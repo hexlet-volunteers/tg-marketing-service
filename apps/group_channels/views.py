@@ -218,7 +218,7 @@ class GroupDetailView(View):
             free_qs = TelegramChannel.objects.exclude(groups=group)
             add_form = AddChannelForm(channel_qs=free_qs)
 
-        return render(request, 'group_channels/detail.html', {
+        return inertia_render(request, 'group_channels/detail.html', props={
             'group': group.get_data,
             'channels': channels.get_data,
             'auto_category': auto_category,
@@ -234,7 +234,7 @@ class AddChannelsView(UserAuthenticationCheckMixin, UserPassesTestMixin, View):
         self.group = get_object_or_404(Group, slug=self.kwargs['slug'])
         return self.group.owner == self.request.user
 
-
+    """На стороне фронта нет компонента groep_detaile, бронируем название компонента GroupDetail"""
     def post(self, request, slug):
         free_qs = TelegramChannel.objects.exclude(groups=self.group)
         form = AddChannelForm(
@@ -245,9 +245,12 @@ class AddChannelsView(UserAuthenticationCheckMixin, UserPassesTestMixin, View):
 
         if form.is_valid():
             self.group.channels.add(*form.cleaned_data['channels'])
-            messages.success(request, 'Каналы добавлены')
-        else:
-            for msg in form.errors.values():
-                messages.error(request, msg)
-
-        return redirect('group_channels:group_detail', slug=slug)
+            return inertia_render(request, 'GroupDetail', props={
+                "flash": {"success": 'Каналы добавлены'}
+            })
+        return inertia_render(request, 'GroupDetail', props={
+            "form": {
+                "errors": form.errors,
+                "values": form.data
+            }
+        })
