@@ -36,3 +36,7 @@ s:
 
 test:
 	python3 -m pytest --tb=short -q
+
+install:
+	uv sync
+.PHONY: install
