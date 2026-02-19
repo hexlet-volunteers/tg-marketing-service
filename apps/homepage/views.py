@@ -10,9 +10,9 @@ class IndexView(View):
     Документация компонентов для InertiaJS:
     [
         {
-            "component": "HomePageComponent",
-            "props": ["id", "type", "title", "content", "order"],
-            "url": "/"
+            "component": "название компонента",
+            "props": { пропсы },
+            "url": "url"
         }
     ]
     """
@@ -25,20 +25,32 @@ class IndexView(View):
             .order_by('order')
         )
 
-        # Формируем props для Inertia
-        page_data = {
-            'components': [
-                {
-                    'id': component.id,
-                    'type': component.component_type,
-                    'title': component.title,
-                    'content': component.content,
-                    'order': component.order
-                }
-                for component in components
-            ],
+        # Формируем данные для фронтенда в правильном формате
+        components_data = []
+        for component in components:
+            # Базовые пропсы из модели
+            base_props = {
+                'id': component.id,
+                'title': component.title,
+                'type': component.component_type,
+                'order': component.order,
+            }
+
+            # Добавляем JSON-содержимое в пропсы (распаковываем content)
+            # ВАЖНО: эта операция должна быть ВНУТРИ цикла для каждого компонента
+            component_props = {**base_props, **component.content}
+
+            # Добавляем компонент в итоговый массив в нужном формате
+            components_data.append({
+                'component': component.component_type,
+                'props': component_props,
+                'url': request.path
+            })
+
+        # Формируем общие пропсы для страницы Home
+        page_props = {
+            'components': components_data,
         }
 
         # Возвращаем Inertia Response с шаблоном 'Home' и данными компонентов
-        return inertia_render(request, 'Home', props=page_data)
-
+        return inertia_render(request, 'Home', props=page_props)
