@@ -40,3 +40,14 @@ test:
 install:
 	uv sync
 .PHONY: install
+
+docker-build:
+	docker compose build
+.PHONY: docker-build
+docker-up:
+	docker compose up -d
+.PHONY: docker-up
+
+docker-down:
+	docker compose down
+.PHONY: docker-down

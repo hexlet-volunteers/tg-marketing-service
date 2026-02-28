@@ -1,0 +1,69 @@
+# docker-compose.yaml
+name: tg-marketing-service-dev
+
+services:
+  # Backend server
+  backend:
+    build:
+      context: .
+      dockerfile: Docker/Dockerfile.backend
+    restart: always
+    ports:
+    - '8000:8000'
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - static:/static
+      - ./apps:/app/apps
+      - ./config:/app/config
+      - ./templates:/app/templates
+      - ./tests:/app/tests
+      - ./conftest.py:/app/conftest.py
+      - ./my_main.py:/app/my_main.py
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./uv.lock:/app/uv.lock
+    command: >
+      sh -c "
+      uv run python manage.py migrate &&
+      uv run python manage.py collectstatic --noinput &&
+      uv run python manage.py runserver 0.0.0.0:8000
+      "
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../Docker/Dockerfile.frontend
+    restart: always
+    ports:
+    - '3000:3000'
+    volumes:
+    - /app/node_modules
+    - ./frontend:/app
+
+  # PSQL - data base
+  db:
+    image: postgres:16
+    restart: always
+    shm_size: 128mb
+    env_file:
+      - .env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5  
+
+  # для управления БД
+  adminer:  
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+
+volumes:
+  pgdata:
+  static:

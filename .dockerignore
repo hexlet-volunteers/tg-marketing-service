@@ -1,0 +1,42 @@
+# Environments
+# файл .env временно исключен, для тестирования сборки из Dockerfile
+# .env
+.env
+.envrc
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# git
+.git
+.github
+
+# Django stuff:
+db.sqlite3
+db.sqlite3-journal
+local_settings.py
+*.log
+
+# PyCharm
+.idea/
+.abstra/
+
+# Ruff stuff:
+.ruff_cache/
+
+# Telegram API
+test_session.*
+*.session
+
+# local only
+telegram_session_string.py
+telegram_configuration
+
+django.log
+errors.log
+
+# VSCode
+.vscode
