@@ -31,6 +31,17 @@ services:
       uv run python manage.py collectstatic --noinput &&
       uv run python manage.py runserver 0.0.0.0:8000
       "
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../Docker/Dockerfile.frontend
+    restart: always
+    ports:
+    - '3000:3000'
+    volumes:
+    - /app/node_modules
+    - ./frontend:/app
+
   # PSQL - data base
   db:
     image: postgres:16

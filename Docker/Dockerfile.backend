@@ -18,8 +18,8 @@ COPY pyproject.toml uv.lock README.md ./
 
 RUN uv sync
 
-# # копируем проект в образ
-COPY . .
+# # копируем проект в образ и меняем владельца папки
+COPY --chown=devuser:devuser . .
 
 # открываем порт - нужно только для остальных разработчиков
 # порт будет назначаться через docker-compose
