@@ -1,6 +1,7 @@
 # Environments
 # файл .env временно исключен, для тестирования сборки из Dockerfile
 # .env
+.env
 .envrc
 .venv
 env/
