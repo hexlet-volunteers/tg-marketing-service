@@ -1,0 +1,29 @@
+FROM python:3.13.2-slim
+# создаем пользователя, чтобы пуск контейнера не был от root
+RUN useradd -s /bin/sh -m devuser
+WORKDIR /app
+# меняем владельца рабочей директории (без этого uv не работает)
+RUN chown -R devuser:devuser /app
+# устанавливаем uv глобально из под рута
+RUN pip install uv
+# переключаем пользователя
+USER devuser
+# создаем виртуальное окружение в директорию проекта
+RUN uv venv
+# прописываем в PATH директорию с виртуальным окружением
+ENV PATH="/app/.venv/bin:$PATH"
+
+# копируем зависимости в рабочую директорию
+COPY pyproject.toml uv.lock README.md ./
+
+RUN uv sync
+
+# # копируем проект в образ
+COPY . .
+
+# открываем порт - нужно только для остальных разработчиков
+# порт будет назначаться через docker-compose
+EXPOSE 8000
+
+# эта команда будет переназначена в docker-compose
+CMD [ "uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000" ]
