@@ -41,13 +41,13 @@ install:
 	uv sync
 .PHONY: install
 
-docker-test-build:
-	docker image build -t test/tg-marketing-service .
-.PHONY: docker-test-build
+docker-build:
+	docker compose build
+.PHONY: docker-build
+docker-up:
+	docker compose up -d
+.PHONY: docker-up
 
-docker-start:
-	docker container run --name="tg-marketing-service" --rm -d -p 8000:8000 test/tg-marketing-service
-.PHONY: docker-start
-
-docker-stop:
-	docker container stop tg-marketing-service
+docker-down:
+	docker compose down
+.PHONY: docker-down
