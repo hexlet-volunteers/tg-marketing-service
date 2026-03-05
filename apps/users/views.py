@@ -422,16 +422,13 @@ class AvatarChangeView(View):
         avatar_form = AvatarChange(data=request.POST, instance=user)
         if avatar_form.is_valid():
             avatar_form.save()
-            messages.add_message(request,
-                                 messages.SUCCESS,
-                                 'Аватар успешно изменен')
-            return redirect(reverse('users:profile'))
+            request.session["flash_success"] = \
+                'Аватар успешно изменен'
+            return redirect(reverse('users:user_cabinet'))
         if avatar_form.errors.get('avatar_url'):
             avatar_url = avatar_form.errors.get('avatar_url').as_text()
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 avatar_url[1:])
-        return redirect(reverse('users:profile'))
+            request.session["flash_error"] = f"{avatar_url[1:]}"
+        return redirect(reverse('users:user_cabinet'))
 
 
 class RestorePasswordRequestView(View):
