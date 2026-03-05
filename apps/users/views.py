@@ -385,7 +385,7 @@ class UserUpdate(UserAuthenticationCheckMixin, View):
         
         request.session["flash_error"] = \
             "У вас нет прав для изменения другого пользователя."
-        return redirect(reverse('users:user_cabinet'))
+        return redirect(reverse('users:profile'))
 
     def post(self, request, *args, **kwargs):
         username = kwargs.get('username')
@@ -395,7 +395,7 @@ class UserUpdate(UserAuthenticationCheckMixin, View):
             form.save()
             request.session["flash_success"] = \
                 "Профиль успешно изменен."
-            return redirect(reverse('users:user_cabinet'))
+            return redirect(reverse('users:profile'))
         
         data = {
                 'username': user.username,
@@ -424,43 +424,55 @@ class AvatarChangeView(View):
             avatar_form.save()
             request.session["flash_success"] = \
                 'Аватар успешно изменен'
-            return redirect(reverse('users:user_cabinet'))
+            return redirect(reverse('users:profile'))
         if avatar_form.errors.get('avatar_url'):
             avatar_url = avatar_form.errors.get('avatar_url').as_text()
             request.session["flash_error"] = f"{avatar_url[1:]}"
-        return redirect(reverse('users:user_cabinet'))
+        return redirect(reverse('users:profile'))
 
 
 class RestorePasswordRequestView(View):
-    def get(self, request, *args, **kwargs):
-        form = RestorePasswordRequestForm()
-        return render(
+    """
+    Метод get возвращает props 
+    {
+        "email": ""
+    }
+    
+    Метод post либо сообщает о направлении информаци на email
+    и релирект на страницу login,
+    либо сообщение об ошибке в введенном eamil и возвращает props 
+    {
+        "email": ..........,
+    }
+    """
+    
+    def get(self, request, *args, **kwargs):       
+       
+        return inertia_render(
             request,
-            'users/restore-password-request.html',
-            {'form': form}
+            'RestorePasswordRequest',
+            props={"email": ""}
         )
 
     def post(self, request, *args, **kwargs):
         form = RestorePasswordRequestForm(data=request.POST)
         if form.is_valid():
-            form.save(request=request,
-                      use_https=request.is_secure(),
-                      email_template_name='emails/restore-password-email.html',
+            form.save(
+                request=request,
+                use_https=request.is_secure(),
+                email_template_name='emails/restore-password-email.html',
             )
-            messages.add_message(request,
-                                 messages.SUCCESS,
-                                 'Ссылка на восстановление пароля \
-                                    отправлена на указанный вами Email'
-            )
-            return redirect('users:login')  # redirect already uses reverse
-        
-        messages.add_message(request,
-                             messages.ERROR,
-                             'Пожалуйста, введите корректный Email'
-        )
-        return render(request,
-                      'users/restore-password-request.html',
-                      {'form': form}
+            request.session["flash_success"] = \
+                "Ссылка на восстановление пароля \
+                отправлена на указанный вами Email"
+            return redirect('users:login')
+        return inertia_render(
+            request,
+            "RestorePasswordRequest",
+            props={
+                "email": request.POST.get("email", ""),
+                'errors': form.errors
+                }
         )
 
 
@@ -476,39 +488,36 @@ class RestorePasswordView(View):
             token = None
 
         if uid is None or token is None:
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 'Некорректная ссылка для восстановления пароля')
+            request.session["flash_error"] = \
+                "Некорректная ссылка для восстановления пароля"
             return redirect('users:login')
 
         try:
             uid_decoded = urlsafe_base64_decode(uid).decode()
         except TypeError:
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 'Некорректный id пользователя')
+            request.session["flash_error"] = \
+                'Некорректный id пользователя'
             return redirect('users:login')
         try:
             user = User.objects.get(pk=uid_decoded)
         except User.DoesNotExist:
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 'Пользователь не найден')
+            request.session["flash_error"] = \
+                'Пользователь не найден'
             return redirect('users:login')
 
         if not default_token_generator.check_token(user, token):
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 'Некорректная ссылка для восстановления пароля')
+            request.session["flash_error"] = \
+                'Некорректная ссылка для восстановления пароля'
             return redirect('users:login')
-
-        form = RestorePasswordForm(user=user)
-        return render(
+        
+        return inertia_render(
             request,
-            'users/restore-password.html',
-            {'form': form,
-             'uid': uid,
-             'token': token,
+            "RestorePassword",
+            props={
+                "new_password1": "",
+                "new_password2": "",
+                'uid': uid,
+                'token': token,
             }
         )
 
@@ -523,45 +532,43 @@ class RestorePasswordView(View):
             token = None
 
         if uid is None or token is None:
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 'Некорректная ссылка для восстановления пароля')
+            request.session["flash_error"] = \
+                'Некорректная ссылка для восстановления пароля'
             return redirect('users:login')
 
         try:
             uid_decoded = urlsafe_base64_decode(uid).decode()
         except TypeError:
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 'Некорректный id пользователя')
+            request.session["flash_error"] = \
+                'Некорректный id пользователя'
             return redirect('users:login')
         try:
             user = User.objects.get(pk=uid_decoded)
         except User.DoesNotExist:
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 'Пользователь не найден')
+            request.session["flash_error"] = \
+                'Пользователь не найден'
             return redirect('users:login')
 
         if not default_token_generator.check_token(user, token):
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 'Некорректная ссылка для восстановления пароля')
+            request.session["flash_error"] = \
+                'Некорректная ссылка для восстановления пароля'
             return redirect('users:login')
 
         form = RestorePasswordForm(user=user, data=request.POST)
         if form.is_valid():
             form.save()
-            messages.add_message(request,
-                                 messages.SUCCESS,
-                                 'Пароль успешно изменен')
+            request.session["flash_success"] = \
+                'Пароль успешно изменен'
             return redirect('users:login')
 
-        return render(
+        return inertia_render(
             request,
-            'users/restore-password.html',
-            {'form': form,
-             'uid': uid,
-             'token': token,
+            "RestorePassword",
+            props={
+                "new_password1": request.POST.get("new_password1", ""),
+                "new_password2": request.POST.get("new_password2", ""),
+                'uid': uid,
+                'token': token,
+                "errors": form.errors
             }
         )
