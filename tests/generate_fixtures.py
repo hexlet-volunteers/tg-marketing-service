@@ -1,5 +1,7 @@
 from typing import Dict, List, Tuple, Any
 import logging
+import random
+import string
 
 from tests.data_generator import DataGenerator, NUM_OF_FIXTURES
 
@@ -13,13 +15,23 @@ logger = logging.getLogger(__name__)
 class ModelAndFormFixtureGenerator:
     '''
     class to actually generate fixtures for forms and models
-    why new class and not a script? so that can configure in future
-    not all models and forms present, because some of them require foreign key etc.
-    in future, need to connect to present DB or make local SQLite, populate it and test via it
     '''
     def __init__(self, num: int = NUM_OF_FIXTURES) -> None:
         self.gen = DataGenerator(num)
         self.size = self.gen.data_size
+
+    def _create_test_user(self, username: str, password: str) -> None:
+        """Создает тестового пользователя в БД"""
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        # Проверяем, есть ли уже такой пользователь
+        if not User.objects.filter(username=username).exists():
+            User.objects.create_user(
+                username=username,
+                password=password,
+                email=f"{username}@test.com"
+            )
 
     def _compose(self, field_values: Dict[str, Tuple[Any, ...]]) -> Tuple[Dict[str, Any], ...]:
         '''
@@ -36,35 +48,45 @@ class ModelAndFormFixtureGenerator:
             records.append(rec)
         return tuple(records)
 
-    # make invalid data (its only strings, so _invalid_strings)
     def _invalid_strings(self) -> Tuple[str, ...]:
         return self.gen.generate_invalid_data()
 
-    # generate again
     def _repeat(self, value: Any) -> Tuple[Any, ...]:
         return tuple(value for _ in range(self.size))
+
+    def _generate_valid_username(self) -> str:
+        """Генерирует валидный username (буквы, цифры, @/./+/-/_)"""
+        chars = string.ascii_letters + string.digits + '@.+-_'
+        return ''.join(random.choice(chars) for _ in range(random.randint(5, 20)))
+
+    def _generate_valid_email(self) -> str:
+        """Генерирует валидный email (не длиннее 254 символов)"""
+        local = ''.join(random.choice(string.ascii_letters + string.digits + '._-') for _ in range(10))
+        domain = ''.join(random.choice(string.ascii_lowercase) for _ in range(8))
+        return f"{local}@{domain}.com"
+
+    def _generate_valid_password(self) -> str:
+        """Генерирует валидный пароль"""
+        chars = string.ascii_letters + string.digits + '!@#$%^&*'
+        return ''.join(random.choice(chars) for _ in range(12))
+
+    def _generate_valid_url(self) -> str:
+        """Генерирует валидный URL"""
+        return f"https://example.com/{''.join(random.choice(string.ascii_lowercase) for _ in range(10))}.jpg"
 
     # Models
     def model_users_user(self) -> None:
         '''
         fixtures for users.User model
-        required: username (text, unique, 1-150), email (email, unique, blank allowed but generate), role (text, 1-150)
-        optional: first_name (text), last_name (text), bio (text, 1-200), avatar_image (url)
         '''
-        # usernames unique
-        usernames = self.gen.generate_text(max_len=150, ensure_unique=True)
-        # emails unique and valid
-        emails = self.gen.generate_emails(rule=None)
-        # role and bio lengths
+        usernames = tuple(self._generate_valid_username() for _ in range(self.size))
+        emails = tuple(self._generate_valid_email() for _ in range(self.size))
         roles = self.gen.generate_text(max_len=ROLE_MAXLENGTH)
         bios = self.gen.generate_text(max_len=BIO_MAXLENGTH)
-        # avatar image (URL)
-        avatars = self.gen.generate_urls(rule=None)
-        # names - simple text
-        first_names = self.gen.generate_text(max_len=50)
-        last_names = self.gen.generate_text(max_len=50)
-        # password placeholder (not hashed; for fixtures only)
-        passwords = self.gen.generate_text(max_len=50)
+        avatars = tuple(self._generate_valid_url() for _ in range(self.size))
+        first_names = tuple(''.join(random.choice(string.ascii_letters) for _ in range(8)) for _ in range(self.size))
+        last_names = tuple(''.join(random.choice(string.ascii_letters) for _ in range(10)) for _ in range(self.size))
+        passwords = tuple(self._generate_valid_password() for _ in range(self.size))
 
         valid = self._compose({
             'username': usernames,
@@ -77,7 +99,6 @@ class ModelAndFormFixtureGenerator:
             'password': passwords,
         })
 
-        # Invalid: empty username, invalid email, too-long role and bio, non-url avatar image
         invalid = []
         too_long_role = ('a' * (ROLE_MAXLENGTH + 5))
         too_long_bio = ('b' * (BIO_MAXLENGTH + 5))
@@ -85,14 +106,14 @@ class ModelAndFormFixtureGenerator:
         invalid_avatar = self._invalid_strings()
         for i in range(self.size):
             invalid.append({
-                'username': '' if i % 2 == 0 else ' ',  # required -> invalid
+                'username': '' if i % 2 == 0 else ' ',
                 'email': invalid_email[i] if i < len(invalid_email) else 'not-an-email',
                 'role': too_long_role,
                 'bio': too_long_bio,
                 'avatar_image': invalid_avatar[i] if i < len(invalid_avatar) else 'not-a-url',
                 'first_name': '',
                 'last_name': '',
-                'password': '',  # empty password
+                'password': '',
             })
 
         self.gen.save_fixture('model_users_user', valid, tuple(invalid))
@@ -100,11 +121,7 @@ class ModelAndFormFixtureGenerator:
     def model_parser_telegram_channel(self) -> None:
         '''
         fixtures for parser.TelegramChannel model
-        required: channel_id (bigint unique), title (text, 1-255), participants_count (int), parsed_at (datetime auto)
-        optional: username (text, 0-255, can be blank), description (text), pinned_messages (json), creation_date (datetime),
-                  last_messages (json), average_views (int)
         '''
-        # unique channel ids, up to 12 digits
         channel_ids = self.gen.generate_int(max_len=12, ensure_unique=True)
         titles = self.gen.generate_text(max_len=255)
         usernames = self.gen.generate_text(max_len=255)
@@ -129,18 +146,17 @@ class ModelAndFormFixtureGenerator:
             'average_views': avg_views,
         })
 
-        # invalid set: non-int channel_id, empty title, invalid datetime/json, non-int counts
         invalid_strs = self._invalid_strings()
         invalid_dt = self._invalid_strings()
         invalid = []
         for i in range(self.size):
             invalid.append({
-                'channel_id': invalid_strs[i] if i < len(invalid_strs) else 'abc',  # should be int
-                'title': '',  # required -> invalid
+                'channel_id': invalid_strs[i] if i < len(invalid_strs) else 'abc',
+                'title': '',
                 'username': None,
                 'description': None,
-                'participants_count': invalid_strs[i] if i < len(invalid_strs) else 'n/a',  # should be int
-                'parsed_at': invalid_dt[i] if i < len(invalid_dt) else '2020-13-40 99:99',  # invalid dt
+                'participants_count': invalid_strs[i] if i < len(invalid_strs) else 'n/a',
+                'parsed_at': invalid_dt[i] if i < len(invalid_dt) else '2020-13-40 99:99',
                 'pinned_messages': 'not-json',
                 'creation_date': '31-31-2020',
                 'last_messages': 'not-json',
@@ -148,15 +164,18 @@ class ModelAndFormFixtureGenerator:
             })
         self.gen.save_fixture('model_parser_telegram_channel', valid, tuple(invalid))
 
-    # Forms
     def form_user_login(self) -> None:
-        # username (text), password (text)
-        usernames = self.gen.generate_text(max_len=150, ensure_unique=True)
-        passwords = self.gen.generate_text(max_len=50)
+        usernames = tuple(self._generate_valid_username() for _ in range(self.size))
+        passwords = tuple(self._generate_valid_password() for _ in range(self.size))
+
+        for username, password in zip(usernames, passwords):
+            self._create_test_user(username, password)
+
         valid = self._compose({
             'username': usernames,
             'password': passwords,
         })
+
         invalid = []
         for _ in range(self.size):
             invalid.append({
@@ -166,16 +185,14 @@ class ModelAndFormFixtureGenerator:
         self.gen.save_fixture('form_user_login', valid, tuple(invalid))
 
     def form_user_reg(self) -> None:
-        # first_name (text), last_name (text), username(text), password1 (text), password2 (text),
-        # email (email), bio (text, can be blank), terms (bool), avatar_image (url)
-        first_names = self.gen.generate_text(max_len=50)
-        last_names = self.gen.generate_text(max_len=50)
-        usernames = self.gen.generate_text(max_len=150, ensure_unique=True)
-        # keep passwords equal for validity
-        pw = self.gen.generate_text(max_len=50)
-        emails = self.gen.generate_emails(rule=None)
-        bios = self.gen.generate_text(max_len=BIO_MAXLENGTH)
-        avatars = self.gen.generate_urls(rule=None)
+        """Форма регистрации - генерируем ВАЛИДНЫЕ данные"""
+        first_names = tuple(''.join(random.choice(string.ascii_letters) for _ in range(8)) for _ in range(self.size))
+        last_names = tuple(''.join(random.choice(string.ascii_letters) for _ in range(10)) for _ in range(self.size))
+        usernames = tuple(self._generate_valid_username() for _ in range(self.size))
+        pw = tuple(self._generate_valid_password() for _ in range(self.size))
+        emails = tuple(self._generate_valid_email() for _ in range(self.size))
+        bios = tuple(''.join(random.choice(string.ascii_letters + ' ') for _ in range(50)) for _ in range(self.size))
+        avatars = tuple(self._generate_valid_url() for _ in range(self.size))
         terms_true = self._repeat(True)
 
         valid = self._compose({
@@ -198,26 +215,23 @@ class ModelAndFormFixtureGenerator:
                 'first_name': '',
                 'last_name': '',
                 'username': '',
-                'password1': 'password123',
-                'password2': 'different',  # mismatch
+                'password1': 'short',
+                'password2': 'different',
                 'email': invalid_email[i] if i < len(invalid_email) else 'not-an-email',
-                'bio': 'x' * (BIO_MAXLENGTH + 20),  # too long
-                'terms': False,  # required True
+                'bio': 'x' * (BIO_MAXLENGTH + 20),
+                'terms': False,
                 'avatar_image': invalid_avatar[i] if i < len(invalid_avatar) else 'not-a-url',
             })
         self.gen.save_fixture('form_user_reg', valid, tuple(invalid))
 
     def form_user_update(self) -> None:
-        # mirrors UserUpdateForm fields as defined in forms.py
-        # first_name (text), last_name (text), username(text),
-        # password1 (text), password2 (text), email (email), bio (text), avatar_image (url)
-        first_names = self.gen.generate_text(max_len=50)
-        last_names = self.gen.generate_text(max_len=50)
-        usernames = self.gen.generate_text(max_len=150, ensure_unique=True)
-        pw = self.gen.generate_text(max_len=50)
-        emails = self.gen.generate_emails(rule=None)
-        bios = self.gen.generate_text(max_len=BIO_MAXLENGTH)
-        avatars = self.gen.generate_urls(rule=None)
+        first_names = tuple(''.join(random.choice(string.ascii_letters) for _ in range(8)) for _ in range(self.size))
+        last_names = tuple(''.join(random.choice(string.ascii_letters) for _ in range(10)) for _ in range(self.size))
+        usernames = tuple(self._generate_valid_username() for _ in range(self.size))
+        pw = tuple(self._generate_valid_password() for _ in range(self.size))
+        emails = tuple(self._generate_valid_email() for _ in range(self.size))
+        bios = tuple(''.join(random.choice(string.ascii_letters + ' ') for _ in range(50)) for _ in range(self.size))
+        avatars = tuple(self._generate_valid_url() for _ in range(self.size))
 
         valid = self._compose({
             'first_name': first_names,
@@ -246,37 +260,33 @@ class ModelAndFormFixtureGenerator:
         self.gen.save_fixture('form_user_update', valid, tuple(invalid))
 
     def form_user_avatar_change(self) -> None:
-        # avatar_image (url) required=False but provide valid urls
-        avatars = self.gen.generate_urls(rule=None)
+        avatars = tuple(self._generate_valid_url() for _ in range(self.size))
         valid = self._compose({'avatar_image': avatars})
         invalid = self._compose({'avatar_image': self._invalid_strings()})
         self.gen.save_fixture('form_user_avatar_change', valid, invalid)
 
     def form_restore_password_request(self) -> None:
-        # email (email)
-        emails = self.gen.generate_emails(rule=None)
+        emails = tuple(self._generate_valid_email() for _ in range(self.size))
         valid = self._compose({'email': emails})
         invalid = self._compose({'email': self._invalid_strings()})
         self.gen.save_fixture('form_restore_password_request', valid, invalid)
 
     def form_restore_password(self) -> None:
-        # new_password1 (text), new_password2 (text)
-        pw = self.gen.generate_text(max_len=50)
+        pw = tuple(self._generate_valid_password() for _ in range(self.size))
         valid = self._compose({
             'new_password1': pw,
             'new_password2': pw,
         })
         invalid = self._compose({
-            'new_password1': self.gen.generate_text(max_len=10),  # len 10
-            'new_password2': self.gen.generate_text(max_len=12),  # not same len
+            'new_password1': self.gen.generate_text(max_len=10),
+            'new_password2': self.gen.generate_text(max_len=12),
         })
         self.gen.save_fixture('form_restore_password', valid, invalid)
 
     def form_group_create(self) -> None:
-        # name (text, 1-150), description (text, optional), image_url (url)
-        names = self.gen.generate_text(max_len=150, ensure_unique=True)
-        descriptions = self.gen.generate_text(max_len=200)
-        images = self.gen.generate_urls(rule=None)
+        names = tuple(''.join(random.choice(string.ascii_letters + ' ') for _ in range(20)) for _ in range(self.size))
+        descriptions = tuple(''.join(random.choice(string.ascii_letters + ' ') for _ in range(50)) for _ in range(self.size))
+        images = tuple(self._generate_valid_url() for _ in range(self.size))
 
         valid = self._compose({
             'name': names,
@@ -288,17 +298,16 @@ class ModelAndFormFixtureGenerator:
         invalid_img = self._invalid_strings()
         for i in range(self.size):
             invalid.append({
-                'name': '',  # required
-                'description': 'z' * 1000,  # overly long, tho not really invalid, but assume like 1000 url is not real
+                'name': '',
+                'description': 'z' * 1000,
                 'image_url': invalid_img[i] if i < len(invalid_img) else 'invalid',
             })
         self.gen.save_fixture('form_group_create', valid, tuple(invalid))
 
     def form_group_update(self) -> None:
-        # same fields as create
-        names = self.gen.generate_text(max_len=150, ensure_unique=True)
-        descriptions = self.gen.generate_text(max_len=200)
-        images = self.gen.generate_urls(rule=None)
+        names = tuple(''.join(random.choice(string.ascii_letters + ' ') for _ in range(20)) for _ in range(self.size))
+        descriptions = tuple(''.join(random.choice(string.ascii_letters + ' ') for _ in range(50)) for _ in range(self.size))
+        images = tuple(self._generate_valid_url() for _ in range(self.size))
 
         valid = self._compose({
             'name': names,
@@ -316,32 +325,37 @@ class ModelAndFormFixtureGenerator:
         self.gen.save_fixture('form_group_update', valid, tuple(invalid))
 
     def form_parser_channel_parse(self) -> None:
-        # channel_identifier (text, 1-255), limit (int, 1-20)
-        identifiers = self.gen.generate_text(max_len=255)
-        # produce ints using generator and make no bigger than 20
+        """Форма парсинга канала с обязательными полями"""
+        identifiers = tuple('@' + ''.join(random.choice(string.ascii_lowercase) for _ in range(15)) for _ in range(self.size))
         raw_ints = self.gen.generate_int(max_len=3)
         limits = tuple(1 + (abs(n) % 20) for n in raw_ints)
+
+        categories = ['Новости и СМИ', 'Юмор и развлечения', 'Технологии', 'Бизнес и стартапы']
+        countries = ['Россия', 'США', 'Германия', 'Франция']
+        languages = ['Русский', 'Английский', 'Немецкий', 'Французский']
 
         valid = self._compose({
             'channel_identifier': identifiers,
             'limit': limits,
+            'category': tuple(random.choice(categories) for _ in range(self.size)),
+            'country': tuple(random.choice(countries) for _ in range(self.size)),
+            'language': tuple(random.choice(languages) for _ in range(self.size)),
         })
 
-        # invalid: empty identifier, limit out of range
         invalid_limits = []
         for i in range(self.size):
             invalid_limits.append(0 if i % 2 == 0 else 99)
+
         invalid = self._compose({
             'channel_identifier': self._repeat(''),
             'limit': tuple(invalid_limits),
+            'category': self._repeat(''),
+            'country': self._repeat(''),
+            'language': self._repeat(''),
         })
         self.gen.save_fixture('form_parser_channel_parse', valid, invalid)
 
-    # can simply make obj and call this method to get every fixture file
     def generate_all(self) -> None:
-        '''
-        for now only includes forms and models that not require database relations.
-        '''
         self.model_users_user()
         self.model_parser_telegram_channel()
 

@@ -33,7 +33,8 @@ jobs:
       - name: Install project and test deps
         run: |
           uv pip install --system .
-          uv pip install --system pytest pytest-cov
+          # Устанавливаем тестовые зависимости
+          uv pip install --system pytest pytest-cov pytest-django pytest-mock
 
       - name: Generate fixtures
         env:
@@ -44,6 +45,8 @@ jobs:
           TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
           TELEGRAM_SESSION_STRING: ${{ secrets.TELEGRAM_SESSION_STRING }}
         run: |
+          # Создаем папку для фикстур
+          mkdir -p tests/fixtures
           uv run python3 -c "from tests.generate_fixtures import ModelAndFormFixtureGenerator; ModelAndFormFixtureGenerator().generate_all()"
 
       - name: Run tests
