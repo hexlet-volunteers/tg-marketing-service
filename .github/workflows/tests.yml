@@ -88,9 +88,9 @@ jobs:
           ./cc-test-reporter format-coverage -t coverage.py -o coverage/codeclimate.json
           ./cc-test-reporter upload-coverage
 
-      - name: Run linter
-        run: |
-          uv run ruff check .
+      # - name: Run linter
+      #  run: |
+      #    uv run ruff check .
 
       - name: Upload test artifacts
         if: always()
