@@ -50,16 +50,7 @@ jobs:
           TELEGRAM_SESSION_STRING: ${{ secrets.TELEGRAM_SESSION_STRING || '' }}
         run: |
           mkdir -p tests/fixtures
-          uv run python -c "
-import os
-import django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
-django.setup()
-from tests.generate_fixtures import ModelAndFormFixtureGenerator
-print('🔄 Generating fixtures...')
-ModelAndFormFixtureGenerator().generate_all()
-print('✅ Fixtures generated!')
-"
+          uv run python tests/generate_fixtures_ci.py
 
       - name: Run tests
         env:
