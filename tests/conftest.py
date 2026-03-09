@@ -143,7 +143,6 @@ def test_user_for_password_restore(restore_password_fixtures, db):
     from django.contrib.auth import get_user_model
     User = get_user_model()
     
-    # Создаем пользователя
     user = User.objects.create_user(
         username='password_restore_user',
         password='old_password123',
@@ -152,3 +151,39 @@ def test_user_for_password_restore(restore_password_fixtures, db):
     
     data = restore_password_fixtures['valid'][0]
     return user, data
+
+@pytest.fixture(autouse=True)
+def create_test_roles(db):
+    """Создает тестовые роли для всех тестов"""
+    from django.db import connection, models
+    from django.db.utils import OperationalError
+
+    try:
+        from apps.users.roles import Role
+        Role.objects.exists()
+    except OperationalError:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users_role (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    code VARCHAR(50) NOT NULL UNIQUE,
+                    name VARCHAR(50) NOT NULL
+                )
+            """)
+    
+    roles_data = [
+        {'code': 'user', 'name': 'Пользователь'},
+        {'code': 'partner', 'name': 'Партнер'},
+        {'code': 'moderator', 'name': 'Модератор'},
+        {'code': 'admin', 'name': 'Администратор'},
+    ]
+    
+    created_roles = []
+    for role_data in roles_data:
+        role, created = Role.objects.get_or_create(
+            code=role_data['code'],
+            defaults={'name': role_data['name']}
+        )
+        created_roles.append(role)
+    
+    return created_roles
