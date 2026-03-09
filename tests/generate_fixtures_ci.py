@@ -5,18 +5,16 @@ import os
 import sys
 from pathlib import Path
 
-# Добавляем путь к проекту
-sys.path.append(str(Path(__file__).parent.parent))
+project_root = str(Path(__file__).parent.parent)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 def main():
-    # Устанавливаем настройки Django
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
     
-    # Инициализируем Django
     import django
     django.setup()
     
-    # Импортируем генератор
     from tests.generate_fixtures import ModelAndFormFixtureGenerator
     
     print('🔄 Generating fixtures...')
