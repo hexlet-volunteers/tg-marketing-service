@@ -43,9 +43,11 @@ jobs:
       - name: Generate fixtures
         env:
           DJANGO_SETTINGS_MODULE: config.settings
+          DATABASE_URL: ${{ secrets.DB_URL || 'sqlite:///db.sqlite3' }}
           SECRET_KEY: ${{ secrets.SECRET_KEY || 'django-insecure-test-key' }}
           TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID || '12345' }}
           TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH || 'test_hash' }}
+          TELEGRAM_SESSION_STRING: ${{ secrets.TELEGRAM_SESSION_STRING || '' }}
         run: |
           mkdir -p tests/fixtures
           uv run python -c "
@@ -62,9 +64,11 @@ print('✅ Fixtures generated!')
       - name: Run tests
         env:
           DJANGO_SETTINGS_MODULE: config.settings
+          DATABASE_URL: ${{ secrets.DB_URL || 'sqlite:///db.sqlite3' }}
           SECRET_KEY: ${{ secrets.SECRET_KEY || 'django-insecure-test-key' }}
           TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID || '12345' }}
           TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH || 'test_hash' }}
+          TELEGRAM_SESSION_STRING: ${{ secrets.TELEGRAM_SESSION_STRING || '' }}
         run: |
           uv run pytest tests/ \
             -v \
@@ -101,3 +105,20 @@ print('✅ Fixtures generated!')
             pytest.log
             tests/fixtures/*.json
           retention-days: 7
+
+      - name: Upload django logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: django-logs
+          path: |
+            django.log
+            errors.log
+          if-no-files-found: ignore
+          retention-days: 1
+
+      - name: Show logs
+        if: always()
+        run: |
+          [ -f django.log ] && echo "django.log:" && cat django.log || true
+          [ -f errors.log ] && echo "errors.log:" && cat errors.log || true
