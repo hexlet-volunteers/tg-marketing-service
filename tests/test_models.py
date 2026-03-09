@@ -134,7 +134,7 @@
 #             participants_count=valid_data['participants_count']
 #         )
         
-#         expected_str = f"{valid_data['title']} ({valid_data['channel_id']})"
+#         expected_str = f"{valid_data['channel_id']} канал {valid_data['title']}"
 #         assert str(channel) == expected_str
     
 #     def test_unique_channel_id(self, db, telegram_channel_fixtures):
@@ -163,7 +163,7 @@
 #         group = Group.objects.create(
 #             name=valid_data['name'],
 #             description=valid_data.get('description', ''),
-#             owner=user,  # Обязательно указываем owner!
+#             owner=user,
 #             is_editorial=False,
 #             order=0
 #         )
@@ -194,7 +194,7 @@
 #         with pytest.raises(IntegrityError):
 #             Group.objects.create(
 #                 name=valid_data['name'],
-#                 owner=user  # Пытаемся создать с тем же именем
+#                 owner=user
 #             )
     
 #     def test_group_owner_relation(self, db, group_fixtures, user):
@@ -219,16 +219,15 @@
 #             user=user,
 #             status='active'
 #         )
-        
+
 #         assert profile.user == user
 #         assert profile.status == 'active'
-#         assert str(profile) == f'Partner: {user.username}'
+#         assert str(profile) == f"{user.username} (Активен)"
     
 #     def test_partner_profile_status_choices(self, db, user):
 #         """Тест выбора статуса партнера"""
 #         from apps.users.models import PartnerProfile
         
-#         # Проверяем все возможные статусы
 #         statuses = ['active', 'pending', 'rejected', 'suspended']
 #         for status in statuses:
 #             profile = PartnerProfile.objects.create(
