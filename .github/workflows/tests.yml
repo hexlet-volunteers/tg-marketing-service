@@ -37,6 +37,13 @@ jobs:
           uv pip install --system pytest pytest-cov pytest-django pytest-mock pytest-xdist
 
       - name: Create test database
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          DATABASE_URL: ${{ secrets.DB_URL || 'sqlite:///db.sqlite3' }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY || 'django-insecure-test-key' }}
+          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID || '12345' }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH || 'test_hash' }}
+          TELEGRAM_SESSION_STRING: ${{ secrets.TELEGRAM_SESSION_STRING || '' }}
         run: |
           uv run python manage.py migrate
 
