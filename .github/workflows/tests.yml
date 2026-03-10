@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -21,6 +21,7 @@ jobs:
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Cache uv dependencies
         uses: actions/cache@v3
@@ -33,31 +34,51 @@ jobs:
       - name: Install project and test deps
         run: |
           uv pip install --system .
-          uv pip install --system pytest pytest-cov
+          uv pip install --system pytest pytest-cov pytest-django pytest-mock pytest-xdist
+
+      - name: Create test database
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          DATABASE_URL: ${{ secrets.DB_URL || 'sqlite:///db.sqlite3' }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY || 'django-insecure-test-key' }}
+          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID || '12345' }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH || 'test_hash' }}
+          TELEGRAM_SESSION_STRING: ${{ secrets.TELEGRAM_SESSION_STRING || '' }}
+        run: |
+          uv run python manage.py migrate
 
       - name: Generate fixtures
         env:
           DJANGO_SETTINGS_MODULE: config.settings
-          DATABASE_URL: ${{ secrets.DB_URL }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
-          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
-          TELEGRAM_SESSION_STRING: ${{ secrets.TELEGRAM_SESSION_STRING }}
+          DATABASE_URL: ${{ secrets.DB_URL || 'sqlite:///db.sqlite3' }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY || 'django-insecure-test-key' }}
+          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID || '12345' }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH || 'test_hash' }}
+          TELEGRAM_SESSION_STRING: ${{ secrets.TELEGRAM_SESSION_STRING || '' }}
         run: |
-          uv run python3 -c "from tests.generate_fixtures import ModelAndFormFixtureGenerator; ModelAndFormFixtureGenerator().generate_all()"
+          mkdir -p tests/fixtures
+          uv run python tests/generate_fixtures_ci.py
 
       - name: Run tests
         env:
           DJANGO_SETTINGS_MODULE: config.settings
-          DATABASE_URL: ${{ secrets.DB_URL }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
-          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
-          TELEGRAM_SESSION_STRING: ${{ secrets.TELEGRAM_SESSION_STRING }}
+          DATABASE_URL: ${{ secrets.DB_URL || 'sqlite:///db.sqlite3' }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY || 'django-insecure-test-key' }}
+          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID || '12345' }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH || 'test_hash' }}
+          TELEGRAM_SESSION_STRING: ${{ secrets.TELEGRAM_SESSION_STRING || '' }}
         run: |
-          uv run pytest --cov=config --cov-report=xml
+          uv run pytest tests/ \
+            -v \
+            --tb=short \
+            --cov=apps \
+            --cov=config \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            -n auto
 
       - name: Upload coverage to CodeClimate
+        if: env.CC_TEST_REPORTER_ID != ''
         env:
           CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
         run: |
@@ -66,13 +87,25 @@ jobs:
           ./cc-test-reporter before-build
           ./cc-test-reporter format-coverage -t coverage.py -o coverage/codeclimate.json
           ./cc-test-reporter upload-coverage
-          ./cc-test-reporter after-build --exit-code $?
 
       - name: Run linter
-        run: 
+        run: |
           uv run ruff check .
 
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            htmlcov/
+            coverage.xml
+            pytest.log
+            tests/fixtures/*.json
+          retention-days: 7
+
       - name: Upload django logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: django-logs
@@ -83,6 +116,7 @@ jobs:
           retention-days: 1
 
       - name: Show logs
+        if: always()
         run: |
           [ -f django.log ] && echo "django.log:" && cat django.log || true
           [ -f errors.log ] && echo "errors.log:" && cat errors.log || true

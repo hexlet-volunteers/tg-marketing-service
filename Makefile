@@ -34,8 +34,15 @@ flower:
 s:
 	uv run python manage.py start_telegram_session
 
-test:
-	python3 -m pytest --tb=short -q
+fixtures:
+	@mkdir -p tests/fixtures
+	uv run python -c "import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings'); import django; django.setup(); from tests.generate_fixtures import ModelAndFormFixtureGenerator; ModelAndFormFixtureGenerator().generate_all()"
+
+test: fixtures
+	uv run pytest tests/ -v --tb=short
+
+test-cov: fixtures
+	uv run pytest tests/ --cov=apps --cov=config --cov-report=term-missing
 
 install:
 	uv sync
