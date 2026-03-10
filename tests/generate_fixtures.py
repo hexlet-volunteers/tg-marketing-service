@@ -4,28 +4,23 @@ import random
 import string
 
 from tests.data_generator import DataGenerator, NUM_OF_FIXTURES
-
-# Avoid importing Django app modules (which may require settings/db) just to get constants.
-# Use project defaults, falling back safely if not importable.
 from apps.users.models import ROLE_MAXLENGTH, BIO_MAXLENGTH
 
 logger = logging.getLogger(__name__)
 
 
 class ModelAndFormFixtureGenerator:
-    '''
-    class to actually generate fixtures for forms and models
-    '''
+    """Генератор фикстур для моделей и форм"""
+
     def __init__(self, num: int = NUM_OF_FIXTURES) -> None:
         self.gen = DataGenerator(num)
         self.size = self.gen.data_size
 
     def _create_test_user(self, username: str, password: str) -> None:
-        """Создает тестового пользователя в БД"""
+        """Создаёт тестового пользователя в базе данных"""
         from django.contrib.auth import get_user_model
         User = get_user_model()
 
-        # Проверяем, есть ли уже такой пользователь
         if not User.objects.filter(username=username).exists():
             User.objects.create_user(
                 username=username,
@@ -34,9 +29,7 @@ class ModelAndFormFixtureGenerator:
             )
 
     def _compose(self, field_values: Dict[str, Tuple[Any, ...]]) -> Tuple[Dict[str, Any], ...]:
-        '''
-        Compose list of dicts from generated data
-        '''
+        """Составляет список словарей из сгенерированных данных"""
         size = self.size
         keys = list(field_values.keys())
         records: List[Dict[str, Any]] = []
@@ -49,18 +42,20 @@ class ModelAndFormFixtureGenerator:
         return tuple(records)
 
     def _invalid_strings(self) -> Tuple[str, ...]:
+        """Генерирует невалидные строки"""
         return self.gen.generate_invalid_data()
 
     def _repeat(self, value: Any) -> Tuple[Any, ...]:
+        """Повторяет значение указанное количество раз"""
         return tuple(value for _ in range(self.size))
 
     def _generate_valid_username(self) -> str:
-        """Генерирует валидный username (буквы, цифры, @/./+/-/_)"""
+        """Генерирует валидное имя пользователя"""
         chars = string.ascii_letters + string.digits + '@.+-_'
         return ''.join(random.choice(chars) for _ in range(random.randint(5, 20)))
 
     def _generate_valid_email(self) -> str:
-        """Генерирует валидный email (не длиннее 254 символов)"""
+        """Генерирует валидный email"""
         local = ''.join(random.choice(string.ascii_letters + string.digits + '._-') for _ in range(10))
         domain = ''.join(random.choice(string.ascii_lowercase) for _ in range(8))
         return f"{local}@{domain}.com"
@@ -74,11 +69,8 @@ class ModelAndFormFixtureGenerator:
         """Генерирует валидный URL"""
         return f"https://example.com/{''.join(random.choice(string.ascii_lowercase) for _ in range(10))}.jpg"
 
-    # Models
     def model_users_user(self) -> None:
-        '''
-        fixtures for users.User model
-        '''
+        """Генерирует фикстуры для модели User"""
         usernames = tuple(self._generate_valid_username() for _ in range(self.size))
         emails = tuple(self._generate_valid_email() for _ in range(self.size))
         roles = self.gen.generate_text(max_len=ROLE_MAXLENGTH)
@@ -119,9 +111,7 @@ class ModelAndFormFixtureGenerator:
         self.gen.save_fixture('model_users_user', valid, tuple(invalid))
 
     def model_parser_telegram_channel(self) -> None:
-        '''
-        fixtures for parser.TelegramChannel model
-        '''
+        """Генерирует фикстуры для модели TelegramChannel"""
         channel_ids = self.gen.generate_int(max_len=12, ensure_unique=True)
         titles = self.gen.generate_text(max_len=255)
         usernames = self.gen.generate_text(max_len=255)
@@ -165,6 +155,7 @@ class ModelAndFormFixtureGenerator:
         self.gen.save_fixture('model_parser_telegram_channel', valid, tuple(invalid))
 
     def form_user_login(self) -> None:
+        """Генерирует фикстуры для формы входа"""
         usernames = tuple(self._generate_valid_username() for _ in range(self.size))
         passwords = tuple(self._generate_valid_password() for _ in range(self.size))
 
@@ -185,7 +176,7 @@ class ModelAndFormFixtureGenerator:
         self.gen.save_fixture('form_user_login', valid, tuple(invalid))
 
     def form_user_reg(self) -> None:
-        """Форма регистрации - генерируем ВАЛИДНЫЕ данные"""
+        """Генерирует фикстуры для формы регистрации"""
         first_names = tuple(''.join(random.choice(string.ascii_letters) for _ in range(8)) for _ in range(self.size))
         last_names = tuple(''.join(random.choice(string.ascii_letters) for _ in range(10)) for _ in range(self.size))
         usernames = tuple(self._generate_valid_username() for _ in range(self.size))
@@ -225,6 +216,7 @@ class ModelAndFormFixtureGenerator:
         self.gen.save_fixture('form_user_reg', valid, tuple(invalid))
 
     def form_user_update(self) -> None:
+        """Генерирует фикстуры для формы обновления пользователя"""
         first_names = tuple(''.join(random.choice(string.ascii_letters) for _ in range(8)) for _ in range(self.size))
         last_names = tuple(''.join(random.choice(string.ascii_letters) for _ in range(10)) for _ in range(self.size))
         usernames = tuple(self._generate_valid_username() for _ in range(self.size))
@@ -260,18 +252,21 @@ class ModelAndFormFixtureGenerator:
         self.gen.save_fixture('form_user_update', valid, tuple(invalid))
 
     def form_user_avatar_change(self) -> None:
+        """Генерирует фикстуры для формы изменения аватара"""
         avatars = tuple(self._generate_valid_url() for _ in range(self.size))
         valid = self._compose({'avatar_image': avatars})
         invalid = self._compose({'avatar_image': self._invalid_strings()})
         self.gen.save_fixture('form_user_avatar_change', valid, invalid)
 
     def form_restore_password_request(self) -> None:
+        """Генерирует фикстуры для формы запроса восстановления пароля"""
         emails = tuple(self._generate_valid_email() for _ in range(self.size))
         valid = self._compose({'email': emails})
         invalid = self._compose({'email': self._invalid_strings()})
         self.gen.save_fixture('form_restore_password_request', valid, invalid)
 
     def form_restore_password(self) -> None:
+        """Генерирует фикстуры для формы восстановления пароля"""
         pw = tuple(self._generate_valid_password() for _ in range(self.size))
         valid = self._compose({
             'new_password1': pw,
@@ -284,6 +279,7 @@ class ModelAndFormFixtureGenerator:
         self.gen.save_fixture('form_restore_password', valid, invalid)
 
     def form_group_create(self) -> None:
+        """Генерирует фикстуры для формы создания группы"""
         names = tuple(''.join(random.choice(string.ascii_letters + ' ') for _ in range(20)) for _ in range(self.size))
         descriptions = tuple(''.join(random.choice(string.ascii_letters + ' ') for _ in range(50)) for _ in range(self.size))
         images = tuple(self._generate_valid_url() for _ in range(self.size))
@@ -305,6 +301,7 @@ class ModelAndFormFixtureGenerator:
         self.gen.save_fixture('form_group_create', valid, tuple(invalid))
 
     def form_group_update(self) -> None:
+        """Генерирует фикстуры для формы обновления группы"""
         names = tuple(''.join(random.choice(string.ascii_letters + ' ') for _ in range(20)) for _ in range(self.size))
         descriptions = tuple(''.join(random.choice(string.ascii_letters + ' ') for _ in range(50)) for _ in range(self.size))
         images = tuple(self._generate_valid_url() for _ in range(self.size))
@@ -325,7 +322,7 @@ class ModelAndFormFixtureGenerator:
         self.gen.save_fixture('form_group_update', valid, tuple(invalid))
 
     def form_parser_channel_parse(self) -> None:
-        """Форма парсинга канала с обязательными полями"""
+        """Генерирует фикстуры для формы парсинга канала"""
         identifiers = tuple('@' + ''.join(random.choice(string.ascii_lowercase) for _ in range(15)) for _ in range(self.size))
         raw_ints = self.gen.generate_int(max_len=3)
         limits = tuple(1 + (abs(n) % 20) for n in raw_ints)
@@ -356,6 +353,7 @@ class ModelAndFormFixtureGenerator:
         self.gen.save_fixture('form_parser_channel_parse', valid, invalid)
 
     def generate_all(self) -> None:
+        """Генерирует все фикстуры"""
         self.model_users_user()
         self.model_parser_telegram_channel()
 
