@@ -42,7 +42,7 @@ class LoginView(View):
             "Auth",
             props={'form': {
                 "data": {
-                        "username": "",
+                        "email": "",
                         "password": ""
                 }, 
                 "errors": {}
@@ -76,7 +76,7 @@ class LoginView(View):
             return inertia_render(request, "Auth", props={
                 "form": {
                     "data": {
-                        "username": request.POST.get("username", ""),
+                        "email": request.POST.get("email", ""),
                         "password": ""
                         },
                     "errors": form.errors
@@ -84,23 +84,48 @@ class LoginView(View):
             })
 
 
-# добавил миксин UserAuthenticationCheckMixin
 class UserProfileView(UserAuthenticationCheckMixin, View):
     def get(self, request, *args, **kwargs):
-        create_form = CreateGroupForm()
-        update_form = UpdateGroupForm()
-        avatar_form = AvatarChange()
         user = request.user
         groups = user.owned_groups.all()
-        return render(
+        
+        user_data = {
+            "id": request.user.id,
+            "username": request.user.username,
+            "full_name": request.user.get_full_name(),
+            "email": request.user.email,
+            "avatar": request.user.avatar_image,
+            "role": request.user.role,
+            "bio": request.user.bio,
+            "is_active": request.user.is_active
+        }
+        
+        groups_data = [group.get_data() for group in groups]
+        
+        create_form_data = {
+            "name": "",
+            "description": "",
+            "image_url": ""
+        }
+        
+        update_form_data = {
+            "name": "",
+            "description": "",
+            "image_url": ""
+        }
+        
+        return inertia_render(
             request,
-            'users/profile.html',
-            {
-                'user': user,
-                'create_form': create_form,
-                'update_form': update_form,
-                'avatar_form': avatar_form,
-                'groups': groups
+            "UserProfilePage",
+            props={
+                    "user": user_data,
+                    "groups": groups_data,
+                    "form": {
+                        "create_form": create_form_data,
+                        "update_form": update_form_data,
+                        "avatar_form": {"avatar": ""}
+                    },
+                    "errors": {}
             }
         )
 
@@ -140,10 +165,11 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
             'usage_stats': usage_stats,
             'user_role': request.role,  # Используем атрибут из middleware
         }
+        
     def get(self, request, *args, **kwargs):
         user = request.user
         props = self._build_base_props(request, user)
-        return inertia_render(request, 'UserProfile', props)
+        return inertia_render(request, 'UserProfilePage', props=props)
 
     def post(self, request, *args, **kwargs):
         user = request.user
@@ -174,11 +200,63 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
                     'first_name': request.POST.get('first_name', ''),
                     'email': request.POST.get('email', ''),
                 }
-                return inertia_render(request, 'UserProfile', props)
+                return inertia_render(request, 'UserProfilePage', props=props)
 
         return redirect(reverse('users:user_cabinet'))
 
+
 class UserRegister(View):
+    
+    """
+    Страница регистрации и аутентификации пользователя
+    При первом посещении рендерится страница регистрации GET запрос.
+    Props возвращает пустые поля формы email и password:
+        {
+            "first_name": "",
+            "last_name": "",
+            "username": "",
+            "password1": "",
+            "password2": "",
+            "email": "",
+            "bio": "",
+            "avatar_image": ""
+        }
+        
+    POST /register/ 
+    Назначение: обрабатывает отправку данных формы регистрации.
+    Входные данные (request.POST):
+    
+    {
+        "data": {
+            "first_name": "",
+            "last_name": "",
+            "username": "",
+            "password1": "",
+            "password2": "",
+            "email": "",
+            "bio": "",
+            "avatar_image": ""
+        },
+        "errors": form.errors
+    }
+    """
+    
+    def get(self, request):
+        return inertia_render(
+            request,
+            "FormRegistration",
+            props = {
+                "first_name": "",
+                "last_name": "",
+                "username": "",
+                "password1": "",
+                "password2": "",
+                "email": "",
+                "bio": "",
+                "avatar_image": ""
+            }
+        )
+        
     def post(self, request, *args, **kwargs):
         form = UserRegForm(data=request.POST)
         if form.is_valid():
@@ -252,44 +330,89 @@ rK3p1E6Fc9XhpNRPhra9i9jUSSr4XI6zeI6povWGv3iMqqWLA56gbCOM1NMMeUcW67B5lB\
     VllVgGTFSVcEkK1Ng8Qc7XNEEw9EJB+VJN3CCQfsvbOwlQ6QJR+XP/jRpQScdi4SU3\
         XZJPk+ha9DmSdWVpinGtrrSTv+amjKDkc3iq7Kbt0mV9YVaTJOmdfEdPFcUdZo\
             2xpRdViVJi3zTYik+wqvoR3h/xU/4DwzAeQMogZYGAAAAAElFTkSuQmCC'
-            form.save()
-            messages.add_message(request,
-                                 messages.SUCCESS,
-                                 'Пользователь успешно зарегистрирован')
-            return redirect(reverse('users:login'))
-        return render(request, 'users/register.html', {'form': form})
-
-    def get(self, request, *args, **kwargs):
-        form = UserRegForm()
-        return render(
+            user.save()
+            request.session["flash_success"] = \
+                "Пользователь успешно зарегистрирован"
+            return redirect("/home")
+        return inertia_render(
             request,
-            'users/register.html',
-            {'form': form}
+            'FormRegistration',
+            props={
+                "data": { 
+                    "first_name": request.POST.get("first_name", ""),
+                    "last_name": request.POST.get("last_name", ""),
+                    "username": request.POST.get("username", ""),
+                    "password1": request.POST.get("password1", ""),
+                    "password2": request.POST.get("password2", ""),
+                    "email": request.POST.get("email", ""),
+                    "bio": request.POST.get("bio", ""),
+                    "avatar_image": request.POST.get("avatar_image", "")
+                },
+                "errors": form.errors,
+            }
         )
 
 
 class UserUpdate(UserAuthenticationCheckMixin, View):
+    
+    """
+    Метод get рендерит страницу UpdateUserProfile и передает данные в props
+    
+    {
+        'first_name': ........,
+        'last_name': .......,
+        'username': .....,
+        'password1': "",
+        'password2': "",
+        'email': ........,
+        'bio': ......,
+        'avatar_image': .......,
+    }
+    
+    Метод post при успешном изменении данных перенаправляет 
+    на страницу профиля пользователя и выводит флеш сообжение 
+    об успешности изменений сохраняя данные в БД иначе
+    
+    рендерит страницу изменений профиля, передает props с данными:
+    {
+        {
+        'first_name': ........,
+        'last_name': .......,
+        'username': .....,
+        'password1': "",
+        'password2': "",
+        'email': ........,
+        'bio': ......,
+        'avatar_image': .......,
+    }
+    нформацию об ошибке:
+    "errors": form.errors
+    """
+    
     def get(self, request, *args, **kwargs):
         if request.user.username == kwargs.get('username'):
-            form = UserUpdateForm(initial={
-                'username': request.user.username,
-                'first_name': request.user.first_name,
-                'last_name': request.user.last_name,
-                'avatar_image': request.user.avatar_image,
-                'email': request.user.email,
-                'bio': request.user.bio,
-            })
-            return render(
+            
+            data = {
+                "first_name": request.user.first_name,
+                "last_name": request.user.last_name,
+                "username": request.user.username,
+                "password1":"",
+                "password2":"",
+                "email": request.user.email,
+                "bio": request.user.bio,
+                "avatar_image": request.user.avatar_image,
+            }
+            return inertia_render(
                 request,
-                'users/update.html',
-                {'form': form,
-                 'username': request.user.username,
-                 'user': request.user,
+                'UpdateUserProfile',
+                props={
+                    'form': data,
+                    'errors': {} 
                 }
             )
-        messages.add_message(request,
-                             messages.ERROR,
-                        'У вас нет прав для изменения другого пользователя.')
+        
+        request.session["flash_error"] = \
+            "У вас нет прав для изменения другого пользователя."
         return redirect(reverse('users:profile'))
 
     def post(self, request, *args, **kwargs):
@@ -298,14 +421,28 @@ class UserUpdate(UserAuthenticationCheckMixin, View):
         form = UserUpdateForm(data=request.POST, instance=user)
         if form.is_valid():
             form.save()
-            messages.add_message(request,
-                                 messages.SUCCESS,
-                                 'Профиль успешно изменен')
+            request.session["flash_success"] = \
+                "Профиль успешно изменен."
             return redirect(reverse('users:profile'))
-        return render(
+        
+        data = {
+                
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "username": user.username,
+                "password1": "",
+                "password2": "",
+                "email": user.email,
+                "bio": user.bio,
+                "avatar_image": user.avatar_image,
+            }
+        return inertia_render(
             request,
-            'users/update.html',
-            {'form': form}
+            'UpdateUserProfile',
+            props={
+                'form': data,
+                'errors': form.errors
+            }
         )
 
 
@@ -316,52 +453,80 @@ class AvatarChangeView(View):
         avatar_form = AvatarChange(data=request.POST, instance=user)
         if avatar_form.is_valid():
             avatar_form.save()
-            messages.add_message(request,
-                                 messages.SUCCESS,
-                                 'Аватар успешно изменен')
+            request.session["flash_success"] = \
+                'Аватар успешно изменен'
             return redirect(reverse('users:profile'))
         if avatar_form.errors.get('avatar_url'):
             avatar_url = avatar_form.errors.get('avatar_url').as_text()
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 avatar_url[1:])
+            request.session["flash_error"] = f"{avatar_url[1:]}"
         return redirect(reverse('users:profile'))
 
 
 class RestorePasswordRequestView(View):
-    def get(self, request, *args, **kwargs):
-        form = RestorePasswordRequestForm()
-        return render(
+    """
+    Метод get возвращает props 
+    {
+        "email": ""
+    }
+    
+    Метод post либо сообщает о направлении информаци на email
+    и релирект на страницу login,
+    либо сообщение об ошибке в введенном eamil и возвращает props 
+    {
+        "email": ..........,
+    }
+    """
+    
+    def get(self, request, *args, **kwargs):       
+       
+        return inertia_render(
             request,
-            'users/restore-password-request.html',
-            {'form': form}
+            'RestorePasswordRequest',
+            props={"email": ""}
         )
 
     def post(self, request, *args, **kwargs):
         form = RestorePasswordRequestForm(data=request.POST)
         if form.is_valid():
-            form.save(request=request,
-                      use_https=request.is_secure(),
-                      email_template_name='emails/restore-password-email.html',
+            form.save(
+                request=request,
+                use_https=request.is_secure(),
+                email_template_name='emails/restore-password-email.html',
             )
-            messages.add_message(request,
-                                 messages.SUCCESS,
-                                 'Ссылка на восстановление пароля \
-                                    отправлена на указанный вами Email'
-            )
-            return redirect('users:login')  # redirect already uses reverse
-        
-        messages.add_message(request,
-                             messages.ERROR,
-                             'Пожалуйста, введите корректный Email'
-        )
-        return render(request,
-                      'users/restore-password-request.html',
-                      {'form': form}
+            request.session["flash_success"] = \
+                "Ссылка на восстановление пароля \
+                отправлена на указанный вами Email"
+            return redirect('users:login')
+        return inertia_render(
+            request,
+            "RestorePasswordRequest",
+            props={
+                "email": request.POST.get("email", ""),
+                'errors': form.errors
+                }
         )
 
 
 class RestorePasswordView(View):
+    """
+    Метод get возвращает props 
+    {
+        "new_password1": "",
+        "new_password2": "",
+        "id": uid,
+        "token": token,
+    }
+    
+    Метод post либо сообщает о направлении информаци на email
+    и релирект на страницу login,
+    либо сообщение об ошибке в введенном eamil и возвращает props 
+    {
+        "new_password1": .......,
+        "new_password2": .......,
+        "id": uid,
+        "token": token,
+    }
+    """
     def get(self, request, *args, **kwargs):
         try:
             uid = kwargs['uidb64']
@@ -373,39 +538,36 @@ class RestorePasswordView(View):
             token = None
 
         if uid is None or token is None:
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 'Некорректная ссылка для восстановления пароля')
+            request.session["flash_error"] = \
+                "Некорректная ссылка для восстановления пароля"
             return redirect('users:login')
 
         try:
             uid_decoded = urlsafe_base64_decode(uid).decode()
         except TypeError:
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 'Некорректный id пользователя')
+            request.session["flash_error"] = \
+                'Некорректный id пользователя'
             return redirect('users:login')
         try:
             user = User.objects.get(pk=uid_decoded)
         except User.DoesNotExist:
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 'Пользователь не найден')
+            request.session["flash_error"] = \
+                'Пользователь не найден'
             return redirect('users:login')
 
         if not default_token_generator.check_token(user, token):
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 'Некорректная ссылка для восстановления пароля')
+            request.session["flash_error"] = \
+                'Некорректная ссылка для восстановления пароля'
             return redirect('users:login')
-
-        form = RestorePasswordForm(user=user)
-        return render(
+        
+        return inertia_render(
             request,
-            'users/restore-password.html',
-            {'form': form,
-             'uid': uid,
-             'token': token,
+            "RestorePassword",
+            props={
+                "new_password1": "",
+                "new_password2": "",
+                'uid': uid,
+                'token': token,
             }
         )
 
@@ -420,45 +582,43 @@ class RestorePasswordView(View):
             token = None
 
         if uid is None or token is None:
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 'Некорректная ссылка для восстановления пароля')
+            request.session["flash_error"] = \
+                'Некорректная ссылка для восстановления пароля'
             return redirect('users:login')
 
         try:
             uid_decoded = urlsafe_base64_decode(uid).decode()
         except TypeError:
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 'Некорректный id пользователя')
+            request.session["flash_error"] = \
+                'Некорректный id пользователя'
             return redirect('users:login')
         try:
             user = User.objects.get(pk=uid_decoded)
         except User.DoesNotExist:
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 'Пользователь не найден')
+            request.session["flash_error"] = \
+                'Пользователь не найден'
             return redirect('users:login')
 
         if not default_token_generator.check_token(user, token):
-            messages.add_message(request,
-                                 messages.ERROR,
-                                 'Некорректная ссылка для восстановления пароля')
+            request.session["flash_error"] = \
+                'Некорректная ссылка для восстановления пароля'
             return redirect('users:login')
 
         form = RestorePasswordForm(user=user, data=request.POST)
         if form.is_valid():
             form.save()
-            messages.add_message(request,
-                                 messages.SUCCESS,
-                                 'Пароль успешно изменен')
+            request.session["flash_success"] = \
+                'Пароль успешно изменен'
             return redirect('users:login')
 
-        return render(
+        return inertia_render(
             request,
-            'users/restore-password.html',
-            {'form': form,
-             'uid': uid,
-             'token': token,
+            "RestorePassword",
+            props={
+                "new_password1": request.POST.get("new_password1", ""),
+                "new_password2": request.POST.get("new_password2", ""),
+                'uid': uid,
+                'token': token,
+                "errors": form.errors
             }
         )

@@ -3,6 +3,7 @@ from inertia import render as inertia_render
 from apps.homepage.models import HomePageComponent
 from django.http import HttpRequest, HttpResponse
 
+
 class IndexView(View):
     """
     Главная страница сайта.
@@ -46,11 +47,23 @@ class IndexView(View):
                 'props': component_props,
                 'url': request.path
             })
-
-        # Формируем общие пропсы для страницы Home
+        
+        # Flach сообщение временное явление пока не будет готова на фронте страница login
+        # сейчас представление UserRegister делает редирект с сообщение на главную страницу
+                
+        flash = {}
+        if "flash_success" in request.session:
+            flash["success"] = request.session.pop("flash_success")
+            
         page_props = {
-            'components': components_data,
+           'components': components_data,
+           'flash': flash
         }
+        
+        # коментируем до изменеий в UserRegister
+        # page_props = {
+        #    'components': components_data,
+        # }
 
         # Возвращаем Inertia Response с шаблоном 'Home' и данными компонентов
         return inertia_render(request, 'Home', props=page_props)

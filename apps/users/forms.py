@@ -157,7 +157,7 @@ class AvatarChange(UserChangeForm):
     class Meta:
         model = User
         fields = ('avatar_image',)
-    avatar_image = forms.CharField(
+        avatar_image = forms.CharField(
         required=False,
         label='URL аватара',
         widget=forms.TextInput(attrs={'id': 'avatarUrl',
