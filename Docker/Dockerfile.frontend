@@ -1,0 +1,23 @@
+FROM node:slim
+# создаем пользователя, чтобы пуск контейнера не был от root
+RUN useradd -s /bin/sh -m devuser
+WORKDIR /app
+# меняем владельца рабочей директории (без этого uv не работает)
+RUN chown -R devuser:devuser /app
+# переключаем пользователя
+USER devuser
+
+# копипуем зависимости и меняем владельца
+COPY --chown=devuser:devuser package*.json ./
+# устанавливаем зависимости
+RUN npm install
+
+# копируем проект в образ и меняем владельца папки
+COPY --chown=devuser:devuser . .
+
+# открываем порт - нужно только для остальных разработчиков
+# порт будет назначаться через docker-compose
+EXPOSE 3000
+
+# эта команда будет переназначена в docker-compose
+CMD [ "npm", "run", "dev"]
