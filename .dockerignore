@@ -74,7 +74,7 @@ fixtures/
 .vscode
 
 # frontend
-frontend/node_modules
+frontend
 
 # docker
 .gitignore
