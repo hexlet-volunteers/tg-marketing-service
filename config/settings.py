@@ -171,7 +171,6 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
 MAPPING_DB = {
     'psql': {
         "ENGINE": "django.db.backends.postgresql",
@@ -179,7 +178,7 @@ MAPPING_DB = {
         "USER": os.getenv("POSTGRES_USER"),
         "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
         "HOST": os.getenv('POSTGRES_HOST'),
-        "PORT": 5432,
+        "PORT": os.getenv('POSTGRES_PORT'),
     },
     'sqlite': dj_database_url.config(
             default=os.getenv('DATABASE_URL', 'sqlite:///db.sqlite3'),
