@@ -35,8 +35,42 @@ test_session.*
 telegram_session_string.py
 telegram_configuration
 
-django.log
-errors.log
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Temporary files
+# tmp.*
+celerybeat-schedule*
+celerybeat-schedule.*
+dump.rdb
+staticfiles/
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py.cover
+.hypothesis/
+.pytest_cache/
+cover/
+fixtures/
+
+# pdm
+.pdm-python
+.pdm-build/
+
 
 # VSCode
 .vscode
+
+# frontend
+frontend/node_modules
