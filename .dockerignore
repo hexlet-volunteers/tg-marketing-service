@@ -2,6 +2,7 @@
 # файл .env временно исключен, для тестирования сборки из Dockerfile
 # .env
 .env
+.env.example
 .envrc
 .venv
 env/
@@ -74,3 +75,7 @@ fixtures/
 
 # frontend
 frontend/node_modules
+
+# docker
+.gitignore
+Docker
