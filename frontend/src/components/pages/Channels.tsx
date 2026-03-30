@@ -18,6 +18,7 @@ import {
   mapCategoryCountEntry,
 } from '@/utils/reduceChannels.ts';
 import channelsCol from '@/fixtures/channelsCollection.ts';
+import { CheckIcon } from '@heroicons/react/24/outline';
 
 const defaultChannels = channelsCol;
 
@@ -96,18 +97,7 @@ const Channels: React.FC<ChannelsProps> = ({ channels = defaultChannels }) => {
             <h2 className="text-md md:text-xl lg:text-2xl font-bold ">
               Верифицированные подборки
             </h2>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="size-5 md:size-6 text-blue-500"
-            >
-              <path
-                fillRule="evenodd"
-                d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-                clipRule="evenodd"
-              />
-            </svg>
+            <CheckIcon className="size-5 md:size-6 text-blue-500"/>
           </div>
           <div className="w-full p-5 h-55 py-5 border flex flex-col md:flex-row items-center justify-center gap-5 bg-background rounded-md shadow-md">
             <ul className="w-full grid md:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
