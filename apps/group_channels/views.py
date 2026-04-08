@@ -17,7 +17,7 @@ from apps.group_channels.forms import (
 from apps.group_channels.models import Group
 
 # константа для дефолтной аватарки
-DEFAULT_AVATAR_GROUP = f'{settings.BASDIR_URL}/static/default_avatar_group.jpg'
+DEFAULT_AVATAR_GROUP = f'{settings.BASDIR_URL}default_avatar_group.jpg'
 
 
 class CreateGroupView(View):

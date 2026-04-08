@@ -24,7 +24,8 @@ from apps.users.models import User
 
 
 # константа с дефолтной=аватаркой для представления UserRegister
-DEFAULT_AVATAR_URL = f"{settings.STATIC_URL}/static/default_avatar.jpeg"
+DEFAULT_AVATAR_URL = f"{settings.STATIC_URL}default_avatar.jpeg"
+
 
 class LogoutView(UserAuthenticationCheckMixin, View):
     def get(self, request, *args, **kwargs):
