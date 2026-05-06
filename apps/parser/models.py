@@ -112,5 +112,38 @@ class ChannelStats(models.Model):
         return f"{self.channel} - {self.parsed_at}"
 
 
-# Create your models here.
+class AIInsight(models.Model):
+    """Модель для хранения AI-предложений для пользователей"""
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='ai_insights',
+        verbose_name='Пользователь'
+    )
+    channel = models.ForeignKey(
+        TelegramChannel,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='ai_insights',
+        verbose_name='Канал'
+    )
+    insight_text = models.TextField(verbose_name='Текст инсайта')
+    insight_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('trend', 'Тренд'),
+            ('recommendation', 'Рекомендация'),
+            ('warning', 'Предупреждение'),
+            ('positive', 'Позитивный'),
+        ],
+        verbose_name='Тип инсайта'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+    
+    class Meta:
+        verbose_name = 'AI инсайт'
+        verbose_name_plural = 'AI инсайты'
+        ordering = ['-created_at']
 
