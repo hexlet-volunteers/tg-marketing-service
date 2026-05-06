@@ -2,12 +2,15 @@ from django.views.generic.base import View
 from inertia import render as inertia_render
 from apps.homepage.models import HomePageComponent
 from django.http import HttpRequest, HttpResponse
+from django.shortcuts import redirect
 
 
 class IndexView(View):
     """
     Главная страница сайта.
-
+    
+    Авторизованные пользователи перенаправляются на /dashboard/
+    
     Документация компонентов для InertiaJS:
     [
         {
@@ -19,6 +22,11 @@ class IndexView(View):
     """
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        
+        # Если пользователь авторизован - редирект на дашборд
+        if request.user.is_authenticated:
+            return redirect('/dashboard/')
+        
         # Получаем все активные компоненты, сортируем по порядку
         components = (
             HomePageComponent.objects
