@@ -1,77 +1,77 @@
-from django.shortcuts import render
 from django.views.generic.base import View
-from apps.group_channels.models import Group
-from django.db.models import Count
-from apps.parser.models import TelegramChannel
-from math import ceil
+from inertia import render as inertia_render
+from apps.homepage.models import HomePageComponent
+from django.http import HttpRequest, HttpResponse
+from django.shortcuts import redirect
+
 
 class IndexView(View):
-    CATS_COLUMNS = 4 
-    ROWS_PER_COL = 8
-
-
-    def get(self, request, *args, **kwargs):
-        editorial = (
-            Group.objects
-                 .filter(is_editorial=True)
-                 .annotate(ch_count=Count('channels'))
-        )
-
-        auto_qs = (
-            Group.objects
-                 .filter(auto_rule__isnull=False)
-                 .select_related('auto_rule')
-                 .order_by('order', 'name')
-        )
-        auto_groups = list(auto_qs)
-
-        page_size = self.CATS_COLUMNS * self.ROWS_PER_COL
-        total = len(auto_groups)
-        total_pages = max(1, ceil(total / page_size))
-
-        try:
-            page = int(request.GET.get('cats_page', '1'))
-        except ValueError:
-            page = 1
-        page = max(1, min(page, total_pages))
-
-        start = (page - 1) * page_size
-        end = start + page_size
-        page_groups = auto_groups[start:end]
-
-        categories = [g.auto_rule.category for g in page_groups]
-        if categories:
-            counts_qs = (
-                TelegramChannel.objects
-                    .filter(category__in=categories)
-                    .values('category')
-                    .annotate(cnt=Count('id'))
-            )
-            counts_map = {row['category']: row['cnt'] for row in counts_qs}
-        else:
-            counts_map = {}
-
-        for g in page_groups:
-            g.cat_count = counts_map.get(g.auto_rule.category, 0)
-
-        cols = []
-        for i in range(self.CATS_COLUMNS):
-            start_i = i * self.ROWS_PER_COL
-            end_i = start_i + self.ROWS_PER_COL
-            cols.append(page_groups[start_i:end_i])
-        
-        role = request.role
-        
-        context = {
-            'editorial_groups': editorial,
-            'categories_cols': cols,
-            'cats_page': page,
-            'cats_total_pages': total_pages,
-            'cats_has_prev': page > 1,
-            'cats_has_next': page < total_pages,
-            'cats_prev_page': page - 1,
-            'cats_next_page': page + 1,
-            'user_role': role
+    """
+    Главная страница сайта.
+    
+    Авторизованные пользователи перенаправляются на /dashboard/
+    
+    Документация компонентов для InertiaJS:
+    [
+        {
+            "component": "название компонента",
+            "props": { пропсы },
+            "url": "url"
         }
-        print(role)
-        return render(request, 'index.html', context)
+    ]
+    """
+
+    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        
+        # Если пользователь авторизован - редирект на дашборд
+        if request.user.is_authenticated:
+            return redirect('homepage:dashboard')
+        
+        # Получаем все активные компоненты, сортируем по порядку
+        components = (
+            HomePageComponent.objects
+            .filter(is_active=True)
+            .order_by('order')
+        )
+
+        # Формируем данные для фронтенда в правильном формате
+        components_data = []
+        for component in components:
+            # Базовые пропсы из модели
+            base_props = {
+                'id': component.id,
+                'title': component.title,
+                'type': component.component_type,
+                'order': component.order,
+            }
+
+            # Добавляем JSON-содержимое в пропсы (распаковываем content)
+            # ВАЖНО: эта операция должна быть ВНУТРИ цикла для каждого компонента
+            component_props = {**base_props, **component.content}
+
+            # Добавляем компонент в итоговый массив в нужном формате
+            components_data.append({
+                'component': component.component_type,
+                'props': component_props,
+                'url': request.path
+            })
+        
+        # Flach сообщение временное явление пока не будет готова на фронте страница login
+        # сейчас представление UserRegister делает редирект с сообщение на главную страницу
+                
+        flash = {}
+        if "flash_success" in request.session:
+            flash["success"] = request.session.pop("flash_success")
+            
+        page_props = {
+           'components': components_data,
+           'flash': flash
+        }
+        
+        # коментируем до изменеий в UserRegister
+        # page_props = {
+        #    'components': components_data,
+        # }
+
+        # Возвращаем Inertia Response с шаблоном 'Home' и данными компонентов
+        return inertia_render(request, 'Home', props=page_props)

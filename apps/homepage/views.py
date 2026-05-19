@@ -1,69 +1,103 @@
-from django.views.generic.base import View
+from django.middleware.csrf import get_token
+from django.shortcuts import redirect
+from django.views import View
 from inertia import render as inertia_render
-from apps.homepage.models import HomePageComponent
-from django.http import HttpRequest, HttpResponse
+
+from .services.dashboard_service import DashboardService
 
 
-class IndexView(View):
+class DashboardView(View):
     """
-    Главная страница сайта.
-
-    Документация компонентов для InertiaJS:
-    [
-        {
-            "component": "название компонента",
-            "props": { пропсы },
-            "url": "url"
-        }
-    ]
+    Inertia view для дашборда авторизованного пользователя.
+    
+    Пример Inertia payload для фронтенда:
+    
+    {
+        "component": "Dashboard",
+        "props": {
+            "stats": {
+                "channels": 47,
+                "posts": 2347,
+                "ai_suggestions": 89,
+                "days_left": 23
+            },
+            "channels": [
+                {
+                    "name": "Tech News RU",
+                    "subscribers": 45200,
+                    "posts": 24,
+                    "views": 156000,
+                    "engagement": 78.5,
+                    "growth": 12.3
+                },
+                {
+                    "name": "AI Weekly",
+                    "subscribers": 28100,
+                    "posts": 18,
+                    "views": 89200,
+                    "engagement": 74.2,
+                    "growth": 8.7
+                }
+            ],
+            "ai_insights": [
+                {
+                    "text": "Тренд: посты о новых ИИ инструментах набирают +45% просмотров",
+                    "type": "trend",
+                    "id": 1
+                },
+                {
+                    "text": "Канал «Tech News RU» растёт (+156 подписчиков за день)",
+                    "type": "positive",
+                    "id": null
+                }
+            ],
+            "collections": [
+                {
+                    "name": "IT & Технологии",
+                    "channels_count": 23,
+                    "slug": "it-tech",
+                    "description": "Каналы про IT и технологии",
+                    "is_auto": false
+                },
+                {
+                    "name": "Мои каналы",
+                    "channels_count": 47,
+                    "slug": "my-channels",
+                    "description": "Все каналы",
+                    "is_auto": false
+                }
+            ],
+            "quick_actions": [
+                "Добавить канал",
+                "Экспорт данных",
+                "Настройки"
+            ],
+            "csrfToken": "abc123xyz456..."
+        },
+        "url": "/dashboard/"
+    }
+    
+    Примечания:
+    - channels ограничены первыми 5 каналами для производительности
+    - ai_insights: до 5 непрочитанных из БД или сгенерированных fallback
+    - engagement: процент (views / subscribers * 100)
+    - growth: процентный рост подписчиков за последний период
+    - days_left: 0 для неактивной подписки, иначе 30 (пример)
+    - is_auto: признак автоматической/ручной коллекции
     """
-
-    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
-        # Получаем все активные компоненты, сортируем по порядку
-        components = (
-            HomePageComponent.objects
-            .filter(is_active=True)
-            .order_by('order')
-        )
-
-        # Формируем данные для фронтенда в правильном формате
-        components_data = []
-        for component in components:
-            # Базовые пропсы из модели
-            base_props = {
-                'id': component.id,
-                'title': component.title,
-                'type': component.component_type,
-                'order': component.order,
+    
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('main_index')
+        
+        service = DashboardService(request.user)
+        dto = service.build()
+        
+        return inertia_render(
+            request,
+            'Dashboard',
+            props={
+                **dto.model_dump(mode="json"),
+                "csrfToken": get_token(request),
             }
-
-            # Добавляем JSON-содержимое в пропсы (распаковываем content)
-            # ВАЖНО: эта операция должна быть ВНУТРИ цикла для каждого компонента
-            component_props = {**base_props, **component.content}
-
-            # Добавляем компонент в итоговый массив в нужном формате
-            components_data.append({
-                'component': component.component_type,
-                'props': component_props,
-                'url': request.path
-            })
-        
-        # Flach сообщение временное явление пока не будет готова на фронте страница login
-        # сейчас представление UserRegister делает редирект с сообщение на главную страницу
-                
-        flash = {}
-        if "flash_success" in request.session:
-            flash["success"] = request.session.pop("flash_success")
-            
-        page_props = {
-           'components': components_data,
-           'flash': flash
-        }
-        
-        # коментируем до изменеий в UserRegister
-        # page_props = {
-        #    'components': components_data,
-        # }
-
-        # Возвращаем Inertia Response с шаблоном 'Home' и данными компонентов
-        return inertia_render(request, 'Home', props=page_props)
+        )

@@ -227,6 +227,3 @@ telegram_configuration
 
 django.log
 errors.log
-
-# Скрипт сборки строки сессии
-my_main.py
