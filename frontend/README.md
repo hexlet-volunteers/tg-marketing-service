@@ -1,45 +1,54 @@
-## Фронтенд-стэк
+# Фронтенд
 
-- Typescript
-- React 19
-- Redux Toolkit: упраление состоянием
-- React Router: клиентский роутинг
-- React Hook Form: формы
-- Vite
-- shadcn/ui с Tailwind СSS
-- см. другие зависимости в [`package.json`](package.json)
+SPA-часть проекта: React + TypeScript, интегрируется с Django через Inertia.js.
+
+## Стек
+
+- **TypeScript**
+- **React 19**
+- **Mantine** — библиотека UI-компонентов и хуков (`@mantine/core`, `@mantine/hooks`)
+- **Redux Toolkit** — управление состоянием
+- **React Router** — клиентский роутинг
+- **React Hook Form** — работа с формами
+- **Vite** — сборка и dev-сервер
+- Остальные зависимости — в [`package.json`](package.json)
 
 ## Методологии и соглашения
 
-<!-- - [FSD](https://feature-sliced.design/ru/) -->
-<!-- - [Conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) -->
+- Архитектура — [Feature-Sliced Design (FSD)](https://feature-sliced.design/ru/): слои `app/`, `pages/`, `widgets/`, `features/`, `components/`.
+- Вёрстка — **mobile first**.
+- Названия веток в git: `[type]/[short-description]`. Возможные типы:
+  - `feat` — добавляет функциональность для конечного пользователя;
+  - `refactor` — изменения кода без новой функциональности и без фикса багов;
+  - `bugfix` — исправление ошибок;
+  - `chore` — изменения, не влияющие на код приложения (зависимости / конфиги / CI / скрипты и пр.);
+  - `docs` — документация.
 
-- Названия веток в git: `[type]/[short-description]`, возможные типы:
-
-  - `feat` добавляет функциональность для конечного пользователя
-  - `refactor` изменения в коде приложения, не добавляющие функциональность и не исправляющие баги
-  - `bugfix`
-  - `chore` изменения, не влияющие на код приложения (зависимости/конфиги/CI/скрипты и пр.)
-  - `docs`
-
-- mobile first верстка.
-
-## Как запустить
+## Запуск
 
 ```sh
 git clone https://github.com/Hexlet/hexlet-price-tracker.git
-cd hexlet-price-tracker/frontend/
-code .
+cd hexlet-price-tracker/frontend
 npm i
 npm run dev
 ```
 
-## Как сделать сборку
+## Сборка
 
 ```sh
 npm run build
 ```
 
-P.S. Вы должны находиться в папке frontend
+> Все команды выполняются из папки `frontend/`.
 
-см. другие скрипты в [`package.json`](package.json)
+## Скрипты
+
+| Команда | Действие |
+|---------|----------|
+| `npm run dev` | Dev-сервер Vite |
+| `npm run build` | Сборка (`tsc -b && vite build`) |
+| `npm run preview` | Предпросмотр собранного приложения |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | Проверка типов (`tsc --noEmit`) |
+
+Остальные скрипты — в [`package.json`](package.json).
