@@ -43,3 +43,24 @@ open docs/design/tgpulse-prototype.html      # macOS
 | Админка (модерация и управление) | Админка и модерация |
 
 Общая база (Mantine, тема, AppShell, роутинг, Inertia-мост) — майлстоун **«Фундамент: Mantine + Inertia»**.
+
+## Скриншоты экранов
+
+Статичные превью (сняты с прототипа). Интерактив — в [`tgpulse-prototype.html`](tgpulse-prototype.html).
+
+| Экран | Превью |
+|-------|--------|
+| Лендинг | ![Лендинг](screens/landing.png) |
+| Каталог каналов и групп | ![Каталог](screens/catalog.png) |
+| Дашборд канала | ![Дашборд](screens/dash.png) |
+| Страница поста (AI-разбор) | ![Пост](screens/post.png) |
+| Сравнение каналов | ![Сравнение](screens/compare.png) |
+| AI-кабинет автора | ![AI-кабинет](screens/cabinet.png) |
+| Подборки | ![Подборки](screens/collections.png) |
+| Детальная подборка | ![Подборка](screens/collection.png) |
+| Личный кабинет | ![Личный кабинет](screens/account.png) |
+| Блог | ![Блог](screens/blog.png) |
+| Статья | ![Статья](screens/blogPost.png) |
+| Правовое | ![Правовое](screens/legal.png) |
+| 404 | ![404](screens/notfound.png) |
+| Админка | ![Админка](screens/admin.png) |
