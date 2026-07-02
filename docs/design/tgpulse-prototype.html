@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#f1f3f5;font-family:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;color:#1a1b1e}
+  ::selection{background:#d0ebf9}
+  .navitem:hover{background:#f1f3f5}
+  .navitem.active:hover{background:#E7F5FB}
+  .chcard{transition:box-shadow .15s,transform .15s,border-color .15s}
+  .chcard:hover{box-shadow:0 8px 24px rgba(16,18,22,.10);transform:translateY(-2px);border-color:#d0ebf9}
+  .btnp{transition:filter .15s}.btnp:hover{filter:brightness(1.07)}
+  .chip{transition:background .12s,color .12s}
+  .rowh:hover{background:#f8fafb}
+  .catchip:hover{border-color:#229ED9;color:#1B87BC}
+  input,button{font-family:inherit}
+</style>
+</helmet>
+
+<div style="display:flex;min-height:100vh;width:100%">
+  <!-- ===== SIDEBAR ===== -->
+  <aside style="width:236px;flex:none;background:#fff;border-right:1px solid #e9ecef;padding:20px 14px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0;height:100vh">
+    <div style="display:flex;align-items:center;gap:10px;padding:0 6px">
+      <div style="width:32px;height:32px;border-radius:9px;background:#229ED9;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px">t</div>
+      <span style="font-weight:800;font-size:17px;letter-spacing:-.4px">tgpulse</span>
+    </div>
+
+    <nav style="display:flex;flex-direction:column;gap:3px">
+      <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="8">
+        <div class="navitem" onClick="{{ n.go }}" style="cursor:pointer;display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:9px;font-size:13.5px;font-weight:600;color:{{ n.col }};background:{{ n.bg }}"><span style="width:17px;height:17px;border-radius:5px;background:{{ n.dot }};display:inline-block;flex:none"></span>{{ n.label }}</div>
+      </sc-for>
+    </nav>
+
+    <div style="margin-top:auto;background:linear-gradient(160deg,#E7F5FB,#eef2ff);border:1px solid #d3e9f5;border-radius:11px;padding:14px">
+      <div style="font-size:12px;font-weight:700;color:#1B87BC;margin-bottom:4px">{{ planLabel }}</div>
+      <div style="font-size:11.5px;color:#5f6b7a;line-height:1.45;margin-bottom:10px">3 из 5 AI-разборов в этом месяце</div>
+      <div style="height:6px;background:#d3e9f5;border-radius:99px;overflow:hidden;margin-bottom:11px"><div style="width:60%;height:100%;background:#229ED9;border-radius:99px"></div></div>
+      <div onClick="{{ openUpgrade }}" class="btnp" style="cursor:pointer;text-align:center;font-size:12px;font-weight:700;color:#fff;background:#229ED9;border-radius:8px;padding:8px">Улучшить тариф</div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <!-- topbar -->
+    <div style="height:60px;flex:none;background:#fff;border-bottom:1px solid #e9ecef;display:flex;align-items:center;padding:0 26px;gap:16px;position:sticky;top:0;z-index:20">
+      <div style="flex:1;max-width:440px;display:flex;align-items:center;gap:10px;background:#f1f3f5;border-radius:9px;padding:0 14px">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#868e96" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M14 14l4 4" stroke-linecap="round"/></svg>
+        <input value="{{ q }}" onInput="{{ onSearch }}" placeholder="Поиск канала по @username, названию или теме…" style="border:none;outline:none;background:transparent;padding:11px 0;font-size:13px;width:100%;color:#1a1b1e"/>
+      </div>
+      <div class="btnp" onClick="{{ goCabinet }}" style="cursor:pointer;padding:8px 14px;background:linear-gradient(135deg,#7048e8,#229ED9);color:#fff;border-radius:9px;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px"><span>✦</span>AI-разбор</div>
+      <div onClick="{{ openLogin }}" style="cursor:pointer;font-size:12.5px;font-weight:700;color:#495057;padding:8px 6px">Войти</div>
+      <div onClick="{{ goAccount }}" style="cursor:pointer;display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;color:#495057">Мария Л.<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#f783ac,#e64980);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">М</div></div>
+    </div>
+
+    <!-- screen slot -->
+    <div style="flex:1;min-width:0">
+
+      <!-- ============ LANDING ============ -->
+      <sc-if value="{{ isLandingScreen }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <!-- hero -->
+        <div style="padding:60px 48px 52px;background:linear-gradient(160deg,#fff 0%,#f2fafd 100%);border-bottom:1px solid #e9ecef">
+          <div style="max-width:1080px;margin:0 auto;display:grid;grid-template-columns:1.05fr .95fr;gap:44px;align-items:center">
+            <div>
+              <div style="display:inline-flex;align-items:center;gap:7px;background:#E7F5FB;color:#1B87BC;font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:99px;margin-bottom:20px"><span>✦</span>Аналитика Telegram с искусственным интеллектом</div>
+              <h1 style="font-size:44px;line-height:1.08;font-weight:800;letter-spacing:-1.2px;margin:0 0 18px">Знайте о своём канале<br>больше, чем вы сами</h1>
+              <p style="font-size:16px;line-height:1.6;color:#5a6b78;margin:0 0 26px;max-width:480px">Статистика, охваты и реакции каждого поста — и AI, который подсказывает, <b>о чём писать дальше</b>, чтобы расти быстрее.</p>
+              <div style="display:flex;gap:12px;align-items:center">
+                <div class="btnp" onClick="{{ openAddChannel }}" style="cursor:pointer;padding:13px 24px;background:#229ED9;color:#fff;border-radius:11px;font-size:14.5px;font-weight:700">Добавить свой канал</div>
+                <div class="btnp" onClick="{{ goCatalog }}" style="cursor:pointer;padding:13px 22px;background:#fff;border:1px solid #dee2e6;color:#343a40;border-radius:11px;font-size:14.5px;font-weight:700">Каталог каналов</div>
+              </div>
+              <div style="display:flex;gap:26px;margin-top:30px">
+                <div><div style="font-size:22px;font-weight:800">2.4М</div><div style="font-size:12px;color:#868e96;font-weight:600">каналов в базе</div></div>
+                <div><div style="font-size:22px;font-weight:800">18 млрд</div><div style="font-size:12px;color:#868e96;font-weight:600">проанализ. постов</div></div>
+                <div><div style="font-size:22px;font-weight:800">120К</div><div style="font-size:12px;color:#868e96;font-weight:600">авторов</div></div>
+              </div>
+            </div>
+            <!-- AI demo window -->
+            <div style="background:#fff;border:1px solid #e6e0fb;border-radius:16px;box-shadow:0 20px 50px rgba(112,72,232,.14);overflow:hidden">
+              <div style="padding:13px 16px;border-bottom:1px solid #f1eefc;display:flex;align-items:center;gap:8px"><span style="width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#7048e8,#229ED9);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800">✦</span><span style="font-size:13.5px;font-weight:800">AI-помощник редактора</span><span style="margin-left:auto;font-size:11px;color:#868e96">@product_radar</span></div>
+              <div style="padding:16px;display:flex;flex-direction:column;gap:11px">
+                <div style="border-left:3px solid #2f9e44;background:#f4fbf6;border-radius:0 9px 9px 0;padding:11px 13px"><div style="font-size:10.5px;font-weight:700;color:#2f9e44;letter-spacing:.4px;margin-bottom:3px">РЕКОМЕНДАЦИЯ</div><div style="font-size:12.5px;line-height:1.5;color:#343a40">Разборы кейсов дают <b>+34%</b> реакций. Запланируйте один на этой неделе.</div></div>
+                <div style="border-left:3px solid #229ED9;background:#f2fafd;border-radius:0 9px 9px 0;padding:11px 13px"><div style="font-size:10.5px;font-weight:700;color:#1B87BC;letter-spacing:.4px;margin-bottom:3px">ТРЕНД</div><div style="font-size:12.5px;line-height:1.5;color:#343a40">Тема <b>AI-агентов</b> +180% за 30 дней — ниша ещё свободна.</div></div>
+                <div style="background:#f3f0ff;border-radius:9px;padding:12px 13px;display:flex;gap:10px;align-items:center"><span style="font-size:16px">🎯</span><div style="font-size:12.5px;line-height:1.4"><b>«Как AI-агенты меняют онбординг»</b><div style="color:#0ca678;font-weight:700;font-size:11.5px;margin-top:2px">Прогноз ~48K охват · чт 19:30</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- features -->
+        <div style="max-width:1080px;margin:0 auto;padding:52px 48px">
+          <div style="text-align:center;margin-bottom:36px"><h2 style="font-size:30px;font-weight:800;letter-spacing:-.6px;margin:0 0 10px">Всё, что умеет tgstats — и AI сверху</h2><p style="font-size:15px;color:#868e96;margin:0">Полная статистика каналов плюс рекомендательный слой на искусственном интеллекте</p></div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
+            <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;padding:22px"><div style="width:42px;height:42px;border-radius:11px;background:#E7F5FB;color:#1B87BC;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:14px">📈</div><div style="font-size:16px;font-weight:800;margin-bottom:6px">Статистика каналов</div><div style="font-size:13px;color:#5a6b78;line-height:1.55">Подписчики, охваты, ER, индекс цитирования, прирост по дням и вовлечённость каждого поста.</div></div>
+            <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;padding:22px"><div style="width:42px;height:42px;border-radius:11px;background:#f3f0ff;color:#7048e8;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:14px">✦</div><div style="font-size:16px;font-weight:800;margin-bottom:6px">AI: о чём писать</div><div style="font-size:13px;color:#5a6b78;line-height:1.55">ИИ анализирует реакции и спрос, предлагает темы постов и лучшее время публикации для роста.</div></div>
+            <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;padding:22px"><div style="width:42px;height:42px;border-radius:11px;background:#e6fcf5;color:#0ca678;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:14px">⚖</div><div style="font-size:16px;font-weight:800;margin-bottom:6px">Сравнение и подбор</div><div style="font-size:13px;color:#5a6b78;line-height:1.55">Сравнивайте каналы для закупа рекламы: цена контакта, накрутки, пересечение аудиторий.</div></div>
+          </div>
+        </div>
+
+        <!-- tariffs -->
+        <div style="background:#fff;border-top:1px solid #e9ecef;padding:52px 48px">
+          <div style="max-width:1080px;margin:0 auto">
+            <h2 style="font-size:26px;font-weight:800;text-align:center;margin:0 0 30px;letter-spacing:-.5px">Тарифы</h2>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:stretch">
+              <div style="border:1px solid #e9ecef;border-radius:14px;padding:24px"><div style="font-size:15px;font-weight:800">Free</div><div style="font-size:32px;font-weight:800;margin:10px 0 2px">0 ₽</div><div style="font-size:12px;color:#868e96;margin-bottom:16px">навсегда</div><div style="display:flex;flex-direction:column;gap:9px;font-size:13px;color:#495057"><div>✓ Базовая статистика</div><div>✓ 5 AI-разборов / мес</div><div>✓ Каталог каналов</div></div></div>
+              <div style="border:2px solid #229ED9;border-radius:14px;padding:24px;position:relative;box-shadow:0 12px 30px rgba(34,158,217,.14)"><div style="position:absolute;top:-11px;left:24px;background:#229ED9;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px">Популярный</div><div style="font-size:15px;font-weight:800">Pro</div><div style="font-size:32px;font-weight:800;margin:10px 0 2px">990 ₽</div><div style="font-size:12px;color:#868e96;margin-bottom:16px">в месяц</div><div style="display:flex;flex-direction:column;gap:9px;font-size:13px;color:#495057"><div>✓ Всё из Free</div><div>✓ Безлимит AI-разборов</div><div>✓ Контент-план на неделю</div><div>✓ Сравнение до 5 каналов</div><div>✓ Экспорт отчётов</div></div><div class="btnp" onClick="{{ openUpgrade }}" style="cursor:pointer;margin-top:18px;text-align:center;background:#229ED9;color:#fff;font-weight:700;font-size:13px;padding:11px;border-radius:9px">Выбрать Pro</div></div>
+              <div style="border:1px solid #e9ecef;border-radius:14px;padding:24px"><div style="font-size:15px;font-weight:800">Agency</div><div style="font-size:32px;font-weight:800;margin:10px 0 2px">4 900 ₽</div><div style="font-size:12px;color:#868e96;margin-bottom:16px">в месяц</div><div style="display:flex;flex-direction:column;gap:9px;font-size:13px;color:#495057"><div>✓ Всё из Pro</div><div>✓ До 50 каналов</div><div>✓ API-доступ</div><div>✓ Командный доступ</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ CATALOG ============ -->
+      <sc-if value="{{ isCatalogScreen }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:26px 30px;max-width:1200px;margin:0 auto">
+        <div style="margin-bottom:14px"><h1 style="font-size:24px;font-weight:800;letter-spacing:-.5px;margin:0 0 4px">Каталог каналов и групп</h1><p style="font-size:13.5px;color:#868e96;margin:0">{{ totalLabel }} · отсортировано по размеру</p></div>
+        <div style="display:inline-flex;background:#f1f3f5;border-radius:10px;padding:3px;margin-bottom:16px">
+          <sc-for list="{{ typeTabs }}" as="t" hint-placeholder-count="3"><div onClick="{{ t.onClick }}" style="cursor:pointer;font-size:12.5px;font-weight:700;padding:7px 16px;border-radius:8px;background:{{ t.bg }};color:{{ t.color }}">{{ t.label }}</div></sc-for>
+        </div>
+
+        <!-- category chips -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px">
+          <sc-for list="{{ categories }}" as="c" hint-placeholder-count="7">
+            <div class="catchip chip" onClick="{{ c.onClick }}" style="cursor:pointer;font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:99px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.color }}">{{ c.label }}</div>
+          </sc-for>
+        </div>
+
+        <!-- channel grid -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+          <sc-for list="{{ list }}" as="ch" hint-placeholder-count="9">
+            <div class="chcard" onClick="{{ ch.open }}" style="cursor:pointer;background:#fff;border:1px solid #e9ecef;border-radius:14px;padding:16px">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+                <div style="width:46px;height:46px;border-radius:12px;background:{{ ch.grad }};display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;font-weight:800;flex:none">{{ ch.initials }}</div>
+                <div style="min-width:0;flex:1">
+                  <div style="display:flex;align-items:center;gap:5px"><span style="font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ch.title }}</span><sc-if value="{{ ch.verified }}" hint-placeholder-val="{{ true }}"><svg width="14" height="14" viewBox="0 0 20 20" fill="#229ED9" style="flex:none"><path fill-rule="evenodd" d="M16.7 4.15a.75.75 0 0 1 .14 1.05l-8 10.5a.75.75 0 0 1-1.12.07l-4.5-4.5a.75.75 0 1 1 1.06-1.06l3.89 3.9 7.48-9.82a.75.75 0 0 1 1.05-.14Z" clip-rule="evenodd"/></svg></sc-if></div>
+                  <div style="font-size:12px;color:#868e96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ch.username }}</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:6px;margin-bottom:14px"><span style="font-size:11px;font-weight:700;background:{{ ch.badgeBg }};color:{{ ch.badgeColor }};padding:2px 9px;border-radius:6px">{{ ch.typeBadge }}</span><span style="font-size:11px;font-weight:600;background:#E7F5FB;color:#1B87BC;padding:2px 9px;border-radius:6px">{{ ch.category }}</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:flex-end">
+                <div><div style="font-size:11px;color:#868e96;font-weight:600">{{ ch.m1l }}</div><div style="font-size:18px;font-weight:800">{{ ch.m1v }}</div></div>
+                <div style="text-align:right"><div style="font-size:11px;color:#868e96;font-weight:600">{{ ch.m2l }}</div><div style="font-size:15px;font-weight:800;color:{{ ch.m2c }}">{{ ch.m2v }}</div></div>
+                <div style="text-align:right"><div style="font-size:11px;color:#868e96;font-weight:600">{{ ch.m3l }}</div><div style="font-size:13px;font-weight:800;color:{{ ch.m3c }}">{{ ch.m3v }}</div></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;padding:60px;color:#868e96;font-size:14px">Ничего не найдено по запросу «{{ q }}»</div>
+        </sc-if>
+      </div>
+      </sc-if>
+
+      <!-- ============ DASHBOARD ============ -->
+      <sc-if value="{{ isDashScreen }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:24px 30px;max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:20px">
+        <!-- channel header -->
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="width:58px;height:58px;border-radius:14px;background:linear-gradient(135deg,#229ED9,#6741d9);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:800;flex:none">PR</div>
+          <div style="min-width:0">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:21px;font-weight:800;letter-spacing:-.4px">Product Radar</span><svg width="18" height="18" viewBox="0 0 20 20" fill="#229ED9"><path fill-rule="evenodd" d="M16.7 4.15a.75.75 0 0 1 .14 1.05l-8 10.5a.75.75 0 0 1-1.12.07l-4.5-4.5a.75.75 0 1 1 1.06-1.06l3.89 3.9 7.48-9.82a.75.75 0 0 1 1.05-.14Z" clip-rule="evenodd"/></svg></div>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:3px;font-size:13px;color:#868e96">@product_radar<span style="width:3px;height:3px;border-radius:50%;background:#ced4da"></span><span style="background:#E7F5FB;color:#1B87BC;padding:2px 8px;border-radius:6px;font-weight:600;font-size:11.5px">Технологии</span></div>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <div style="display:flex;background:#fff;border:1px solid #e9ecef;border-radius:9px;overflow:hidden;font-size:12.5px;font-weight:600"><span style="padding:8px 13px;color:#868e96">7д</span><span style="padding:8px 13px;background:#229ED9;color:#fff">30д</span><span style="padding:8px 13px;color:#868e96">90д</span></div>
+            <div class="btnp" style="cursor:pointer;padding:8px 16px;background:#101216;color:#fff;border-radius:9px;font-size:12.5px;font-weight:700">Экспорт</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+          <div style="background:#fff;border:1px solid #e9ecef;border-radius:12px;padding:16px 18px"><div style="font-size:12px;color:#868e96;font-weight:600">Подписчики</div><div style="font-size:26px;font-weight:800;letter-spacing:-.5px;margin:6px 0 2px">142 340</div><div style="font-size:12px;color:#2f9e44;font-weight:700">▲ +2 480 · 1.8%</div></div>
+          <div style="background:#fff;border:1px solid #e9ecef;border-radius:12px;padding:16px 18px"><div style="font-size:12px;color:#868e96;font-weight:600">Ср. охват поста</div><div style="font-size:26px;font-weight:800;letter-spacing:-.5px;margin:6px 0 2px">38 200</div><div style="font-size:12px;color:#2f9e44;font-weight:700">▲ +4.1%</div></div>
+          <div style="background:#fff;border:1px solid #e9ecef;border-radius:12px;padding:16px 18px"><div style="font-size:12px;color:#868e96;font-weight:600">Вовлечённость (ER)</div><div style="font-size:26px;font-weight:800;letter-spacing:-.5px;margin:6px 0 2px">26.9%</div><div style="font-size:12px;color:#e03131;font-weight:700">▼ −1.2%</div></div>
+          <div style="background:#fff;border:1px solid #e9ecef;border-radius:12px;padding:16px 18px"><div style="font-size:12px;color:#868e96;font-weight:600">Индекс цитирования</div><div style="font-size:26px;font-weight:800;letter-spacing:-.5px;margin:6px 0 2px">184</div><div style="font-size:12px;color:#2f9e44;font-weight:700">▲ +9</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px;align-items:stretch">
+          <div style="background:#fff;border:1px solid #e9ecef;border-radius:12px;padding:18px 20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div style="font-size:14px;font-weight:700">Рост подписчиков</div><div style="font-size:12px;color:#868e96;font-weight:600">30 дней · +2 480</div></div>
+            <svg viewBox="0 0 640 200" style="width:100%;height:190px;display:block">
+              <defs><linearGradient id="gd1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#229ED9" stop-opacity=".22"/><stop offset="1" stop-color="#229ED9" stop-opacity="0"/></linearGradient></defs>
+              <line x1="0" y1="50" x2="640" y2="50" stroke="#f1f3f5"/><line x1="0" y1="100" x2="640" y2="100" stroke="#f1f3f5"/><line x1="0" y1="150" x2="640" y2="150" stroke="#f1f3f5"/>
+              <path d="M0,168 C70,160 110,150 180,138 C250,126 290,124 360,104 C430,84 470,74 540,52 C590,38 620,30 640,24 L640,200 L0,200 Z" fill="url(#gd1)"/>
+              <path d="M0,168 C70,160 110,150 180,138 C250,126 290,124 360,104 C430,84 470,74 540,52 C590,38 620,30 640,24" fill="none" stroke="#229ED9" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="640" cy="24" r="4.5" fill="#229ED9" stroke="#fff" stroke-width="2"/>
+            </svg>
+          </div>
+          <div style="background:linear-gradient(160deg,#fbfaff,#fff);border:1px solid #e6e0fb;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#7048e8,#229ED9);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800">✦</span><span style="font-size:14px;font-weight:800">AI-советы редактору</span></div>
+            <div style="border-left:3px solid #2f9e44;background:#f4fbf6;border-radius:0 8px 8px 0;padding:10px 12px"><div style="font-size:11px;font-weight:700;color:#2f9e44;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Рекомендация</div><div style="font-size:12.5px;line-height:1.45;color:#343a40">Разборы кейсов дают <b>+34% реакций</b>. Запланируйте один на неделе.</div></div>
+            <div style="border-left:3px solid #229ED9;background:#f2fafd;border-radius:0 8px 8px 0;padding:10px 12px"><div style="font-size:11px;font-weight:700;color:#1B87BC;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Тренд</div><div style="font-size:12.5px;line-height:1.45;color:#343a40">Спрос на <b>AI-агентов</b> +180% за 30 дней.</div></div>
+            <div class="btnp" onClick="{{ goCabinet }}" style="cursor:pointer;margin-top:auto;text-align:center;font-size:12.5px;font-weight:700;color:#7048e8;background:#f3f0ff;border-radius:8px;padding:9px">Открыть AI-кабинет →</div>
+          </div>
+        </div>
+
+        <div style="background:#fff;border:1px solid #e9ecef;border-radius:12px;overflow:hidden">
+          <div style="padding:14px 20px;border-bottom:1px solid #f1f3f5;display:flex;align-items:center;justify-content:space-between"><div style="font-size:14px;font-weight:700">Последние посты</div><div style="font-size:12px;color:#229ED9;font-weight:700">Все посты →</div></div>
+          <div style="display:grid;grid-template-columns:1fr 96px 96px 96px 96px;padding:10px 20px;font-size:11px;color:#868e96;font-weight:700;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #f1f3f5"><div>Пост</div><div style="text-align:right">Просмотры</div><div style="text-align:right">Реакции</div><div style="text-align:right">Пересылки</div><div style="text-align:right">ER</div></div>
+          <div onClick="{{ openPost }}" class="rowh" style="cursor:pointer;display:grid;grid-template-columns:1fr 96px 96px 96px 96px;padding:13px 20px;font-size:13px;align-items:center;border-bottom:1px solid #f8f9fa"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:14px">5 метрик, которые убьют ваш онбординг</div><div style="text-align:right;font-weight:600">52 100</div><div style="text-align:right;color:#2f9e44;font-weight:700">1 240</div><div style="text-align:right;color:#868e96">340</div><div style="text-align:right"><span style="background:#f4fbf6;color:#2f9e44;font-weight:700;padding:2px 8px;border-radius:6px">31%</span></div></div>
+          <div onClick="{{ openPost }}" class="rowh" style="cursor:pointer;display:grid;grid-template-columns:1fr 96px 96px 96px 96px;padding:13px 20px;font-size:13px;align-items:center;border-bottom:1px solid #f8f9fa"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:14px">Разбор редизайна Авито: что поменялось</div><div style="text-align:right;font-weight:600">41 300</div><div style="text-align:right;color:#2f9e44;font-weight:700">890</div><div style="text-align:right;color:#868e96">210</div><div style="text-align:right"><span style="background:#f4fbf6;color:#2f9e44;font-weight:700;padding:2px 8px;border-radius:6px">28%</span></div></div>
+          <div onClick="{{ openPost }}" class="rowh" style="cursor:pointer;display:grid;grid-template-columns:1fr 96px 96px 96px 96px;padding:13px 20px;font-size:13px;align-items:center;border-bottom:1px solid #f8f9fa"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:14px">Как мы подняли retention на 12%</div><div style="text-align:right;font-weight:600">38 000</div><div style="text-align:right;color:#2f9e44;font-weight:700">760</div><div style="text-align:right;color:#868e96">180</div><div style="text-align:right"><span style="background:#f4fbf6;color:#2f9e44;font-weight:700;padding:2px 8px;border-radius:6px">26%</span></div></div>
+          <div onClick="{{ openPost }}" class="rowh" style="cursor:pointer;display:grid;grid-template-columns:1fr 96px 96px 96px 96px;padding:13px 20px;font-size:13px;align-items:center"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:14px;color:#868e96">Вакансия: продакт в финтех</div><div style="text-align:right;font-weight:600">22 400</div><div style="text-align:right;color:#e03131;font-weight:700">210</div><div style="text-align:right;color:#868e96">12</div><div style="text-align:right"><span style="background:#fff5f5;color:#e03131;font-weight:700;padding:2px 8px;border-radius:6px">9%</span></div></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ COMPARE ============ -->
+      <sc-if value="{{ isCompareScreen }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:26px 30px;max-width:1200px;margin:0 auto">
+        <div style="margin-bottom:20px"><h1 style="font-size:24px;font-weight:800;letter-spacing:-.5px;margin:0 0 4px">Сравнение каналов</h1><p style="font-size:13.5px;color:#868e96;margin:0">Выберите каналы ниже — до 3 штук. Для закупа рекламы и анализа конкурентов.</p></div>
+
+        <!-- picker -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px">
+          <sc-for list="{{ pickList }}" as="p" hint-placeholder-count="8">
+            <div class="chip" onClick="{{ p.toggle }}" style="cursor:pointer;display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;padding:6px 12px 6px 6px;border-radius:99px;border:1px solid {{ p.border }};background:{{ p.bg }};color:{{ p.color }}"><span style="width:22px;height:22px;border-radius:50%;background:{{ p.grad }};display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800">{{ p.initials }}</span>{{ p.title }}</div>
+          </sc-for>
+        </div>
+
+        <!-- comparison table -->
+        <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;overflow:hidden">
+          <!-- header row of channels -->
+          <div style="display:grid;grid-template-columns:{{ compareCols }};border-bottom:1px solid #e9ecef">
+            <div style="padding:18px 20px;font-size:12px;color:#868e96;font-weight:700;display:flex;align-items:flex-end">Метрика</div>
+            <sc-for list="{{ compareChannels }}" as="c" hint-placeholder-count="2">
+              <div style="padding:16px 18px;border-left:1px solid #f1f3f5;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
+                <div style="width:44px;height:44px;border-radius:12px;background:{{ c.grad }};display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:800">{{ c.initials }}</div>
+                <div><div style="font-size:14px;font-weight:800">{{ c.title }}</div><div style="font-size:11.5px;color:#868e96">{{ c.username }}</div></div>
+              </div>
+            </sc-for>
+          </div>
+          <sc-for list="{{ compareRows }}" as="r" hint-placeholder-count="5">
+            <div class="rowh" style="display:grid;grid-template-columns:{{ compareCols }};border-bottom:1px solid #f8f9fa">
+              <div style="padding:14px 20px;font-size:13px;color:#495057;font-weight:600">{{ r.label }}</div>
+              <sc-for list="{{ r.cells }}" as="cell" hint-placeholder-count="2">
+                <div style="padding:14px 18px;border-left:1px solid #f8f9fa;text-align:center;font-size:14px;font-weight:700;color:{{ cell.color }}">{{ cell.value }}<sc-if value="{{ cell.best }}" hint-placeholder-val="{{ false }}"><span style="margin-left:6px;font-size:10px;background:#f4fbf6;color:#2f9e44;padding:1px 6px;border-radius:5px;font-weight:700">лучший</span></sc-if></div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- AI verdict -->
+        <div style="margin-top:16px;background:linear-gradient(160deg,#fbfaff,#fff);border:1px solid #e6e0fb;border-radius:14px;padding:18px 20px;display:flex;gap:12px;align-items:flex-start">
+          <span style="width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#7048e8,#229ED9);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800;flex:none">✦</span>
+          <div><div style="font-size:14px;font-weight:800;margin-bottom:4px">AI-вердикт</div><div style="font-size:13px;color:#495057;line-height:1.55">{{ compareVerdict }}</div></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ AI CABINET ============ -->
+      <sc-if value="{{ isCabinetScreen }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:26px 30px;max-width:1200px;margin:0 auto">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+          <span style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#7048e8,#229ED9);display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;font-weight:800">✦</span>
+          <div><h1 style="font-size:24px;font-weight:800;letter-spacing:-.5px;margin:0">AI-кабинет автора</h1><p style="font-size:13px;color:#868e96;margin:2px 0 0">Product Radar · @product_radar · разбор и план на неделю</p></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:start">
+          <!-- left: content plan -->
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;padding:18px 20px">
+              <div style="font-size:15px;font-weight:800;margin-bottom:4px">О чём написать на этой неделе</div>
+              <div style="font-size:12.5px;color:#868e96;margin-bottom:14px">Сгенерировано по вашим реакциям + трендам категории</div>
+              <div style="display:flex;flex-direction:column;gap:11px">
+                <div style="background:#fbfcfd;border:1px solid #e9ecef;border-radius:12px;padding:14px 16px;display:flex;gap:13px;align-items:flex-start">
+                  <div style="width:38px;height:38px;border-radius:10px;background:#f3f0ff;color:#7048e8;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none">🎯</div>
+                  <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;margin-bottom:2px">Разбор: «Как AI-агенты меняют онбординг»</div><div style="font-size:12.5px;color:#5a6b78;line-height:1.5">Тренд +180%, а ваши разборы дают +34% реакций. Сильное пересечение.</div><div style="display:flex;gap:7px;margin-top:9px"><span style="font-size:11px;font-weight:700;background:#e6fcf5;color:#0ca678;padding:3px 9px;border-radius:7px">~48K охват</span><span style="font-size:11px;font-weight:700;background:#fff4e6;color:#e8590c;padding:3px 9px;border-radius:7px">чт 19:30</span></div></div>
+                  <div class="btnp" onClick="{{ writeIdea1 }}" style="cursor:pointer;font-size:12px;font-weight:700;color:#fff;background:#229ED9;padding:8px 13px;border-radius:8px;flex:none">Написать</div>
+                </div>
+                <div style="background:#fbfcfd;border:1px solid #e9ecef;border-radius:12px;padding:14px 16px;display:flex;gap:13px;align-items:flex-start">
+                  <div style="width:38px;height:38px;border-radius:10px;background:#e7f5ff;color:#1B87BC;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none">📊</div>
+                  <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;margin-bottom:2px">Кейс с цифрами: «Retention на N% — что сработало»</div><div style="font-size:12.5px;color:#5a6b78;line-height:1.5">Пост про retention в топ-3. Аудитория хочет продолжение с механиками.</div><div style="display:flex;gap:7px;margin-top:9px"><span style="font-size:11px;font-weight:700;background:#e6fcf5;color:#0ca678;padding:3px 9px;border-radius:7px">~42K охват</span><span style="font-size:11px;font-weight:700;background:#edf2ff;color:#4263eb;padding:3px 9px;border-radius:7px">карусель</span></div></div>
+                  <div class="btnp" onClick="{{ writeIdea2 }}" style="cursor:pointer;font-size:12px;font-weight:700;color:#229ED9;background:#e7f5fb;padding:8px 13px;border-radius:8px;flex:none">Написать</div>
+                </div>
+                <div style="background:#fbfcfd;border:1px solid #e9ecef;border-radius:12px;padding:14px 16px;display:flex;gap:13px;align-items:flex-start">
+                  <div style="width:38px;height:38px;border-radius:10px;background:#fff0f6;color:#e64980;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none">🧩</div>
+                  <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;margin-bottom:2px">«5 ошибок в продуктовой аналитике»</div><div style="font-size:12.5px;color:#5a6b78;line-height:1.5">Формат списка — ваш топ по вовлечённости. Проверенная механика.</div><div style="display:flex;gap:7px;margin-top:9px"><span style="font-size:11px;font-weight:700;background:#e6fcf5;color:#0ca678;padding:3px 9px;border-radius:7px">~45K охват</span><span style="font-size:11px;font-weight:700;background:#f3f0ff;color:#7048e8;padding:3px 9px;border-radius:7px">топ-формат</span></div></div>
+                  <div class="btnp" onClick="{{ writeIdea3 }}" style="cursor:pointer;font-size:12px;font-weight:700;color:#229ED9;background:#e7f5fb;padding:8px 13px;border-radius:8px;flex:none">Написать</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- best time heatmap -->
+            <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;padding:18px 20px">
+              <div style="font-size:15px;font-weight:800;margin-bottom:3px">Лучшее время для публикации</div>
+              <div style="font-size:12.5px;color:#868e96;margin-bottom:14px">Активность вашей аудитории по часам и дням</div>
+              <div style="display:grid;grid-template-columns:34px repeat(12,1fr);gap:4px;align-items:center">
+                <sc-for list="{{ heat }}" as="row" hint-placeholder-count="7">
+                  <div style="font-size:11px;color:#868e96;font-weight:600">{{ row.day }}</div>
+                  <sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="12">
+                    <div style="aspect-ratio:1;border-radius:4px;background:{{ cell.bg }}"></div>
+                  </sc-for>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;color:#868e96"><span>меньше</span><span style="width:12px;height:12px;border-radius:3px;background:#e7f5fb"></span><span style="width:12px;height:12px;border-radius:3px;background:#a5d8f2"></span><span style="width:12px;height:12px;border-radius:3px;background:#229ED9"></span><span style="width:12px;height:12px;border-radius:3px;background:#1662a3"></span><span>больше</span><span style="margin-left:auto;color:#229ED9;font-weight:700">Пик: будни 19:00–21:00</span></div>
+            </div>
+            <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;padding:18px 20px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px"><div style="font-size:15px;font-weight:800">Конкуренты</div><div onClick="{{ openAddCompetitor }}" style="cursor:pointer;font-size:12px;font-weight:700;color:#229ED9">+ Добавить</div></div>
+              <div style="font-size:12.5px;color:#868e96;margin-bottom:14px">Сравнение с вашим каналом Product Radar · ER 26.9%</div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <sc-for list="{{ competitorChannels }}" as="c" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid #f1f3f5;border-radius:11px">
+                    <div style="width:36px;height:36px;border-radius:10px;background:{{ c.grad }};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;flex:none">{{ c.initials }}</div>
+                    <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.title }}</div><div style="font-size:11.5px;color:#868e96">{{ c.subsShort }} · ER {{ c.erStr }}</div></div>
+                    <span style="font-size:12px;font-weight:800;color:{{ c.vsColor }}">{{ c.vs }}</span>
+                    <div onClick="{{ c.remove }}" style="cursor:pointer;color:#adb5bd;font-size:15px;padding:0 2px">✕</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div class="btnp" onClick="{{ compareWithCompetitors }}" style="cursor:pointer;margin-top:14px;text-align:center;font-size:13px;font-weight:700;color:#fff;background:#229ED9;border-radius:9px;padding:11px">Сравнить все каналы →</div>
+            </div>
+          </div>
+
+          <!-- right: insights + chat -->
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;padding:18px 20px">
+              <div style="font-size:14px;font-weight:800;margin-bottom:12px">Инсайты недели</div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="border-left:3px solid #2f9e44;background:#f4fbf6;border-radius:0 8px 8px 0;padding:10px 12px"><div style="font-size:10.5px;font-weight:700;color:#2f9e44;letter-spacing:.4px;margin-bottom:3px">РЕКОМЕНДАЦИЯ</div><div style="font-size:12.5px;line-height:1.45;color:#343a40">Разборы кейсов дают +34% реакций.</div></div>
+                <div style="border-left:3px solid #229ED9;background:#f2fafd;border-radius:0 8px 8px 0;padding:10px 12px"><div style="font-size:10.5px;font-weight:700;color:#1B87BC;letter-spacing:.4px;margin-bottom:3px">ТРЕНД</div><div style="font-size:12.5px;line-height:1.45;color:#343a40">Тема AI-агентов +180% за 30д.</div></div>
+                <div style="border-left:3px solid #f08c00;background:#fff9f0;border-radius:0 8px 8px 0;padding:10px 12px"><div style="font-size:10.5px;font-weight:700;color:#e8590c;letter-spacing:.4px;margin-bottom:3px">ПРЕДУПРЕЖДЕНИЕ</div><div style="font-size:12.5px;line-height:1.45;color:#343a40">Вакансии режут ER на 60% — выносите отдельно.</div></div>
+                <div style="border-left:3px solid #7048e8;background:#f6f3ff;border-radius:0 8px 8px 0;padding:10px 12px"><div style="font-size:10.5px;font-weight:700;color:#6741d9;letter-spacing:.4px;margin-bottom:3px">ПОЗИТИВНЫЙ</div><div style="font-size:12.5px;line-height:1.45;color:#343a40">Прирост ускорился на 18% vs прошлый месяц.</div></div>
+              </div>
+            </div>
+
+            <!-- chat box -->
+            <div style="background:linear-gradient(160deg,#faf9ff,#fff);border:1px solid #e6e0fb;border-radius:14px;padding:18px 20px">
+              <div style="font-size:14px;font-weight:800;margin-bottom:12px">Спросить AI о канале</div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+                <div class="catchip" style="cursor:pointer;font-size:12.5px;color:#495057;background:#fff;border:1px solid #e9ecef;border-radius:9px;padding:9px 12px">Почему упал ER на прошлой неделе?</div>
+                <div class="catchip" style="cursor:pointer;font-size:12.5px;color:#495057;background:#fff;border:1px solid #e9ecef;border-radius:9px;padding:9px 12px">Составь план постов на 2 недели</div>
+                <div class="catchip" style="cursor:pointer;font-size:12.5px;color:#495057;background:#fff;border:1px solid #e9ecef;border-radius:9px;padding:9px 12px">С кем из конкурентов сравнить?</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;background:#fff;border:1.5px solid #d0bfff;border-radius:10px;padding:4px 4px 4px 14px">
+                <input placeholder="Ваш вопрос…" style="flex:1;border:none;outline:none;background:transparent;font-size:12.5px;padding:8px 0"/>
+                <div class="btnp" style="cursor:pointer;font-size:12.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,#7048e8,#229ED9);padding:8px 14px;border-radius:8px">↵</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ POST DETAIL ============ -->
+      <sc-if value="{{ isPostScreen }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:24px 30px;max-width:1000px;margin:0 auto">
+        <div onClick="{{ goDash }}" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#868e96;font-weight:600;margin-bottom:16px">← Назад к каналу</div>
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start">
+          <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;overflow:hidden">
+            <div style="padding:16px 18px;border-bottom:1px solid #f1f3f5;display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#229ED9,#6741d9);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px">PR</div>
+              <div><div style="font-size:13.5px;font-weight:800">Product Radar</div><div style="font-size:11.5px;color:#868e96">3 дня назад · 18:40</div></div>
+              <span style="margin-left:auto;font-size:11px;font-weight:700;background:#f4fbf6;color:#2f9e44;padding:3px 10px;border-radius:7px">🔥 Топ пост</span>
+            </div>
+            <div style="padding:18px">
+              <div style="font-size:15px;line-height:1.6;font-weight:700">5 метрик, которые убьют ваш онбординг 👇</div>
+              <div style="font-size:14px;line-height:1.65;color:#495057;margin-top:8px">Разбираем, какие показатели реально влияют на активацию новых пользователей, а какие просто тешат самолюбие. Спойлер: DAU без контекста ничего не значит, а вот time-to-value — почти всё.</div>
+              <div style="display:flex;gap:8px;margin:16px 0;flex-wrap:wrap"><span style="font-size:12px;background:#f1f3f5;padding:4px 10px;border-radius:7px">#продукт</span><span style="font-size:12px;background:#f1f3f5;padding:4px 10px;border-radius:7px">#аналитика</span><span style="font-size:12px;background:#f1f3f5;padding:4px 10px;border-radius:7px">#онбординг</span></div>
+              <div style="display:flex;gap:22px;padding-top:14px;border-top:1px solid #f1f3f5;font-size:13px;font-weight:700"><span>👁 52 100</span><span style="color:#2f9e44">❤️ 1 240</span><span style="color:#868e96">↗ 340</span><span style="color:#868e96">💬 96</span></div>
+            </div>
+          </div>
+          <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;padding:18px">
+            <div style="font-size:14px;font-weight:800;margin-bottom:14px">Разбивка реакций</div>
+            <div style="display:flex;flex-direction:column;gap:13px">
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:16px;width:22px">🔥</span><div style="flex:1;height:8px;background:#f1f3f5;border-radius:99px;overflow:hidden"><div style="width:90%;height:100%;background:#f76707;border-radius:99px"></div></div><span style="font-size:12.5px;font-weight:700;width:44px;text-align:right">620</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:16px;width:22px">❤️</span><div style="flex:1;height:8px;background:#f1f3f5;border-radius:99px;overflow:hidden"><div style="width:58%;height:100%;background:#e64980;border-radius:99px"></div></div><span style="font-size:12.5px;font-weight:700;width:44px;text-align:right">380</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:16px;width:22px">👍</span><div style="flex:1;height:8px;background:#f1f3f5;border-radius:99px;overflow:hidden"><div style="width:26%;height:100%;background:#229ED9;border-radius:99px"></div></div><span style="font-size:12.5px;font-weight:700;width:44px;text-align:right">160</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:16px;width:22px">🤯</span><div style="flex:1;height:8px;background:#f1f3f5;border-radius:99px;overflow:hidden"><div style="width:13%;height:100%;background:#7048e8;border-radius:99px"></div></div><span style="font-size:12.5px;font-weight:700;width:44px;text-align:right">80</span></div>
+            </div>
+            <div style="margin-top:16px;padding-top:14px;border-top:1px solid #f1f3f5;display:flex;justify-content:space-between;font-size:12.5px"><span style="color:#868e96">ER поста</span><span style="font-weight:800;color:#2f9e44">31% · выше среднего на 34%</span></div>
+          </div>
+        </div>
+        <div style="margin-top:16px;background:linear-gradient(160deg,#fbfaff,#fff);border:1px solid #e6e0fb;border-radius:14px;padding:20px">
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px"><span style="width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#7048e8,#229ED9);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800">✦</span><span style="font-size:16px;font-weight:800">AI-разбор поста</span></div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+            <div style="background:#f4fbf6;border-radius:11px;padding:14px"><div style="font-size:11px;font-weight:700;color:#2f9e44;letter-spacing:.4px;margin-bottom:6px">ПОЧЕМУ ЗАШЁЛ</div><div style="font-size:12.5px;color:#343a40;line-height:1.5">Конкретный список + эмоция в заголовке и понятная польза. Реакции на 34% выше среднего по каналу.</div></div>
+            <div style="background:#fff9f0;border-radius:11px;padding:14px"><div style="font-size:11px;font-weight:700;color:#e8590c;letter-spacing:.4px;margin-bottom:6px">ЧТО УЛУЧШИТЬ</div><div style="font-size:12.5px;color:#343a40;line-height:1.5">Добавьте опрос в конце — поднимет комментарии. CTA на подписку вынесите выше по тексту.</div></div>
+            <div style="background:#f3f0ff;border-radius:11px;padding:14px"><div style="font-size:11px;font-weight:700;color:#6741d9;letter-spacing:.4px;margin-bottom:6px">ПОХОЖИЕ ИДЕИ</div><div style="font-size:12.5px;color:#343a40;line-height:1.5">«7 ошибок в продуктовой аналитике», «Метрики активации по шагам воронки».</div></div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ COLLECTIONS ============ -->
+      <sc-if value="{{ isCollectionsScreen }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:26px 30px;max-width:1200px;margin:0 auto">
+        <div style="margin-bottom:20px"><h1 style="font-size:24px;font-weight:800;letter-spacing:-.5px;margin:0 0 4px">Подборки каналов</h1><p style="font-size:13.5px;color:#868e96;margin:0">Готовые тематические списки от редакции и авторов</p></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+          <sc-for list="{{ collections }}" as="c" hint-placeholder-count="6">
+            <div class="chcard" onClick="{{ c.open }}" style="cursor:pointer;background:#fff;border:1px solid #e9ecef;border-radius:14px;overflow:hidden">
+              <div style="height:100px;background:{{ c.grad }};position:relative;display:flex;align-items:flex-end;padding:14px 16px">
+                <sc-if value="{{ c.editorial }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:14px;font-size:11px;font-weight:700;background:rgba(255,255,255,.92);color:#1B87BC;padding:3px 9px;border-radius:7px">★ Редакция</span></sc-if>
+                <span style="color:#fff;font-size:18px;font-weight:800;text-shadow:0 1px 4px rgba(0,0,0,.15)">{{ c.title }}</span>
+              </div>
+              <div style="padding:14px 16px">
+                <div style="font-size:13px;color:#5a6b78;line-height:1.5;margin-bottom:12px">{{ c.desc }}</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#868e96"><span>{{ c.curator }}</span><span style="font-weight:700;color:#229ED9">{{ c.countLabel }}</span></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ COLLECTION DETAIL ============ -->
+      <sc-if value="{{ isCollectionScreen }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:26px 30px;max-width:1200px;margin:0 auto">
+        <div onClick="{{ goCollections }}" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#868e96;font-weight:600;margin-bottom:12px">← Все подборки</div>
+        <div style="border-radius:14px;background:{{ collectionGrad }};padding:26px;color:#fff;margin-bottom:20px">
+          <div style="font-size:26px;font-weight:800;letter-spacing:-.5px">{{ collectionTitle }}</div>
+          <div style="opacity:.92;font-size:14px;margin-top:6px">{{ collectionDesc }}</div>
+          <div style="opacity:.85;font-size:12.5px;margin-top:12px;font-weight:600">{{ collectionCount }}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+          <sc-for list="{{ collectionChannels }}" as="ch" hint-placeholder-count="3">
+            <div class="chcard" onClick="{{ ch.open }}" style="cursor:pointer;background:#fff;border:1px solid #e9ecef;border-radius:14px;padding:16px">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+                <div style="width:46px;height:46px;border-radius:12px;background:{{ ch.grad }};display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;font-weight:800;flex:none">{{ ch.initials }}</div>
+                <div style="min-width:0;flex:1"><div style="display:flex;align-items:center;gap:5px"><span style="font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ch.title }}</span></div><div style="font-size:12px;color:#868e96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ch.username }}</div></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:flex-end">
+                <div><div style="font-size:11px;color:#868e96;font-weight:600">Подписчики</div><div style="font-size:18px;font-weight:800">{{ ch.subsShort }}</div></div>
+                <div style="text-align:right"><div style="font-size:11px;color:#868e96;font-weight:600">ER</div><div style="font-size:15px;font-weight:800;color:#2f9e44">{{ ch.er }}%</div></div>
+                <div style="text-align:right"><div style="font-size:11px;color:#868e96;font-weight:600">30д</div><div style="font-size:13px;font-weight:800;color:{{ ch.growthColor }}">{{ ch.growthFmt }}</div></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ ACCOUNT ============ -->
+      <sc-if value="{{ isAccountScreen }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:26px 30px;max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
+        <h1 style="font-size:24px;font-weight:800;letter-spacing:-.5px;margin:0">Личный кабинет</h1>
+        <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;padding:20px;display:flex;align-items:center;gap:16px">
+          <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#f783ac,#e64980);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;flex:none">М</div>
+          <div style="flex:1"><div style="font-size:17px;font-weight:800">Мария Логинова</div><div style="font-size:13px;color:#868e96">maria@example.com</div></div>
+          <div onClick="{{ openEditProfile }}" class="catchip" style="cursor:pointer;font-size:12.5px;font-weight:700;color:#495057;border:1px solid #dee2e6;border-radius:9px;padding:9px 15px">Редактировать</div>
+          <div onClick="{{ openLogin }}" class="catchip" style="cursor:pointer;font-size:12.5px;font-weight:700;color:#e03131;border:1px solid #ffd5d5;border-radius:9px;padding:9px 15px">Выйти</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;padding:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px"><div style="font-size:15px;font-weight:800">Подписка</div><span style="font-size:12px;font-weight:700;background:#f1f3f5;color:#495057;padding:4px 11px;border-radius:7px">{{ planLabel }}</span></div>
+          <sc-if value="{{ planIsFree }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:16px;background:linear-gradient(160deg,#E7F5FB,#eef2ff);border:1px solid #d3e9f5;border-radius:12px;padding:16px 18px;margin-bottom:16px">
+            <div style="flex:1"><div style="font-size:13.5px;font-weight:800;color:#1B87BC">Перейдите на Pro за 990 ₽/мес</div><div style="font-size:12.5px;color:#5f6b7a;margin-top:2px">Безлимит AI-разборов, контент-план и экспорт отчётов</div></div>
+            <div onClick="{{ openUpgrade }}" class="btnp" style="cursor:pointer;font-size:12.5px;font-weight:700;color:#fff;background:#229ED9;padding:10px 18px;border-radius:9px">Улучшить</div>
+          </div>
+          </sc-if>
+          <div style="font-size:12px;font-weight:700;color:#868e96;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">История платежей</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;padding:11px 0;border-bottom:1px solid #f1f3f5"><span style="color:#495057">1 июня 2026 · Тариф Free</span><span style="font-weight:700">0 ₽</span></div>
+          <div style="font-size:12.5px;color:#adb5bd;padding:12px 0 0">Платных операций пока нет</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;padding:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div style="font-size:15px;font-weight:800">Мои каналы и группы</div><div onClick="{{ openAddChannel }}" class="btnp" style="cursor:pointer;font-size:12px;font-weight:700;color:#fff;background:#229ED9;border-radius:8px;padding:8px 14px">+ Добавить</div></div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ myChannels }}" as="mc" hint-placeholder-count="1">
+              <div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #f1f3f5;border-radius:11px">
+                <div style="width:40px;height:40px;border-radius:11px;background:{{ mc.grad }};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;flex:none">{{ mc.initials }}</div>
+                <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800">{{ mc.title }}</div><div style="font-size:12px;color:#868e96">{{ mc.username }} · {{ mc.subsShort }}</div></div>
+                <div onClick="{{ goDash }}" class="catchip" style="cursor:pointer;font-size:12px;font-weight:700;color:#229ED9;border:1px solid #d0ebf9;border-radius:8px;padding:8px 14px">Открыть</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;padding:20px">
+          <div style="font-size:15px;font-weight:800;margin-bottom:14px">Уведомления</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0"><span style="font-size:13.5px;color:#343a40">Email об AI-инсайтах</span><div style="width:38px;height:22px;border-radius:99px;background:#229ED9;position:relative"><div style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#fff"></div></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0"><span style="font-size:13.5px;color:#343a40">Еженедельный отчёт по каналу</span><div style="width:38px;height:22px;border-radius:99px;background:#229ED9;position:relative"><div style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#fff"></div></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0"><span style="font-size:13.5px;color:#343a40">Тренды в моей категории</span><div style="width:38px;height:22px;border-radius:99px;background:#dee2e6;position:relative"><div style="position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff"></div></div></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ BLOG ============ -->
+      <sc-if value="{{ isBlogScreen }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:26px 30px;max-width:1080px;margin:0 auto">
+        <div style="margin-bottom:20px"><h1 style="font-size:24px;font-weight:800;letter-spacing:-.5px;margin:0 0 4px">Блог</h1><p style="font-size:13.5px;color:#868e96;margin:0">Как расти в Telegram: данные, AI и практика</p></div>
+        <div class="chcard" onClick="{{ featured.open }}" style="cursor:pointer;display:grid;grid-template-columns:1.05fr 1fr;background:#fff;border:1px solid #e9ecef;border-radius:16px;overflow:hidden;margin-bottom:20px">
+          <div style="background:{{ featured.grad }};min-height:220px"></div>
+          <div style="padding:28px;display:flex;flex-direction:column;justify-content:center">
+            <span style="align-self:flex-start;font-size:11px;font-weight:700;background:#E7F5FB;color:#1B87BC;padding:3px 10px;border-radius:7px">{{ featured.cat }}</span>
+            <div style="font-size:23px;font-weight:800;margin:12px 0 10px;line-height:1.25;letter-spacing:-.4px">{{ featured.title }}</div>
+            <div style="font-size:13.5px;color:#5a6b78;line-height:1.6;margin-bottom:14px">{{ featured.excerpt }}</div>
+            <div style="font-size:12px;color:#868e96;font-weight:600">{{ featured.date }} · {{ featured.read }}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+          <sc-for list="{{ restPosts }}" as="p" hint-placeholder-count="3">
+            <div class="chcard" onClick="{{ p.open }}" style="cursor:pointer;background:#fff;border:1px solid #e9ecef;border-radius:14px;overflow:hidden">
+              <div style="height:130px;background:{{ p.grad }}"></div>
+              <div style="padding:16px">
+                <span style="font-size:11px;font-weight:700;background:#f1f3f5;color:#495057;padding:3px 9px;border-radius:7px">{{ p.cat }}</span>
+                <div style="font-size:15px;font-weight:800;margin:10px 0 6px;line-height:1.3">{{ p.title }}</div>
+                <div style="font-size:12.5px;color:#868e96;line-height:1.5;margin-bottom:12px">{{ p.excerpt }}</div>
+                <div style="font-size:11.5px;color:#adb5bd;font-weight:600">{{ p.date }} · {{ p.read }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ BLOG POST ============ -->
+      <sc-if value="{{ isBlogPostScreen }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:26px 30px;max-width:720px;margin:0 auto">
+        <div onClick="{{ goBlog }}" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#868e96;font-weight:600;margin-bottom:16px">← Все статьи</div>
+        <span style="display:inline-block;font-size:11px;font-weight:700;background:#E7F5FB;color:#1B87BC;padding:3px 10px;border-radius:7px;margin-bottom:12px">{{ articleCat }}</span>
+        <h1 style="font-size:30px;font-weight:800;letter-spacing:-.6px;line-height:1.2;margin:0 0 10px">{{ articleTitle }}</h1>
+        <div style="font-size:13px;color:#868e96;font-weight:600">{{ articleDate }} · {{ articleRead }} чтения</div>
+        <div style="height:240px;border-radius:14px;background:{{ articleGrad }};margin:20px 0"></div>
+        <sc-for list="{{ articleBody }}" as="para" hint-placeholder-count="3">
+          <p style="font-size:16px;line-height:1.75;color:#343a40;margin:0 0 18px">{{ para }}</p>
+        </sc-for>
+        <div style="margin-top:12px;background:linear-gradient(160deg,#E7F5FB,#eef2ff);border:1px solid #d3e9f5;border-radius:14px;padding:22px;display:flex;align-items:center;gap:16px">
+          <div style="flex:1"><div style="font-size:16px;font-weight:800">Хотите так же для своего канала?</div><div style="font-size:13px;color:#5f6b7a;margin-top:3px">AI-разбор покажет, о чём писать дальше</div></div>
+          <div class="btnp" onClick="{{ goCabinet }}" style="cursor:pointer;font-size:13px;font-weight:700;color:#fff;background:#229ED9;padding:12px 20px;border-radius:10px;flex:none">Разобрать канал</div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ LEGAL ============ -->
+      <sc-if value="{{ isLegalScreen }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:26px 30px;max-width:820px;margin:0 auto">
+        <h1 style="font-size:24px;font-weight:800;letter-spacing:-.5px;margin:0 0 16px">Правовая информация</h1>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <sc-for list="{{ legalTabs }}" as="t" hint-placeholder-count="3">
+            <div class="chip" onClick="{{ t.onClick }}" style="cursor:pointer;font-size:12.5px;font-weight:600;padding:8px 15px;border-radius:99px;border:1px solid {{ t.border }};background:{{ t.bg }};color:{{ t.color }}">{{ t.label }}</div>
+          </sc-for>
+        </div>
+        <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;padding:28px">
+          <h2 style="font-size:19px;font-weight:800;margin:0 0 4px">{{ legalTitle }}</h2>
+          <div style="font-size:12px;color:#868e96;margin-bottom:18px">Обновлено 1 июля 2026 · демонстрационный документ</div>
+          <sc-for list="{{ legalBody }}" as="para" hint-placeholder-count="3">
+            <p style="font-size:14px;line-height:1.7;color:#343a40;margin:0 0 16px">{{ para }}</p>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ 404 ============ -->
+      <sc-if value="{{ isNotFoundScreen }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:90px 30px;text-align:center;max-width:520px;margin:0 auto">
+        <div style="font-size:92px;font-weight:800;background:linear-gradient(135deg,#229ED9,#7048e8);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-4px;line-height:1">404</div>
+        <div style="font-size:22px;font-weight:800;margin:10px 0 8px">Страница не найдена</div>
+        <p style="color:#868e96;font-size:14px;line-height:1.6;margin:0 0 24px">Возможно, канал удалён или ссылка устарела. Попробуйте начать с главной или загляните в каталог.</p>
+        <div style="display:flex;gap:10px;justify-content:center">
+          <div class="btnp" onClick="{{ goHome }}" style="cursor:pointer;padding:12px 24px;background:#229ED9;color:#fff;border-radius:11px;font-weight:700;font-size:14px">На главную</div>
+          <div onClick="{{ goCatalog }}" style="cursor:pointer;padding:12px 22px;background:#fff;border:1px solid #dee2e6;color:#343a40;border-radius:11px;font-weight:700;font-size:14px">В каталог</div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ ADMIN ============ -->
+      <sc-if value="{{ isAdminScreen }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:26px 30px;max-width:1080px;margin:0 auto">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px"><span style="width:32px;height:32px;border-radius:9px;background:#e8590c;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:800">⚙</span><h1 style="font-size:24px;font-weight:800;letter-spacing:-.5px;margin:0">Админка</h1></div>
+        <p style="font-size:13px;color:#868e96;margin:0 0 18px">Только для администраторов сервиса · модерация заявок пользователей, каналы, статьи и подборки</p>
+        <div style="display:inline-flex;background:#f1f3f5;border-radius:10px;padding:3px;margin-bottom:20px">
+          <div onClick="{{ setAdminMod }}" style="cursor:pointer;font-size:12.5px;font-weight:700;padding:8px 16px;border-radius:8px;background:{{ adminMoBg }};color:{{ adminMoColor }};display:flex;align-items:center;gap:7px">Модерация<span style="font-size:10.5px;font-weight:800;background:#e8590c;color:#fff;border-radius:99px;padding:1px 7px">{{ modCount }}</span></div>
+          <div onClick="{{ setAdminChannels }}" style="cursor:pointer;font-size:12.5px;font-weight:700;padding:8px 16px;border-radius:8px;background:{{ adminChBg }};color:{{ adminChColor }}">Каналы и группы</div>
+          <div onClick="{{ setAdminPosts }}" style="cursor:pointer;font-size:12.5px;font-weight:700;padding:8px 16px;border-radius:8px;background:{{ adminPoBg }};color:{{ adminPoColor }}">Статьи блога</div>
+          <div onClick="{{ setAdminCollections }}" style="cursor:pointer;font-size:12.5px;font-weight:700;padding:8px 16px;border-radius:8px;background:{{ adminCoBg }};color:{{ adminCoColor }}">Подборки</div>
+        </div>
+
+        <sc-if value="{{ adminTabMod }}" hint-placeholder-val="{{ true }}">
+        <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;overflow:hidden">
+          <div style="padding:14px 20px;border-bottom:1px solid #f1f3f5"><div style="font-size:14px;font-weight:700">Заявки от пользователей</div><div style="font-size:12px;color:#868e96;margin-top:2px">Каналы и группы, которые добавили сами пользователи. Назначьте категорию и одобрите публикацию в каталоге.</div></div>
+          <div style="display:grid;grid-template-columns:1fr 165px 175px 175px;gap:12px;padding:10px 20px;font-size:11px;color:#868e96;font-weight:700;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #f1f3f5"><div>Канал</div><div>Кто добавил</div><div>Категория</div><div style="text-align:right">Действие</div></div>
+          <sc-for list="{{ moderationQueue }}" as="m" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:1fr 165px 175px 175px;gap:12px;padding:12px 20px;align-items:center;border-bottom:1px solid #f8f9fa">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0"><div style="width:32px;height:32px;border-radius:9px;background:{{ m.grad }};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;flex:none">{{ m.initials }}</div><div style="min-width:0"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.title }}</div><div style="font-size:11px;color:#868e96">{{ m.username }}</div></div></div>
+              <div style="min-width:0"><div style="font-size:12px;color:#495057;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.submittedBy }}</div><div style="font-size:11px;color:#adb5bd">{{ m.date }}</div></div>
+              <div><select value="{{ m.category }}" onChange="{{ m.onCat }}" style="width:160px;border:1px solid #dee2e6;border-radius:8px;padding:7px 9px;font-size:12.5px;outline:none;background:#fff;font-family:inherit;color:#1a1b1e"><option value="—">— категория —</option><sc-for list="{{ adminCatsList }}" as="opt" hint-placeholder-count="8"><option value="{{ opt }}">{{ opt }}</option></sc-for></select></div>
+              <div style="display:flex;gap:7px;justify-content:flex-end"><div onClick="{{ m.approve }}" style="cursor:{{ m.apprCursor }};font-size:12px;font-weight:700;color:#fff;background:{{ m.apprBg }};border-radius:8px;padding:8px 14px">Одобрить</div><div onClick="{{ m.reject }}" class="catchip" style="cursor:pointer;font-size:12px;font-weight:700;color:#e03131;border:1px solid #ffd5d5;border-radius:8px;padding:8px 12px">Отклонить</div></div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ modEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:44px;text-align:center;color:#868e96;font-size:13.5px">✓ Все заявки обработаны — новых нет</div></sc-if>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ adminTabChannels }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;overflow:hidden">
+          <div style="padding:14px 20px;border-bottom:1px solid #f1f3f5;display:flex;align-items:center;justify-content:space-between"><div style="font-size:14px;font-weight:700">Все каналы и группы в базе</div><div onClick="{{ openAddChannel }}" class="btnp" style="cursor:pointer;font-size:12px;font-weight:700;color:#fff;background:#229ED9;border-radius:8px;padding:8px 14px">+ Добавить канал</div></div>
+          <div style="display:grid;grid-template-columns:1fr 190px 110px 110px;padding:10px 20px;font-size:11px;color:#868e96;font-weight:700;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #f1f3f5"><div>Канал</div><div>Категория</div><div style="text-align:center">Верификация</div><div style="text-align:right">Подписчики</div></div>
+          <sc-for list="{{ adminChannels }}" as="ch" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:1fr 190px 110px 110px;padding:11px 20px;align-items:center;border-bottom:1px solid #f8f9fa">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0"><div style="width:32px;height:32px;border-radius:9px;background:{{ ch.grad }};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;flex:none">{{ ch.initials }}</div><div style="min-width:0"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ch.title }}</div><div style="font-size:11px;color:#868e96">{{ ch.username }}</div></div></div>
+              <div><select value="{{ ch.category }}" onChange="{{ ch.onCat }}" style="width:170px;border:1px solid #dee2e6;border-radius:8px;padding:7px 9px;font-size:12.5px;outline:none;background:#fff;font-family:inherit;color:#1a1b1e"><sc-for list="{{ adminCatsList }}" as="opt" hint-placeholder-count="8"><option value="{{ opt }}">{{ opt }}</option></sc-for></select></div>
+              <div style="display:flex;justify-content:center"><div onClick="{{ ch.toggleVer }}" style="cursor:pointer;width:40px;height:23px;border-radius:99px;background:{{ ch.verBg }};display:flex;align-items:center;justify-content:{{ ch.verJustify }};padding:2px"><div style="width:19px;height:19px;border-radius:50%;background:#fff"></div></div></div>
+              <div style="text-align:right;font-size:13px;font-weight:700">{{ ch.subsShort }}</div>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ adminTabPosts }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;overflow:hidden">
+          <div style="padding:14px 20px;border-bottom:1px solid #f1f3f5;display:flex;align-items:center;justify-content:space-between"><div style="font-size:14px;font-weight:700">Статьи блога</div><div onClick="{{ openArticleEditor }}" class="btnp" style="cursor:pointer;font-size:12px;font-weight:700;color:#fff;background:#229ED9;border-radius:8px;padding:8px 14px">+ Новая статья</div></div>
+          <sc-for list="{{ adminPosts }}" as="p" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid #f8f9fa">
+              <div style="width:44px;height:44px;border-radius:9px;background:{{ p.grad }};flex:none"></div>
+              <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.title }}</div><div style="font-size:11.5px;color:#868e96">{{ p.cat }} · {{ p.date }} · {{ p.read }}</div></div>
+              <span style="font-size:11px;font-weight:700;background:#e6f7ec;color:#2f9e44;padding:3px 10px;border-radius:7px">Опубликовано</span>
+              <div onClick="{{ p.open }}" class="catchip" style="cursor:pointer;font-size:12px;font-weight:700;color:#495057;border:1px solid #dee2e6;border-radius:8px;padding:7px 13px">Открыть</div>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ adminTabCollections }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#fff;border:1px solid #e9ecef;border-radius:14px;overflow:hidden">
+          <div style="padding:14px 20px;border-bottom:1px solid #f1f3f5;display:flex;align-items:center;justify-content:space-between"><div style="font-size:14px;font-weight:700">Подборки каналов</div><div onClick="{{ openCollectionEditor }}" class="btnp" style="cursor:pointer;font-size:12px;font-weight:700;color:#fff;background:#229ED9;border-radius:8px;padding:8px 14px">+ Новая подборка</div></div>
+          <sc-for list="{{ adminCollections }}" as="c" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid #f8f9fa">
+              <div style="width:44px;height:44px;border-radius:9px;background:{{ c.grad }};flex:none"></div>
+              <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700">{{ c.title }}</div><div style="font-size:11.5px;color:#868e96">{{ c.curator }} · {{ c.countLabel }}</div></div>
+              <div onClick="{{ c.open }}" class="catchip" style="cursor:pointer;font-size:12px;font-weight:700;color:#495057;border:1px solid #dee2e6;border-radius:8px;padding:7px 13px">Открыть</div>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+      </div>
+      </sc-if>
+
+      <!-- ============ FOOTER ============ -->
+      <sc-if value="{{ showFooter }}" hint-placeholder-val="{{ true }}">
+      <footer style="background:#fff;border-top:1px solid #e9ecef;padding:40px 40px 24px;margin-top:24px">
+        <div style="max-width:1080px;margin:0 auto;display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:28px">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><div style="width:28px;height:28px;border-radius:8px;background:#229ED9;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px">t</div><span style="font-weight:800;font-size:16px">tgpulse</span></div>
+            <p style="font-size:12.5px;color:#868e96;line-height:1.55;margin:0;max-width:250px">Аналитика Telegram-каналов с искусственным интеллектом. Знайте о своём канале больше, чем вы сами.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:12px;font-weight:800;color:#343a40;margin-bottom:2px">Продукт</div>
+            <span onClick="{{ goCatalog }}" style="cursor:pointer;font-size:12.5px;color:#868e96">Каталог каналов</span>
+            <span onClick="{{ goCollections }}" style="cursor:pointer;font-size:12.5px;color:#868e96">Подборки</span>
+            <span onClick="{{ goCompare }}" style="cursor:pointer;font-size:12.5px;color:#868e96">Сравнение</span>
+            <span onClick="{{ goCabinet }}" style="cursor:pointer;font-size:12.5px;color:#868e96">AI-кабинет</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:12px;font-weight:800;color:#343a40;margin-bottom:2px">Компания</div>
+            <span onClick="{{ goBlog }}" style="cursor:pointer;font-size:12.5px;color:#868e96">Блог</span>
+            <span onClick="{{ goHome }}" style="cursor:pointer;font-size:12.5px;color:#868e96">О сервисе</span>
+            <span onClick="{{ openRegister }}" style="cursor:pointer;font-size:12.5px;color:#868e96">Регистрация</span>
+            <span onClick="{{ openLogin }}" style="cursor:pointer;font-size:12.5px;color:#868e96">Войти</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:12px;font-weight:800;color:#343a40;margin-bottom:2px">Правовое</div>
+            <span onClick="{{ goLegalPrivacy }}" style="cursor:pointer;font-size:12.5px;color:#868e96">Конфиденциальность</span>
+            <span onClick="{{ goLegalTerms }}" style="cursor:pointer;font-size:12.5px;color:#868e96">Соглашение</span>
+            <span onClick="{{ goLegalOffer }}" style="cursor:pointer;font-size:12.5px;color:#868e96">Публичная оферта</span>
+          </div>
+        </div>
+        <div style="max-width:1080px;margin:24px auto 0;padding-top:18px;border-top:1px solid #f1f3f5;display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#adb5bd">
+          <span>© 2026 tgpulse · Прототип</span>
+          <span onClick="{{ go404 }}" style="cursor:pointer">Пример страницы 404 →</span>
+        </div>
+      </footer>
+      </sc-if>
+
+    </div>
+  </div>
+
+  <!-- ============ AUTH MODAL ============ -->
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(16,18,22,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px">
+    <div onClick="{{ stop }}" style="width:{{ modalWidth }};max-width:100%;background:#fff;border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.3);overflow:auto;max-height:92vh">
+      <div style="padding:16px 20px;border-bottom:1px solid #f1f3f5;display:flex;align-items:center;gap:10px">
+        <div style="width:28px;height:28px;border-radius:8px;background:#229ED9;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px">t</div>
+        <span style="font-weight:800;font-size:16px">tgpulse</span>
+        <div onClick="{{ closeModal }}" style="margin-left:auto;cursor:pointer;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#868e96;font-size:18px">✕</div>
+      </div>
+      <div style="padding:22px 24px 24px">
+        <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div style="font-size:19px;font-weight:800;margin-bottom:4px">Вход</div>
+          <div style="font-size:13px;color:#868e96;margin-bottom:18px">Рады видеть снова</div>
+          <input placeholder="Email" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:13.5px;outline:none;margin-bottom:11px"/>
+          <input type="password" placeholder="Пароль" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:13.5px;outline:none;margin-bottom:8px"/>
+          <div onClick="{{ openRecovery }}" style="cursor:pointer;text-align:right;font-size:12.5px;color:#229ED9;font-weight:600;margin-bottom:16px">Забыли пароль?</div>
+          <div class="btnp" style="cursor:pointer;text-align:center;background:#229ED9;color:#fff;font-weight:700;font-size:14px;padding:12px;border-radius:10px;margin-bottom:14px">Войти</div>
+          <div style="text-align:center;font-size:12.5px;color:#868e96">Нет аккаунта? <span onClick="{{ openRegister }}" style="cursor:pointer;color:#229ED9;font-weight:700">Зарегистрироваться</span></div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ isRegister }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="font-size:19px;font-weight:800;margin-bottom:4px">Регистрация</div>
+          <div style="font-size:13px;color:#868e96;margin-bottom:18px">Первые 5 AI-разборов — бесплатно</div>
+          <input placeholder="Имя" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:13.5px;outline:none;margin-bottom:11px"/>
+          <input placeholder="Email" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:13.5px;outline:none;margin-bottom:11px"/>
+          <input type="password" placeholder="Пароль" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:13.5px;outline:none;margin-bottom:14px"/>
+          <div style="display:flex;gap:8px;align-items:flex-start;font-size:11.5px;color:#868e96;line-height:1.4;margin-bottom:16px"><div style="width:16px;height:16px;border-radius:4px;border:1.5px solid #229ED9;background:#229ED9;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;flex:none;margin-top:1px">✓</div><span>Принимаю <span onClick="{{ goLegalTerms }}" style="color:#229ED9;font-weight:600;cursor:pointer">Соглашение</span> и <span onClick="{{ goLegalPrivacy }}" style="color:#229ED9;font-weight:600;cursor:pointer">Политику конфиденциальности</span></span></div>
+          <div class="btnp" style="cursor:pointer;text-align:center;background:#229ED9;color:#fff;font-weight:700;font-size:14px;padding:12px;border-radius:10px;margin-bottom:14px">Создать аккаунт</div>
+          <div style="text-align:center;font-size:12.5px;color:#868e96">Уже есть аккаунт? <span onClick="{{ openLogin }}" style="cursor:pointer;color:#229ED9;font-weight:700">Войти</span></div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ isRecovery }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="font-size:19px;font-weight:800;margin-bottom:4px">Сброс пароля</div>
+          <div style="font-size:13px;color:#868e96;line-height:1.5;margin-bottom:18px">Введите email — пришлём ссылку для восстановления доступа</div>
+          <input placeholder="Email" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:13.5px;outline:none;margin-bottom:16px"/>
+          <div class="btnp" style="cursor:pointer;text-align:center;background:#229ED9;color:#fff;font-weight:700;font-size:14px;padding:12px;border-radius:10px;margin-bottom:14px">Отправить ссылку</div>
+          <div style="text-align:center;font-size:12.5px;color:#868e96">Вспомнили пароль? <span onClick="{{ openLogin }}" style="cursor:pointer;color:#229ED9;font-weight:700">Войти</span></div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ isEditProfile }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="font-size:19px;font-weight:800;margin-bottom:4px">Редактирование профиля</div>
+          <div style="font-size:13px;color:#868e96;margin-bottom:18px">Так вас увидят в сервисе</div>
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px"><div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#f783ac,#e64980);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800">М</div><div class="catchip" style="cursor:pointer;font-size:12px;font-weight:700;color:#495057;border:1px solid #dee2e6;border-radius:8px;padding:8px 13px">Сменить фото</div></div>
+          <input defaultValue="Мария Логинова" placeholder="Имя" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:13.5px;outline:none;margin-bottom:11px"/>
+          <input defaultValue="maria@example.com" placeholder="Email" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:13.5px;outline:none;margin-bottom:11px"/>
+          <textarea placeholder="О себе" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:13.5px;outline:none;margin-bottom:16px;min-height:70px;resize:vertical;font-family:inherit">Автор канала Product Radar</textarea>
+          <div class="btnp" onClick="{{ closeModal }}" style="cursor:pointer;text-align:center;background:#229ED9;color:#fff;font-weight:700;font-size:14px;padding:12px;border-radius:10px">Сохранить изменения</div>
+          <div onClick="{{ closeModal }}" style="cursor:pointer;text-align:center;font-size:12.5px;color:#868e96;margin-top:12px">Отмена</div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ isUpgrade }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="font-size:19px;font-weight:800;margin-bottom:4px">Улучшить тариф</div>
+          <sc-if value="{{ upgradeStepPlans }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <div style="font-size:13px;color:#868e96;margin-bottom:16px">Больше AI, без лимитов на разборы</div>
+            <div style="display:inline-flex;background:#f1f3f5;border-radius:9px;padding:3px;margin-bottom:18px">
+              <div onClick="{{ setUpgradeMonthly }}" style="cursor:pointer;font-size:12.5px;font-weight:700;padding:7px 16px;border-radius:7px;background:{{ upgradeMonthlyBg }}">Помесячно</div>
+              <div onClick="{{ setUpgradeAnnual }}" style="cursor:pointer;font-size:12.5px;font-weight:700;padding:7px 16px;border-radius:7px;background:{{ upgradeAnnualBg }}">За год · −20%</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+              <sc-for list="{{ upgradePlans }}" as="p" hint-placeholder-count="3">
+                <div style="border:{{ p.bw }} solid {{ p.border }};border-radius:13px;padding:16px 14px;display:flex;flex-direction:column">
+                  <div style="font-size:14px;font-weight:800">{{ p.name }}</div>
+                  <div style="font-size:22px;font-weight:800;margin:8px 0 1px">{{ p.price }}</div>
+                  <div style="font-size:11px;color:#868e96;margin-bottom:13px">{{ p.per }}</div>
+                  <div style="display:flex;flex-direction:column;gap:7px;font-size:11.5px;color:#495057;margin-bottom:14px">
+                    <sc-for list="{{ p.feats }}" as="f" hint-placeholder-count="4"><div style="display:flex;gap:6px"><span style="color:#2f9e44;font-weight:700">✓</span>{{ f }}</div></sc-for>
+                  </div>
+                  <div onClick="{{ p.onSelect }}" style="cursor:pointer;margin-top:auto;text-align:center;font-size:12px;font-weight:700;color:{{ p.btnColor }};background:{{ p.btnBg }};border-radius:8px;padding:10px">{{ p.btnLabel }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          </sc-if>
+          <sc-if value="{{ upgradeStepPay }}" hint-placeholder-val="{{ false }}">
+          <div>
+            <div style="font-size:13px;color:#868e96;margin-bottom:16px">Оплата тарифа <b style="color:#1a1b1e">{{ selName }}</b> · {{ payPrice }}</div>
+            <input placeholder="Номер карты" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:13.5px;outline:none;margin-bottom:11px"/>
+            <div style="display:flex;gap:11px;margin-bottom:11px"><input placeholder="ММ / ГГ" style="flex:1;min-width:0;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:13.5px;outline:none"/><input placeholder="CVC" style="flex:1;min-width:0;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:13.5px;outline:none"/></div>
+            <input placeholder="Email для чека" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:13.5px;outline:none;margin-bottom:16px"/>
+            <div style="display:flex;gap:10px">
+              <div onClick="{{ backToPlans }}" style="cursor:pointer;flex:none;text-align:center;font-size:13px;font-weight:700;color:#495057;border:1px solid #dee2e6;border-radius:10px;padding:12px 18px">Назад</div>
+              <div class="btnp" onClick="{{ payNow }}" style="cursor:pointer;flex:1;text-align:center;font-size:14px;font-weight:700;color:#fff;background:#229ED9;border-radius:10px;padding:12px">Оплатить {{ payPrice }}</div>
+            </div>
+            <div style="font-size:11px;color:#adb5bd;text-align:center;margin-top:12px">🔒 Демо-оплата · карта не спишется</div>
+          </div>
+          </sc-if>
+          <sc-if value="{{ upgradeStepDone }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;padding:12px 0 4px">
+            <div style="width:64px;height:64px;border-radius:50%;background:#e6f7ec;color:#2f9e44;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 16px">✓</div>
+            <div style="font-size:18px;font-weight:800;margin-bottom:6px">Тариф {{ selName }} активирован</div>
+            <div style="font-size:13px;color:#868e96;line-height:1.5;margin-bottom:20px;max-width:320px;margin-left:auto;margin-right:auto">Безлимит AI-разборов и контент-план уже доступны. Чек отправлен на почту.</div>
+            <div class="btnp" onClick="{{ closeModal }}" style="cursor:pointer;display:inline-block;font-size:14px;font-weight:700;color:#fff;background:#229ED9;border-radius:10px;padding:12px 28px">Отлично</div>
+          </div>
+          </sc-if>
+        </div>
+        </sc-if>
+        <sc-if value="{{ isAddChannel }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="font-size:19px;font-weight:800;margin-bottom:4px">Добавить канал или группу</div>
+          <div style="font-size:13px;color:#868e96;line-height:1.5;margin-bottom:16px">Вставьте @username или ссылку — запустим сбор статистики и первый AI-разбор</div>
+          <div style="display:inline-flex;background:#f1f3f5;border-radius:9px;padding:3px;margin-bottom:14px">
+            <div onClick="{{ setAddChannel }}" style="cursor:pointer;font-size:12.5px;font-weight:700;padding:7px 20px;border-radius:7px;background:{{ addChannelBg }};color:{{ addChannelColor }}">Канал</div>
+            <div onClick="{{ setAddGroup }}" style="cursor:pointer;font-size:12.5px;font-weight:700;padding:7px 20px;border-radius:7px;background:{{ addGroupBg }};color:{{ addGroupColor }}">Группа</div>
+          </div>
+          <input value="{{ addQuery }}" onInput="{{ onAddInput }}" placeholder="@my_channel или t.me/my_channel" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:13.5px;outline:none;margin-bottom:10px"/>
+          <div style="font-size:11.5px;color:#868e96;line-height:1.45;margin-bottom:16px">Первые 5 AI-разборов бесплатно на тарифе Free. Нужны права администратора для приватных каналов.</div>
+          <div class="btnp" onClick="{{ addSubmit }}" style="cursor:pointer;text-align:center;background:#229ED9;color:#fff;font-weight:700;font-size:14px;padding:12px;border-radius:10px">Добавить и разобрать</div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ isAddCompetitor }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="font-size:19px;font-weight:800;margin-bottom:4px">Конкуренты для сравнения</div>
+          <div style="font-size:13px;color:#868e96;margin-bottom:14px">Вставьте ссылку или @username. Есть в базе — выберите; нет — добавим в базу.</div>
+          <input value="{{ compQuery }}" onInput="{{ onCompQuery }}" placeholder="@channel или t.me/channel" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:11px 13px;font-size:13.5px;outline:none;margin-bottom:12px"/>
+          <sc-if value="{{ compNoMatch }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:10px;background:#fff9f0;border:1px solid #ffe3bf;border-radius:10px;padding:11px 13px;margin-bottom:14px">
+            <div style="flex:1;font-size:12.5px;color:#8a5a1a;line-height:1.4">«{{ compQuery }}» не найден в базе — добавим и отправим на модерацию.</div>
+            <div class="btnp" onClick="{{ addCompFromQuery }}" style="cursor:pointer;flex:none;font-size:12px;font-weight:700;color:#fff;background:#e8590c;border-radius:8px;padding:8px 13px">Добавить в базу</div>
+          </div>
+          </sc-if>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;max-height:200px;overflow:auto">
+            <sc-for list="{{ competitorPicker }}" as="p" hint-placeholder-count="8">
+              <div class="chip" onClick="{{ p.toggle }}" style="cursor:pointer;display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;padding:6px 12px 6px 6px;border-radius:99px;border:1px solid {{ p.border }};background:{{ p.bg }};color:{{ p.color }}"><span style="width:22px;height:22px;border-radius:50%;background:{{ p.grad }};display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800">{{ p.initials }}</span>{{ p.title }}</div>
+            </sc-for>
+          </div>
+          <div style="display:flex;gap:10px">
+            <div onClick="{{ closeModal }}" style="flex:1;cursor:pointer;text-align:center;font-size:13px;font-weight:700;color:#495057;border:1px solid #dee2e6;border-radius:10px;padding:11px">Готово</div>
+            <div class="btnp" onClick="{{ compareWithCompetitors }}" style="flex:1;cursor:pointer;text-align:center;font-size:13px;font-weight:700;color:#fff;background:#229ED9;border-radius:10px;padding:11px">Сравнить →</div>
+          </div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ isComposer }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="font-size:19px;font-weight:800;margin-bottom:2px">Новый пост</div>
+          <div style="font-size:12.5px;color:#7048e8;font-weight:700;margin-bottom:14px">✦ AI-черновик · {{ composerTitle }}</div>
+          <textarea value="{{ composerText }}" onChange="{{ onComposerInput }}" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:11px;padding:13px;font-size:13.5px;line-height:1.55;outline:none;min-height:180px;resize:vertical;font-family:inherit;margin-bottom:12px"></textarea>
+          <div style="display:flex;gap:8px;margin-bottom:16px"><span style="font-size:11.5px;font-weight:700;background:#e6fcf5;color:#0ca678;padding:4px 10px;border-radius:8px">🎯 Прогноз ~48K охват</span><span style="font-size:11.5px;font-weight:700;background:#fff4e6;color:#e8590c;padding:4px 10px;border-radius:8px">⏰ Лучшее время: чт 19:30</span></div>
+          <div style="display:flex;gap:10px">
+            <div onClick="{{ closeModal }}" style="flex:1;cursor:pointer;text-align:center;font-size:13px;font-weight:700;color:#495057;border:1px solid #dee2e6;border-radius:10px;padding:11px">Запланировать</div>
+            <div class="btnp" onClick="{{ closeModal }}" style="flex:1;cursor:pointer;text-align:center;font-size:13px;font-weight:700;color:#fff;background:#229ED9;border-radius:10px;padding:11px">Опубликовать</div>
+          </div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ isArticle }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="font-size:19px;font-weight:800;margin-bottom:2px">Новая статья</div>
+          <div style="font-size:13px;color:#868e96;margin-bottom:16px">Появится в блоге сервиса и в разделе «Блог»</div>
+          <input value="{{ artTitle }}" onInput="{{ onArtTitle }}" placeholder="Заголовок статьи" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:14px;font-weight:700;outline:none;margin-bottom:12px"/>
+          <div style="font-size:12px;font-weight:700;color:#868e96;margin-bottom:8px">Рубрика</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <sc-for list="{{ artCatTabs }}" as="t" hint-placeholder-count="4"><div onClick="{{ t.onClick }}" style="cursor:pointer;font-size:12px;font-weight:600;padding:7px 13px;border-radius:99px;border:1px solid {{ t.border }};background:{{ t.bg }};color:{{ t.color }}">{{ t.label }}</div></sc-for>
+          </div>
+          <input value="{{ artExcerpt }}" onInput="{{ onArtExcerpt }}" placeholder="Краткое описание (для карточки)" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:13.5px;outline:none;margin-bottom:12px"/>
+          <textarea value="{{ artBody }}" onChange="{{ onArtBody }}" placeholder="Текст статьи…" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:11px;padding:13px;font-size:13.5px;line-height:1.55;outline:none;min-height:150px;resize:vertical;font-family:inherit;margin-bottom:16px"></textarea>
+          <div class="btnp" onClick="{{ publishArticle }}" style="cursor:pointer;text-align:center;background:#229ED9;color:#fff;font-weight:700;font-size:14px;padding:12px;border-radius:10px">Опубликовать статью</div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ isCollectionEd }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="font-size:19px;font-weight:800;margin-bottom:2px">Новая подборка</div>
+          <div style="font-size:13px;color:#868e96;margin-bottom:16px">Тематический список каналов от редакции</div>
+          <input value="{{ collTitle }}" onInput="{{ onCollTitle }}" placeholder="Название подборки" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:14px;font-weight:700;outline:none;margin-bottom:12px"/>
+          <input value="{{ collDesc }}" onInput="{{ onCollDesc }}" placeholder="Короткое описание" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:9px;padding:12px 13px;font-size:13.5px;outline:none;margin-bottom:14px"/>
+          <div style="font-size:11.5px;color:#868e96;line-height:1.45;margin-bottom:16px">Каналы можно добавить в подборку после создания — из карточки канала или каталога.</div>
+          <div class="btnp" onClick="{{ publishCollection }}" style="cursor:pointer;text-align:center;background:#229ED9;color:#fff;font-weight:700;font-size:14px;padding:12px;border-radius:10px">Создать подборку</div>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { screen: 'landing', q: '', cat: 'Все', compare: [1, 9], modal: null, collection: 1, blogSlug: 'ai-content', legalTab: 'privacy', catalogType: 'all', addType: 'channel', addQuery: '', competitors: [9, 7], upgradeAnnual: false, composerTitle: '', composerText: '', myChannels: [{ id: 1, title: 'Product Radar', username: '@product_radar', initials: 'PR', grad: 'linear-gradient(135deg,#229ED9,#6741d9)', subsShort: '142 340 подписчиков', type: 'channel' }], plan: 'Free', upgradeStep: 'plans', selectedPlan: null, adminTab: 'mod', chOverrides: {}, customPosts: [], customCollections: [], artDraft: { title:'', cat:'AI', excerpt:'', body:'' }, collDraft: { title:'', desc:'' }, moderationQueue: [
+    { id:9001, title:'Нейросети на практике', username:'@ml_practice', submittedBy:'@ivan_dev', date:'2 часа назад', category:'Технологии' },
+    { id:9002, title:'Маркетинг с нуля', username:'@mktg_zero', submittedBy:'@olga_smm', date:'5 часов назад', category:'Маркетинг' },
+    { id:9003, title:'Крипто-сигналы 24/7', username:'@crypto_sig', submittedBy:'@trader_x', date:'вчера', category:'Крипта' },
+    { id:9004, title:'Дизайн-дайджест', username:'@design_digest', submittedBy:'@anna_ux', date:'вчера', category:'Дизайн' },
+  ], extraChannels: [], compQuery: '' };
+
+  raw() {
+    return [
+      { id:1, title:'Product Radar', username:'@product_radar', category:'Технологии', subs:142340, views:38200, er:26.9, growth:2480, verified:true, initials:'PR', grad:'linear-gradient(135deg,#229ED9,#6741d9)' },
+      { id:2, title:'Крипта Дейли', username:'@crypta_daily', category:'Крипта', subs:320100, views:95000, er:18.2, growth:5200, verified:true, initials:'КД', grad:'linear-gradient(135deg,#f76707,#e8590c)' },
+      { id:3, title:'Маркетинг Сок', username:'@mktg_juice', category:'Маркетинг', subs:88400, views:21000, er:31.4, growth:1200, verified:false, initials:'МС', grad:'linear-gradient(135deg,#f783ac,#e64980)' },
+      { id:4, title:'Новости 24/7', username:'@news247', category:'Новости', subs:540000, views:210000, er:12.1, growth:-800, verified:true, initials:'Н', grad:'linear-gradient(135deg,#fa5252,#e03131)' },
+      { id:5, title:'Дизайн Кухня', username:'@design_kitchen', category:'Дизайн', subs:64200, views:19800, er:28.7, growth:940, verified:false, initials:'ДК', grad:'linear-gradient(135deg,#12b886,#0ca678)' },
+      { id:6, title:'Бизнес Молодость', username:'@biz_youth', category:'Бизнес', subs:210500, views:61000, er:15.6, growth:3100, verified:true, initials:'БМ', grad:'linear-gradient(135deg,#40c057,#2f9e44)' },
+      { id:7, title:'Код на ночь', username:'@night_code', category:'Технологии', subs:47800, views:15200, er:33.2, growth:610, verified:false, initials:'КН', grad:'linear-gradient(135deg,#4c6ef5,#3b5bdb)' },
+      { id:8, title:'Финансы Просто', username:'@fin_simple', category:'Бизнес', subs:156700, views:44000, er:19.9, growth:1780, verified:true, initials:'ФП', grad:'linear-gradient(135deg,#22b8cf,#1098ad)' },
+      { id:9, title:'Тренды AI', username:'@ai_trends', category:'Технологии', subs:98300, views:40100, er:29.5, growth:4300, verified:true, initials:'AI', grad:'linear-gradient(135deg,#7048e8,#6741d9)' },
+      { id:10, title:'Смешно До Слёз', username:'@lol_tears', category:'Развлечения', subs:780000, views:260000, er:22.4, growth:2100, verified:false, initials:'СС', grad:'linear-gradient(135deg,#fab005,#f59f00)' },
+      { id:11, title:'Учись Легко', username:'@learn_easy', category:'Образование', subs:55600, views:12300, er:24.1, growth:720, verified:false, initials:'УЛ', grad:'linear-gradient(135deg,#82c91e,#66a80f)' },
+      { id:12, title:'Стартап Дня', username:'@startup_day', category:'Бизнес', subs:72900, views:24500, er:27.8, growth:1550, verified:false, initials:'СД', grad:'linear-gradient(135deg,#f06595,#d6336c)' },
+    ];
+  }
+
+  fmt(n) { return Math.round(n).toLocaleString('ru-RU').replace(/,/g, ' '); }
+  short(n) {
+    if (n >= 1000000) return (n/1000000).toFixed(1).replace('.0','') + 'М';
+    if (n >= 1000) return (n/1000).toFixed(n>=100000?0:1).replace('.0','') + 'K';
+    return String(n);
+  }
+  growthFmt(g) { return (g>=0?'+':'−') + this.fmt(Math.abs(g)); }
+
+  go(s) { return () => this.setState({ screen: s }); }
+
+  collections() {
+    return [
+      {id:1, title:'Топ IT-каналов', desc:'Технологии, разработка и цифровые продукты', curator:'Редакция tgpulse', chIds:[1,9,7], grad:'linear-gradient(135deg,#229ED9,#6741d9)', editorial:true},
+      {id:2, title:'Маркетинг и SMM', desc:'Продвижение, реклама и контент', curator:'Редакция tgpulse', chIds:[3], grad:'linear-gradient(135deg,#f783ac,#e64980)', editorial:true},
+      {id:3, title:'Крипта без шума', desc:'Аналитика рынка без хайпа', curator:'@crypta_daily', chIds:[2], grad:'linear-gradient(135deg,#f76707,#e8590c)', editorial:false},
+      {id:4, title:'Стартапы и венчур', desc:'Истории, разборы и деньги', curator:'Редакция tgpulse', chIds:[12,6], grad:'linear-gradient(135deg,#40c057,#2f9e44)', editorial:true},
+      {id:5, title:'Дизайн и продукт', desc:'UX, UI и продуктовое мышление', curator:'@design_kitchen', chIds:[5,1], grad:'linear-gradient(135deg,#12b886,#0ca678)', editorial:false},
+      {id:6, title:'Финансы и инвестиции', desc:'Личные финансы и рынки', curator:'Редакция tgpulse', chIds:[8,6], grad:'linear-gradient(135deg,#22b8cf,#1098ad)', editorial:true},
+    ];
+  }
+  posts() {
+    return [
+      {slug:'ai-content', cat:'AI', title:'Как AI помогает авторам расти в 2 раза быстрее', excerpt:'Разбираем, как рекомендательные модели предсказывают удачные темы постов и экономят часы на планировании.', date:'28 июня 2026', read:'6 мин', grad:'linear-gradient(135deg,#7048e8,#229ED9)'},
+      {slug:'er-metric', cat:'Аналитика', title:'ER, ERR и охват: какие метрики Telegram реально важны', excerpt:'Перестаём смотреть на тщеславные цифры и считаем то, что влияет на рост канала.', date:'21 июня 2026', read:'8 мин', grad:'linear-gradient(135deg,#229ED9,#1098ad)'},
+      {slug:'ad-buy', cat:'Реклама', title:'Как выбрать канал для рекламы и не слить бюджет', excerpt:'Чек-лист проверки на накрутки и живой пример сравнения двух каналов.', date:'14 июня 2026', read:'5 мин', grad:'linear-gradient(135deg,#12b886,#2f9e44)'},
+      {slug:'best-time', cat:'Практика', title:'Лучшее время для постов: миф или реальность', excerpt:'Смотрим на данные 10 000 каналов и делаем практические выводы.', date:'7 июня 2026', read:'4 мин', grad:'linear-gradient(135deg,#f76707,#e8590c)'},
+    ];
+  }
+  legalDoc(tab) {
+    const docs = {
+      privacy: { title:'Политика конфиденциальности', body:['Настоящая Политика описывает, как сервис tgpulse обрабатывает и защищает данные пользователей. Это демонстрационный текст для прототипа.','Мы собираем только те данные, которые необходимы для работы сервиса: email, публичную статистику Telegram-каналов и настройки аккаунта.','Данные не передаются третьим лицам, кроме случаев, предусмотренных законодательством. Вы можете запросить удаление аккаунта в любой момент.'] },
+      terms: { title:'Пользовательское соглашение', body:['Используя сервис tgpulse, вы соглашаетесь с условиями настоящего соглашения. Это демонстрационный текст для прототипа.','Сервис предоставляет аналитику публичных Telegram-каналов и AI-рекомендации в информационных целях. Мы не гарантируем рост канала.','Запрещается автоматический сбор данных сервиса без письменного согласия, а также попытки обхода тарифных ограничений.'] },
+      offer: { title:'Публичная оферта', body:['Настоящая оферта определяет условия оказания платных услуг сервиса tgpulse. Это демонстрационный текст для прототипа.','Оплата тарифа означает акцепт оферты. Подписка продлевается автоматически, отменить её можно в личном кабинете.','Возврат средств осуществляется в соответствии с законодательством РФ в течение 14 дней с момента оплаты при неиспользовании услуги.'] },
+    };
+    return docs[tab] || docs.privacy;
+  }
+  groups() {
+    return [
+      { id:101, type:'group', title:'Продакты: чат', username:'@product_chat', category:'Технологии', subs:12400, msgDay:320, activePct:18, verified:false, initials:'ПЧ', grad:'linear-gradient(135deg,#4c6ef5,#3b5bdb)' },
+      { id:102, type:'group', title:'IT HR тусовка', username:'@it_hr_chat', category:'Бизнес', subs:8600, msgDay:210, activePct:22, verified:false, initials:'HR', grad:'linear-gradient(135deg,#12b886,#0ca678)' },
+      { id:103, type:'group', title:'Дизайн-кухня чат', username:'@design_chat', category:'Дизайн', subs:15200, msgDay:540, activePct:26, verified:true, initials:'ДЧ', grad:'linear-gradient(135deg,#f783ac,#e64980)' },
+      { id:104, type:'group', title:'Крипто-трейдинг', username:'@crypto_trade_chat', category:'Крипта', subs:31000, msgDay:1200, activePct:31, verified:false, initials:'КТ', grad:'linear-gradient(135deg,#f76707,#e8590c)' },
+      { id:105, type:'group', title:'Стартап-нетворкинг', username:'@startup_net', category:'Бизнес', subs:9800, msgDay:180, activePct:15, verified:false, initials:'СН', grad:'linear-gradient(135deg,#40c057,#2f9e44)' },
+    ];
+  }
+  initialsFrom(s) { const t=(s||'').replace(/^@/,'').replace(/^https?:\/\//,'').replace(/^t\.me\//,''); return (t.slice(0,2)||'TG').toUpperCase(); }
+  compose(t) { return () => this.setState({ modal:'composer', composerTitle:t, composerText: t + '\n\nAI-черновик — отредактируйте под свой голос:\n\n1) Зацепка в первой строке: вопрос или неожиданный факт\n2) Главная мысль с конкретным примером или цифрой\n3) Вывод и вопрос к аудитории, чтобы собрать комментарии' }); }
+  selectPlanFn(name){ return () => this.setState({ upgradeStep:'pay', selectedPlan:name }); }
+  adminCats(){ return ['Технологии','Новости','Маркетинг','Крипта','Дизайн','Бизнес','Развлечения','Образование']; }
+
+  renderVals() {
+    const q = this.state.q.trim().toLowerCase();
+    const cat = this.state.cat;
+    const screen = this.state.screen;
+    const all = [...this.raw(), ...this.state.extraChannels];
+    const entities = [...all.map(c=>({...c, type: c.type || 'channel'})), ...this.groups()];
+    const ctype = this.state.catalogType;
+
+    // type toggle (channels / groups)
+    const typeTabs = [['all','Все'],['channel','Каналы'],['group','Группы']].map(([k,l])=>({ key:k, label:l, onClick:()=>this.setState({catalogType:k, cat:'Все'}), bg: ctype===k?'#101216':'transparent', color: ctype===k?'#fff':'#868e96' }));
+
+    const pool = entities.filter(e => ctype==='all' || e.type===ctype);
+
+    // categories with counts (from current type pool)
+    const counts = {};
+    pool.forEach(c => { counts[c.category] = (counts[c.category]||0)+1; });
+    const catNames = ['Все', ...Object.keys(counts).sort((a,b)=>counts[b]-counts[a])];
+    const categories = catNames.map(name => {
+      const active = name === cat;
+      return {
+        label: name === 'Все' ? 'Все категории' : name + ' · ' + counts[name],
+        onClick: () => this.setState({ cat: name }),
+        bg: active ? '#229ED9' : '#fff',
+        color: active ? '#fff' : '#495057',
+        border: active ? '#229ED9' : '#e9ecef',
+      };
+    });
+
+    // filtered list (channels + groups, generic metric fields)
+    let list = pool.filter(c => cat === 'Все' || c.category === cat);
+    if (q) list = list.filter(c => (c.title+' '+c.username+' '+c.category).toLowerCase().includes(q));
+    list = list.slice().sort((a,b)=>b.subs-a.subs).map(c => {
+      const g = c.type==='group';
+      return {
+        ...c,
+        isGroup: g,
+        typeBadge: g ? 'Группа' : 'Канал',
+        badgeBg: g ? '#f3f0ff' : '#e6fcf5', badgeColor: g ? '#6741d9' : '#0ca678',
+        subsShort: this.short(c.subs),
+        m1l: g ? 'Участников' : 'Подписчики', m1v: this.short(c.subs),
+        m2l: g ? 'Сообщ/день' : 'ER', m2v: g ? this.fmt(c.msgDay) : (c.er + '%'), m2c: '#2f9e44',
+        m3l: g ? 'Актив' : '30д', m3v: g ? (c.activePct + '%') : this.growthFmt(c.growth), m3c: g ? '#7048e8' : (c.growth>=0 ? '#2f9e44' : '#e03131'),
+        open: this.go('dash'),
+      };
+    });
+    const noun = ctype==='group' ? ['группа','группы','групп'] : ctype==='channel' ? ['канал','канала','каналов'] : ['результат','результата','результатов'];
+    const totalLabel = list.length + ' ' + this.plural(list.length, noun);
+
+    // compare picker
+    const sel = this.state.compare;
+    const pickList = all.map(c => {
+      const on = sel.includes(c.id);
+      return {
+        ...c,
+        toggle: () => {
+          const cur = this.state.compare;
+          if (cur.includes(c.id)) this.setState({ compare: cur.filter(x=>x!==c.id) });
+          else if (cur.length < 3) this.setState({ compare: [...cur, c.id] });
+        },
+        bg: on ? '#E7F5FB' : '#fff',
+        color: on ? '#1B87BC' : '#495057',
+        border: on ? '#229ED9' : '#e9ecef',
+      };
+    });
+    const compareChannels = sel.map(id => all.find(c=>c.id===id)).filter(Boolean);
+    const cc = compareChannels;
+    const bestIdx = (arr, dir) => {
+      let bi = 0; arr.forEach((v,i)=>{ if(dir>0 ? v>arr[bi] : v<arr[bi]) bi=i; }); return bi;
+    };
+    const mkRow = (label, vals, fmtFn, dir, colorFn) => {
+      const bi = bestIdx(vals, dir);
+      return { label, cells: vals.map((v,i)=>({ value: fmtFn(v), best: i===bi && vals.length>1, color: colorFn?colorFn(v):'#1a1b1e' })) };
+    };
+    const compareRows = cc.length ? [
+      mkRow('Подписчики', cc.map(c=>c.subs), v=>this.fmt(v), 1),
+      mkRow('Ср. охват поста', cc.map(c=>c.views), v=>this.fmt(v), 1),
+      mkRow('Вовлечённость (ER)', cc.map(c=>c.er), v=>v+'%', 1, ()=>'#2f9e44'),
+      mkRow('Прирост за 30д', cc.map(c=>c.growth), v=>this.growthFmt(v), 1, v=>v>=0?'#2f9e44':'#e03131'),
+      mkRow('Охват / подписчик', cc.map(c=>Math.round(c.views/c.subs*100)), v=>v+'%', 1),
+    ] : [];
+    const compareCols = '1.1fr ' + cc.map(()=>'1fr').join(' ');
+    let verdict = 'Выберите минимум 2 канала, чтобы получить AI-вердикт по закупу рекламы.';
+    if (cc.length >= 2) {
+      const byEr = cc.slice().sort((a,b)=>b.er-a.er)[0];
+      const byReach = cc.slice().sort((a,b)=>(b.views/b.subs)-(a.views/a.subs))[0];
+      verdict = `Для охвата берите «${cc.slice().sort((a,b)=>b.views-a.views)[0].title}». Но по эффективности контакта выигрывает «${byReach.title}» (${Math.round(byReach.views/byReach.subs*100)}% охвата на подписчика), а самая живая аудитория — у «${byEr.title}» (ER ${byEr.er}%). Для нишевого продукта рекомендуем именно его.`;
+    }
+
+    // heatmap 7x12
+    const days = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+    const palette = ['#eef3f6','#e7f5fb','#a5d8f2','#229ED9','#1662a3'];
+    const heat = days.map((day, di) => ({
+      day,
+      cells: Array.from({length:12}, (_,hi) => {
+        const hour = 9 + hi; // 9..20
+        const weekday = di < 5;
+        let v = 0;
+        if (hour>=18 && hour<=21) v = weekday ? 4 : 2;
+        else if (hour>=12 && hour<=14) v = 3;
+        else if (hour>=9 && hour<=11) v = weekday ? 2 : 1;
+        else v = 1;
+        if (!weekday && hour>=14 && hour<=17) v = 2;
+        return { bg: palette[v] };
+      })
+    }));
+
+    const navStyle = (s) => ({
+      col: screen===s ? '#1B87BC' : '#495057',
+      bg: screen===s ? '#E7F5FB' : 'transparent',
+      dot: screen===s ? '#229ED9' : '#dee2e6',
+      is: screen===s ? 'active' : '',
+    });
+    const nL=navStyle('landing'), nC=navStyle('catalog'), nD=navStyle('dash'), nP=navStyle('compare'), nA=navStyle('cabinet');
+
+    // collections
+    const cols = [...this.state.customCollections, ...this.collections()];
+    const collections = cols.map(c => ({ ...c, count:c.chIds.length, countLabel: c.chIds.length + ' ' + this.plural(c.chIds.length, ['канал','канала','каналов']), open: () => this.setState({screen:'collection', collection:c.id}) }));
+    const curCol = cols.find(c=>c.id===this.state.collection) || cols[0];
+    const collectionChannels = curCol.chIds.map(id=>all.find(x=>x.id===id)).filter(Boolean).map(c=>({ ...c, subsShort:this.short(c.subs), growthFmt:this.growthFmt(c.growth), growthColor:c.growth>=0?'#2f9e44':'#e03131', open:this.go('dash') }));
+
+    // blog
+    const bposts = [...this.state.customPosts, ...this.posts()];
+    const blogPosts = bposts.map(p=>({ ...p, open: ()=>this.setState({screen:'blogPost', blogSlug:p.slug}) }));
+    const featured = blogPosts[0];
+    const restPosts = blogPosts.slice(1);
+    const curPost = bposts.find(p=>p.slug===this.state.blogSlug) || bposts[0];
+    const articleBody = ['Это демонстрационная статья блога tgpulse. Здесь мы подробно разбираем тему и показываем, как сервис помогает авторам принимать решения на основе данных, а не интуиции.','Ключевая идея: смотреть не на абсолютные цифры, а на динамику и вовлечённость. AI-модель сервиса подсказывает, какие форматы и темы работают именно у вашей аудитории.','В следующих материалах разберём конкретные кейсы и покажем, как за месяц вырастить охват без накруток и агрессивной рекламы.'];
+
+    // legal
+    const legalRaw = [['privacy','Конфиденциальность'],['terms','Соглашение'],['offer','Оферта']];
+    const legalTabs = legalRaw.map(([k,l])=>({ key:k, label:l, onClick:()=>this.setState({screen:'legal', legalTab:k}), bg: this.state.legalTab===k?'#229ED9':'#fff', color:this.state.legalTab===k?'#fff':'#495057', border:this.state.legalTab===k?'#229ED9':'#e9ecef' }));
+    const legal = this.legalDoc(this.state.legalTab);
+
+    // nav
+    const items = [
+      {key:'landing', label:'Главная', go:this.go('landing')},
+      {key:'catalog', label:'Каталог каналов', go:this.go('catalog')},
+      {key:'collections', label:'Подборки', go:this.go('collections')},
+      {key:'dash', label:'Дашборд канала', go:this.go('dash')},
+      {key:'compare', label:'Сравнение', go:this.go('compare')},
+      {key:'cabinet', label:'AI-кабинет', go:this.go('cabinet'), grad:true},
+      {key:'blog', label:'Блог', go:this.go('blog')},
+      {key:'account', label:'Личный кабинет', go:this.go('account')},
+      {key:'admin', label:'Админка', go:this.go('admin'), admin:true},
+    ];
+    const activeFor = (k)=> screen===k || (k==='collections'&&screen==='collection') || (k==='blog'&&screen==='blogPost') || (k==='dash'&&screen==='post');
+    const navItems = items.map(it=>{ const a=activeFor(it.key); return {...it, col:a?'#1B87BC':'#495057', bg:a?'#E7F5FB':'transparent', dot: it.grad?'linear-gradient(135deg,#7048e8,#229ED9)':(it.admin?'#e8590c':(a?'#229ED9':'#dee2e6'))}; });
+
+    const showFooter = true;
+
+    // competitors
+    const myCh = all.find(c=>c.id===1);
+    const competitorChannels = this.state.competitors.map(id=>all.find(c=>c.id===id)).filter(Boolean).map(c=>{
+      const d = Math.round((c.er - myCh.er)*10)/10;
+      return { ...c, subsShort:this.short(c.subs), erStr:c.er+'%', vs:(d>=0?'+':'−')+Math.abs(d)+'% ER', vsColor:d>=0?'#e03131':'#2f9e44', remove:()=>this.setState({competitors:this.state.competitors.filter(x=>x!==c.id)}) };
+    });
+    const compQ = this.state.compQuery.trim().toLowerCase();
+    const compPool = all.filter(c=>c.id!==1);
+    const compFiltered = compQ ? compPool.filter(c=>(c.title+' '+c.username).toLowerCase().includes(compQ)) : compPool;
+    const competitorPicker = compFiltered.map(c=>{
+      const on = this.state.competitors.includes(c.id);
+      return { ...c, toggle:()=>{ const cur=this.state.competitors; this.setState({competitors: cur.includes(c.id)?cur.filter(x=>x!==c.id):[...cur,c.id]}); }, bg:on?'#E7F5FB':'#fff', color:on?'#1B87BC':'#495057', border:on?'#229ED9':'#e9ecef' };
+    });
+    const compNoMatch = compQ.length>0 && compFiltered.length===0;
+    const addCompFromQuery = () => {
+      const q=this.state.compQuery.trim(); if(!q) return;
+      const base=q.replace(/^@/,'').replace(/^https?:\/\//,'').replace(/^t\.me\//,'');
+      const grads=['linear-gradient(135deg,#229ED9,#6741d9)','linear-gradient(135deg,#12b886,#0ca678)','linear-gradient(135deg,#f76707,#e8590c)','linear-gradient(135deg,#7048e8,#6741d9)'];
+      const id=Date.now();
+      const nc={ id, type:'channel', title: base.charAt(0).toUpperCase()+base.slice(1).replace(/_/g,' '), username:q.startsWith('@')?q:'@'+base, category:'Технологии', subs:25000, views:7000, er:20, growth:500, verified:false, initials:this.initialsFrom(q), grad:grads[Math.floor(Math.random()*4)] };
+      const sub={ id:id+1, title:nc.title, username:nc.username, submittedBy:'Вы · Мария Л.', date:'только что', category:'Технологии' };
+      this.setState({ extraChannels:[...this.state.extraChannels, nc], competitors:[...this.state.competitors, id], moderationQueue:[sub, ...this.state.moderationQueue], compQuery:'' });
+    };
+    const compareWithCompetitors = () => this.setState({ compare:[1, ...this.state.competitors].slice(0,3), screen:'compare', modal:null });
+    const myChannels = this.state.myChannels;
+
+    // upgrade plans
+    const annual = this.state.upgradeAnnual;
+    const upgradePlans = [
+      { name:'Free', price:'0 ₽', per:'навсегда', feats:['Базовая статистика','5 AI-разборов в месяц','Каталог и подборки'] },
+      { name:'Pro', price: annual?'790 ₽':'990 ₽', per: annual?'/мес при оплате за год':'в месяц', feats:['Безлимит AI-разборов','Контент-план и композер','Сравнение до 5 каналов','Конкуренты и алерты','Экспорт отчётов'], accent:true },
+      { name:'Agency', price: annual?'3 900 ₽':'4 900 ₽', per: annual?'/мес при оплате за год':'в месяц', feats:['Всё из Pro','До 50 каналов и групп','API-доступ','Командный доступ'] },
+    ].map(p=>{ const cur=this.state.plan===p.name; return { ...p, cur, border:p.accent?'#229ED9':'#e9ecef', bw:p.accent?'2px':'1px', btnBg:cur?'#f1f3f5':(p.accent?'#229ED9':'#101216'), btnColor:cur?'#868e96':'#fff', btnLabel:cur?'Текущий план':'Оформить '+p.name, onSelect: cur?(()=>{}):this.selectPlanFn(p.name) }; });
+
+    // add channel/group
+    const addSubmit = () => {
+      const qv=(this.state.addQuery||'').trim();
+      const base= qv ? qv.replace(/^@/,'').replace(/^https?:\/\//,'').replace(/^t\.me\//,'') : 'new_channel';
+      const name= base.replace(/_/g,' ');
+      const grads=['linear-gradient(135deg,#229ED9,#6741d9)','linear-gradient(135deg,#12b886,#0ca678)','linear-gradient(135deg,#f76707,#e8590c)','linear-gradient(135deg,#7048e8,#6741d9)'];
+      const nc={ id:Date.now(), title: name.charAt(0).toUpperCase()+name.slice(1), username: qv?(qv.startsWith('@')?qv:'@'+base):'@new_channel', initials:this.initialsFrom(qv), grad:grads[Math.floor(Math.random()*4)], subsShort:'идёт анализ…', type:this.state.addType };
+      const sub={ id:Date.now()+1, title:nc.title, username:nc.username, submittedBy:'Вы · Мария Л.', date:'только что', category:this.state.addType==='group'?'—':'Технологии' };
+      this.setState({ myChannels:[...this.state.myChannels, nc], moderationQueue:[sub, ...this.state.moderationQueue], modal:null, screen:'cabinet', addQuery:'' });
+    };
+
+    // plan + upgrade steps
+    const plan = this.state.plan; const planIsFree = plan==='Free';
+    const uStep = this.state.upgradeStep; const selName = this.state.selectedPlan;
+    const priceMap = annual ? {Pro:'790 ₽',Agency:'3 900 ₽'} : {Pro:'990 ₽',Agency:'4 900 ₽'};
+    const payPrice = priceMap[selName] || '';
+
+    // admin — channels with overrides
+    const ov = this.state.chOverrides;
+    const adminChannels = all.map(c=>{
+      const o = ov[c.id] || {};
+      const category = o.category!==undefined ? o.category : c.category;
+      const verified = o.verified!==undefined ? o.verified : c.verified;
+      return { ...c, category, verified, subsShort:this.short(c.subs),
+        onCat:(e)=>this.setState({chOverrides:{...this.state.chOverrides, [c.id]:{...(this.state.chOverrides[c.id]||{}), category:e.target.value}}}),
+        toggleVer:()=>this.setState({chOverrides:{...this.state.chOverrides, [c.id]:{...(this.state.chOverrides[c.id]||{}), verified:!verified}}}),
+        verBg: verified?'#229ED9':'#dee2e6', verJustify: verified?'flex-end':'flex-start' };
+    });
+    const adminCatsList = this.adminCats();
+    const adminPosts = blogPosts; const adminCollections = collections;
+
+    // editors
+    const ad = this.state.artDraft;
+    const artCatTabs = ['AI','Аналитика','Реклама','Практика'].map(k=>({ key:k, label:k, onClick:()=>this.setState({artDraft:{...this.state.artDraft, cat:k}}), bg: ad.cat===k?'#229ED9':'#fff', color: ad.cat===k?'#fff':'#495057', border: ad.cat===k?'#229ED9':'#e9ecef' }));
+    const publishArticle = () => {
+      const d=this.state.artDraft; const grads=['linear-gradient(135deg,#7048e8,#229ED9)','linear-gradient(135deg,#229ED9,#1098ad)','linear-gradient(135deg,#12b886,#2f9e44)','linear-gradient(135deg,#f76707,#e8590c)'];
+      const np={ slug:'custom-'+Date.now(), cat:d.cat||'AI', title:d.title||'Новая статья', excerpt:d.excerpt||'Черновик статьи', date:'сегодня', read:'3 мин', grad:grads[Math.floor(Math.random()*4)] };
+      this.setState({ customPosts:[np, ...this.state.customPosts], modal:null, screen:'blog', artDraft:{title:'',cat:'AI',excerpt:'',body:''} });
+    };
+    const publishCollection = () => {
+      const d=this.state.collDraft; const grads=['linear-gradient(135deg,#229ED9,#6741d9)','linear-gradient(135deg,#f783ac,#e64980)','linear-gradient(135deg,#40c057,#2f9e44)','linear-gradient(135deg,#22b8cf,#1098ad)'];
+      const nc={ id:Date.now(), title:d.title||'Новая подборка', desc:d.desc||'Описание подборки', curator:'Редакция tgpulse', chIds:[1,9,7], grad:grads[Math.floor(Math.random()*4)], editorial:true };
+      this.setState({ customCollections:[nc, ...this.state.customCollections], modal:null, screen:'collections', collDraft:{title:'',desc:''} });
+    };
+    const modGrads = ['linear-gradient(135deg,#229ED9,#6741d9)','linear-gradient(135deg,#f76707,#e8590c)','linear-gradient(135deg,#12b886,#0ca678)','linear-gradient(135deg,#f783ac,#e64980)'];
+    const modQueue = this.state.moderationQueue.map((m,i)=>{
+      const seed=(Math.abs(m.id)%9)+1;
+      const initials=(m.title||'?').replace(/^@/,'').slice(0,2).toUpperCase();
+      const grad=modGrads[i%4];
+      const canApprove = !!m.category && m.category!=='—';
+      return { ...m, initials, grad, canApprove, apprBg: canApprove?'#2f9e44':'#b7e0c2', apprCursor: canApprove?'pointer':'not-allowed',
+        onCat:(e)=>this.setState({moderationQueue:this.state.moderationQueue.map(x=>x.id===m.id?{...x,category:e.target.value}:x)}),
+        approve:()=>{ if(!canApprove) return; const ex=this.state.extraChannels; const has=ex.find(x=>x.username===m.username); const extra = has ? ex.map(x=>x.username===m.username?{...x, category:m.category, verified:true}:x) : [...ex, { id:'a'+m.id, type:'channel', title:m.title, username:m.username, category:m.category, subs:seed*15000, views:seed*4200, er:18+seed, growth:seed*180, verified:false, initials, grad }]; this.setState({ extraChannels:extra, moderationQueue:this.state.moderationQueue.filter(x=>x.id!==m.id) }); },
+        reject:()=>this.setState({moderationQueue:this.state.moderationQueue.filter(x=>x.id!==m.id)}),
+      };
+    });
+    const modCount = this.state.moderationQueue.length; const modEmpty = modCount===0;
+
+    return {
+      q: this.state.q,
+      onSearch: (e) => this.setState({ q: e.target.value, screen: (this.state.screen==='landing'||this.state.screen==='cabinet') ? 'catalog' : this.state.screen }),
+      goLanding: this.go('landing'), goCatalog: this.go('catalog'), goDash: this.go('dash'), goCompare: this.go('compare'), goCabinet: this.go('cabinet'),
+      isLanding:nL.is, colLanding:nL.col, bgLanding:nL.bg, dotLanding:nL.dot,
+      isCatalog:nC.is, colCatalog:nC.col, bgCatalog:nC.bg, dotCatalog:nC.dot,
+      isDash:nD.is, colDash:nD.col, bgDash:nD.bg, dotDash:nD.dot,
+      isCompare:nP.is, colCompare:nP.col, bgCompare:nP.bg, dotCompare:nP.dot,
+      isCabinet:nA.is, colCabinet:nA.col, bgCabinet:nA.bg,
+      isLandingScreen: screen==='landing',
+      isCatalogScreen: screen==='catalog',
+      isDashScreen: screen==='dash',
+      isCompareScreen: screen==='compare',
+      isCabinetScreen: screen==='cabinet',
+      categories, list, isEmpty: list.length===0,
+      totalLabel,
+      pickList, compareChannels, compareRows, compareCols, compareVerdict: verdict,
+      heat,
+      navItems, showFooter,
+      isPostScreen: screen==='post',
+      isCollectionsScreen: screen==='collections',
+      isCollectionScreen: screen==='collection',
+      isAccountScreen: screen==='account',
+      isBlogScreen: screen==='blog',
+      isBlogPostScreen: screen==='blogPost',
+      isLegalScreen: screen==='legal',
+      isNotFoundScreen: screen==='notfound',
+      collections, collectionChannels,
+      collectionTitle: curCol.title, collectionDesc: curCol.desc, collectionGrad: curCol.grad,
+      collectionCount: curCol.chIds.length + ' ' + this.plural(curCol.chIds.length, ['канал','канала','каналов']),
+      blogPosts, featured, restPosts,
+      articleTitle: curPost.title, articleCat: curPost.cat, articleDate: curPost.date, articleRead: curPost.read, articleGrad: curPost.grad, articleBody,
+      legalTabs, legalTitle: legal.title, legalBody: legal.body,
+      goCollections: this.go('collections'), goBlog: this.go('blog'), goAccount: this.go('account'), openPost: this.go('post'), goHome: this.go('landing'), go404: this.go('notfound'),
+      goLegalPrivacy: ()=>this.setState({screen:'legal', legalTab:'privacy'}),
+      goLegalTerms: ()=>this.setState({screen:'legal', legalTab:'terms'}),
+      goLegalOffer: ()=>this.setState({screen:'legal', legalTab:'offer'}),
+      modalOpen: !!this.state.modal,
+      isLogin: this.state.modal==='login', isRegister: this.state.modal==='register', isRecovery: this.state.modal==='recovery',
+      openLogin: ()=>this.setState({modal:'login'}), openRegister: ()=>this.setState({modal:'register'}), openRecovery: ()=>this.setState({modal:'recovery'}), closeModal: ()=>this.setState({modal:null}),
+      typeTabs, competitorChannels, competitorPicker, compareWithCompetitors, myChannels, upgradePlans,
+      compQuery:this.state.compQuery, onCompQuery:(e)=>this.setState({compQuery:e.target.value}), compNoMatch, addCompFromQuery,
+      upgradeMonthlyBg: annual?'transparent':'#fff', upgradeAnnualBg: annual?'#fff':'transparent',
+      setUpgradeMonthly:()=>this.setState({upgradeAnnual:false}), setUpgradeAnnual:()=>this.setState({upgradeAnnual:true}),
+      openEditProfile:()=>this.setState({modal:'editProfile'}), openUpgrade:()=>this.setState({modal:'upgrade', upgradeStep:'plans', selectedPlan:null}), openAddChannel:()=>this.setState({modal:'addChannel'}), openAddCompetitor:()=>this.setState({modal:'addCompetitor'}),
+      isEditProfile:this.state.modal==='editProfile', isUpgrade:this.state.modal==='upgrade', isAddChannel:this.state.modal==='addChannel', isAddCompetitor:this.state.modal==='addCompetitor', isComposer:this.state.modal==='composer',
+      modalWidth: this.state.modal==='upgrade' ? '760px' : this.state.modal==='article' ? '640px' : (this.state.modal==='composer'||this.state.modal==='addCompetitor'||this.state.modal==='collectionEd') ? '560px' : '420px',
+      setAddChannel:()=>this.setState({addType:'channel'}), setAddGroup:()=>this.setState({addType:'group'}),
+      addChannelBg:this.state.addType==='channel'?'#fff':'transparent', addChannelColor:this.state.addType==='channel'?'#101216':'#868e96',
+      addGroupBg:this.state.addType==='group'?'#fff':'transparent', addGroupColor:this.state.addType==='group'?'#101216':'#868e96',
+      addQuery:this.state.addQuery, onAddInput:(e)=>this.setState({addQuery:e.target.value}), addSubmit,
+      writeIdea1: this.compose('Разбор: как AI-агенты меняют онбординг в продуктах'),
+      writeIdea2: this.compose('Кейс с цифрами: retention +N% — что сработало'),
+      writeIdea3: this.compose('5 ошибок в продуктовой аналитике'),
+      composerTitle:this.state.composerTitle, composerText:this.state.composerText, onComposerInput:(e)=>this.setState({composerText:e.target.value}),
+      isAdminScreen: screen==='admin', adminChannels, adminCatsList, adminPosts, adminCollections,
+      setAdminChannels:()=>this.setState({adminTab:'channels'}), setAdminPosts:()=>this.setState({adminTab:'posts'}), setAdminCollections:()=>this.setState({adminTab:'collections'}),
+      adminTabChannels:this.state.adminTab==='channels', adminTabPosts:this.state.adminTab==='posts', adminTabCollections:this.state.adminTab==='collections',
+      adminChBg:this.state.adminTab==='channels'?'#101216':'transparent', adminChColor:this.state.adminTab==='channels'?'#fff':'#868e96',
+      adminPoBg:this.state.adminTab==='posts'?'#101216':'transparent', adminPoColor:this.state.adminTab==='posts'?'#fff':'#868e96',
+      adminCoBg:this.state.adminTab==='collections'?'#101216':'transparent', adminCoColor:this.state.adminTab==='collections'?'#fff':'#868e96',
+      adminTabMod:this.state.adminTab==='mod', setAdminMod:()=>this.setState({adminTab:'mod'}),
+      adminMoBg:this.state.adminTab==='mod'?'#101216':'transparent', adminMoColor:this.state.adminTab==='mod'?'#fff':'#868e96',
+      moderationQueue:modQueue, modCount, modEmpty,
+      plan, planIsFree, planLabel:'Тариф '+plan,
+      upgradeStepPlans:uStep==='plans', upgradeStepPay:uStep==='pay', upgradeStepDone:uStep==='done',
+      selName, payPrice, payNow:()=>this.setState({upgradeStep:'done', plan:this.state.selectedPlan}), backToPlans:()=>this.setState({upgradeStep:'plans'}),
+      isArticle:this.state.modal==='article', isCollectionEd:this.state.modal==='collectionEd',
+      openArticleEditor:()=>this.setState({modal:'article'}), openCollectionEditor:()=>this.setState({modal:'collectionEd'}),
+      artTitle:this.state.artDraft.title, artExcerpt:this.state.artDraft.excerpt, artBody:this.state.artDraft.body, artCatTabs,
+      onArtTitle:(e)=>this.setState({artDraft:{...this.state.artDraft, title:e.target.value}}),
+      onArtExcerpt:(e)=>this.setState({artDraft:{...this.state.artDraft, excerpt:e.target.value}}),
+      onArtBody:(e)=>this.setState({artDraft:{...this.state.artDraft, body:e.target.value}}),
+      publishArticle,
+      collTitle:this.state.collDraft.title, collDesc:this.state.collDraft.desc,
+      onCollTitle:(e)=>this.setState({collDraft:{...this.state.collDraft, title:e.target.value}}),
+      onCollDesc:(e)=>this.setState({collDraft:{...this.state.collDraft, desc:e.target.value}}),
+      publishCollection,
+      stop: (e)=>e.stopPropagation(),
+    };
+  }
+
+  plural(n, forms) {
+    const n10 = n%10, n100 = n%100;
+    if (n10===1 && n100!==11) return forms[0];
+    if (n10>=2 && n10<=4 && (n100<10||n100>=20)) return forms[1];
+    return forms[2];
+  }
+}
+</script>
+</body>
+</html>
