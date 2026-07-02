@@ -1,0 +1,5 @@
+# Keep GitHub language stats representative of the real stack.
+# The design handoff (interactive HTML prototype + its runtime) is a reference,
+# not application code — exclude it from Linguist language stats.
+docs/design/** linguist-documentation
+docs/design/support.js linguist-vendored
