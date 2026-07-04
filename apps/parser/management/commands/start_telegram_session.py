@@ -8,7 +8,7 @@ Prerequisites:
 - Connection to the internet
 
 How to:
-    uv run python manage.py set_telegram_session
+    uv run python manage.py start_telegram_session
 
 Variables:
     ENV_SESSION_KEY = TelegramClient Session key name in .env
@@ -56,17 +56,17 @@ class Command(BaseCommand):
     - Safely disconnects from the client after successfull set of TelegramClient StringSession
 
     How to and when:
-    1. uv run python manage.py set_telegram_session
+    1. uv run python manage.py start_telegram_session
     when: when everything is present in .env or user will provide data via cli in same terminal
-    2. uv run python manage.py set_telegram_session --force
+    2. uv run python manage.py start_telegram_session --force
     when: StringSession is in .env, but want to regenerate it with data in .env
-    3. uv run python manage.py set_telegram_session --string-session <value>
+    3. uv run python manage.py start_telegram_session --string-session <value>
     when: set new StringSession
-    4. uv run python manage.py set_telegram_session --api-id 123 --api-hash 123abc
+    4. uv run python manage.py start_telegram_session --api-id 123 --api-hash 123abc
     when: use passed data and what data is not passed should be loaded from .env
-    4. uv run python manage.py set_telegram_session --api-id 123 --api-hash 123abc --phone +71235456789
+    5. uv run python manage.py start_telegram_session --api-id 123 --api-hash 123abc --phone +71235456789
     when: use passed data and what data is not passed should be loaded from .env
-    5. uv run python manage.py set_telegram_session chilling
+    6. uv run python manage.py start_telegram_session chilling
     when: u r tired and want to receive argparse.ArgumentError
     """
 

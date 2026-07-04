@@ -63,7 +63,9 @@ def test_get_telegram_credentials_returns_valid_values() -> None:
     TELEGRAM_SESSION_STRING="session",
 )
 def test_get_telegram_credentials_raises_without_api_id() -> None:
-    with pytest.raises(ImproperlyConfigured):
+    with pytest.raises(
+        ImproperlyConfigured, match="Нет конфигурации для Telegram API"
+    ):
         get_telegram_credentials()
 
 
@@ -73,7 +75,9 @@ def test_get_telegram_credentials_raises_without_api_id() -> None:
     TELEGRAM_SESSION_STRING="session",
 )
 def test_get_telegram_credentials_raises_without_api_hash() -> None:
-    with pytest.raises(ImproperlyConfigured):
+    with pytest.raises(
+        ImproperlyConfigured, match="Нет конфигурации для Telegram API"
+    ):
         get_telegram_credentials()
 
 
@@ -83,7 +87,9 @@ def test_get_telegram_credentials_raises_without_api_hash() -> None:
     TELEGRAM_SESSION_STRING="session",
 )
 def test_get_telegram_credentials_raises_on_invalid_api_id() -> None:
-    with pytest.raises(ImproperlyConfigured):
+    with pytest.raises(
+        ImproperlyConfigured, match="TELEGRAM_API_ID должен быть целым числом"
+    ):
         get_telegram_credentials()
 
 
@@ -93,7 +99,9 @@ def test_get_telegram_credentials_raises_on_invalid_api_id() -> None:
     TELEGRAM_SESSION_STRING="",
 )
 def test_credentials_raises_without_session_when_required() -> None:
-    with pytest.raises(ImproperlyConfigured):
+    with pytest.raises(
+        ImproperlyConfigured, match="TELEGRAM_SESSION_STRING не задан"
+    ):
         get_telegram_credentials(require_session=True)
 
 
@@ -104,7 +112,9 @@ def test_credentials_raises_without_session_when_required() -> None:
 )
 def test_parser_view_get_telegram_client_raises_without_session() -> None:
     view = ParserView()
-    with pytest.raises(ImproperlyConfigured):
+    with pytest.raises(
+        ImproperlyConfigured, match="TELEGRAM_SESSION_STRING не задан"
+    ):
         view.get_telegram_client()
 
 
@@ -120,5 +130,7 @@ def test_parse_channel_raises_without_telegram_credentials() -> None:
         title="Test Channel",
         participants_count=0,
     )
-    with pytest.raises(ImproperlyConfigured):
+    with pytest.raises(
+        ImproperlyConfigured, match="Нет конфигурации для Telegram API"
+    ):
         parse_channel(channel.channel_id)

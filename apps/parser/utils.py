@@ -51,7 +51,7 @@ def get_telegram_credentials(
     if require_session and not session_string:
         raise ImproperlyConfigured(
             "TELEGRAM_SESSION_STRING не задан. "
-            "Запусти `uv run python3 manage.py start_telegram_session`"
+            "Запусти `uv run python manage.py start_telegram_session`"
         )
 
     return api_id, api_hash, session_string
