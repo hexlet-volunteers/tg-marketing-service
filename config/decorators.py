@@ -17,7 +17,7 @@ def role_required(allowed_roles, login_url=None, message=None):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
             # Определяем роль пользователя
-            if not hasattr(request, 'role'):
+            if not hasattr(request, "role"):
                 request.role = get_user_role(request)
 
             # Проверяем доступ
@@ -25,7 +25,9 @@ def role_required(allowed_roles, login_url=None, message=None):
                 return view_func(request, *args, **kwargs)
 
             # Обработка отказа в доступе
-            return handle_access_denied(request, request.role, allowed_roles, login_url, message)
+            return handle_access_denied(
+                request, request.role, allowed_roles, login_url, message
+            )
 
         return _wrapped_view
 
@@ -35,29 +37,36 @@ def role_required(allowed_roles, login_url=None, message=None):
 def get_user_role(request):
     """Динамически определяем роль пользователя"""
     if not request.user.is_authenticated:
-        return 'guest'
-    if hasattr(request.user, 'is_partner') and request.user.is_partner:
-        return 'partner'
-    if hasattr(request.user, 'is_channel_moderator') and request.user.is_channel_moderator:
-        return 'channel_moderator'
-    return 'user'
+        return "guest"
+    if hasattr(request.user, "is_partner") and request.user.is_partner:
+        return "partner"
+    if (
+        hasattr(request.user, "is_channel_moderator")
+        and request.user.is_channel_moderator
+    ):
+        return "channel_moderator"
+    return "user"
 
 
-def handle_access_denied(request, current_role, allowed_roles, login_url=None, message=None):
+def handle_access_denied(
+    request, current_role, allowed_roles, login_url=None, message=None
+):
     """
     Обработка отказа в доступе с учетом разных сценариев
     """
     default_messages = {
-        'guest': "Требуется авторизация",
-        'user': "Недостаточно прав",
-        'partner': "Доступ только для партнеров",
-        'channel_moderator': "Доступ только для модераторов каналов"
+        "guest": "Требуется авторизация",
+        "user": "Недостаточно прав",
+        "partner": "Доступ только для партнеров",
+        "channel_moderator": "Доступ только для модераторов каналов",
     }
 
-    error_message = message or default_messages.get(current_role, "Доступ запрещен")
+    error_message = message or default_messages.get(
+        current_role, "Доступ запрещен"
+    )
 
     # Для неавторизованных - редирект на страницу входа
-    if current_role == 'guest' and login_url:
+    if current_role == "guest" and login_url:
         messages.warning(request, error_message)
         return HttpResponseRedirect(login_url)
 
@@ -74,9 +83,9 @@ def guest_required(view_func=None, login_url=None, message=None):
     Авторизованных перенаправляет на главную.
     """
     actual_decorator = role_required(
-        allowed_roles=['guest'],
+        allowed_roles=["guest"],
         login_url=login_url,
-        message=message or "Эта страница доступна только гостям"
+        message=message or "Эта страница доступна только гостям",
     )
     if view_func:
         return actual_decorator(view_func)
@@ -89,9 +98,9 @@ def user_required(view_func=None, login_url=None, message=None):
     Гостей перенаправляет на страницу входа.
     """
     actual_decorator = role_required(
-        allowed_roles=['user', 'partner'],
-        login_url=login_url or reverse('login'),
-        message=message or "Требуется авторизация"
+        allowed_roles=["user", "partner"],
+        login_url=login_url or reverse("login"),
+        message=message or "Требуется авторизация",
     )
     if view_func:
         return actual_decorator(view_func)
@@ -110,11 +119,13 @@ def partner_required(view_func=None, login_url=None, message=None):
             # Сначала проверяем авторизацию
             if not request.user.is_authenticated:
                 messages.warning(request, message or "Требуется авторизация")
-                return HttpResponseRedirect(login_url or reverse('login'))
+                return HttpResponseRedirect(login_url or reverse("login"))
 
             # Затем проверяем партнерский статус
-            if not getattr(request.user, 'is_partner', False):
-                messages.error(request, message or "Доступ только для партнеров")
+            if not getattr(request.user, "is_partner", False):
+                messages.error(
+                    request, message or "Доступ только для партнеров"
+                )
                 return HttpResponseForbidden("Доступ только для партнеров")
 
             return view_func(request, *args, **kwargs)
@@ -138,12 +149,16 @@ def channel_moderator_required(view_func=None, login_url=None, message=None):
             # Сначала проверяем авторизацию
             if not request.user.is_authenticated:
                 messages.warning(request, message or "Требуется авторизация")
-                return HttpResponseRedirect(login_url or reverse('login'))
+                return HttpResponseRedirect(login_url or reverse("login"))
 
             # Затем проверяем статус модератора канала
-            if not getattr(request.user, 'is_channel_moderator', False):
-                messages.error(request, message or "Доступ только для модераторов каналов")
-                return HttpResponseForbidden("Доступ только для модераторов каналов")
+            if not getattr(request.user, "is_channel_moderator", False):
+                messages.error(
+                    request, message or "Доступ только для модераторов каналов"
+                )
+                return HttpResponseForbidden(
+                    "Доступ только для модераторов каналов"
+                )
 
             return view_func(request, *args, **kwargs)
 

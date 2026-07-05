@@ -6,23 +6,53 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0004_user_role'),
+        ("users", "0004_user_role"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Staff',
+            name="Staff",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Создан')),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='staff', to=settings.AUTH_USER_MODEL, verbose_name='Пользователь')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        auto_now_add=True, verbose_name="Создан"
+                    ),
+                ),
+                (
+                    "user",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="staff",
+                        to=settings.AUTH_USER_MODEL,
+                        verbose_name="Пользователь",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Сотрудник администрации сайта',
-                'verbose_name_plural': 'Сотрудники администрации сайта',
-                'permissions': [('add_users', 'Добавлять пользователей'), ('consider applications for partnership', 'Рассматривать заявки на партнерство'), ('manage permissions and permissions', 'Управлять допусками и разрешениями ')],
+                "verbose_name": "Сотрудник администрации сайта",
+                "verbose_name_plural": "Сотрудники администрации сайта",
+                "permissions": [
+                    ("add_users", "Добавлять пользователей"),
+                    (
+                        "consider applications for partnership",
+                        "Рассматривать заявки на партнерство",
+                    ),
+                    (
+                        "manage permissions and permissions",
+                        "Управлять допусками и разрешениями ",
+                    ),
+                ],
             },
         ),
     ]

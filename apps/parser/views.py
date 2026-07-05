@@ -25,17 +25,17 @@ log = logging.getLogger(__name__)
 
 class ParserView(UserAuthenticationCheckMixin, FormView):
     form_class = ChannelParseForm
-    template_name = 'parser/parse_channel.html'
+    template_name = "parser/parse_channel.html"
     success_url = reverse_lazy("parser:list")
 
     def get_telegram_client(self):
         """Get Telegram client for parser work"""
         if not settings.TELEGRAM_SESSION_STRING:
             raise ImproperlyConfigured(
-                'TELEGRAM_SESSION_STRING\
+                "TELEGRAM_SESSION_STRING\
                     (needed by Telethon to parse data from Telegram)\
                         is not set. Please run\
-                            `uv run python3 manage.py set_sessions_string`'
+                            `uv run python3 manage.py set_sessions_string`"
             )
         return TelegramClient(
             StringSession(settings.TELEGRAM_SESSION_STRING),
@@ -51,24 +51,23 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
             return await tg_parser(url, client, limit)
         finally:
             await client.disconnect()
-    
 
     def save_channel(self, data, request=None):
         """Create or update channel"""
         channel, created = TelegramChannel.objects.update_or_create(
             channel_id=data["channel_id"],
             defaults={
-                'title': data['title'],
-                'username': data['username'],
-                'description': data['description'],
-                'participants_count': data['participants_count'],
-                'pinned_messages': data['pinned_messages'],
-                'last_messages': data['last_messages'],
-                'average_views': data['average_views'],
-                'language': data['language'],
-                'country': data['country'],
-                'category': data['category'],
-            }
+                "title": data["title"],
+                "username": data["username"],
+                "description": data["description"],
+                "participants_count": data["participants_count"],
+                "pinned_messages": data["pinned_messages"],
+                "last_messages": data["last_messages"],
+                "average_views": data["average_views"],
+                "language": data["language"],
+                "country": data["country"],
+                "category": data["category"],
+            },
         )
 
         if created:
@@ -77,11 +76,13 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
             log.info(f"Channel updated: {channel.title}")
 
         return channel, created
-            
+
     def save_stats(self, channel, data):
         """Create stats record with growth calculation"""
         last_stats = (
-            ChannelStats.objects.filter(channel=channel).order_by("-parsed_at").first()
+            ChannelStats.objects.filter(channel=channel)
+            .order_by("-parsed_at")
+            .first()
         )
         current_date = timezone.now()
         current_count = data["participants_count"]
@@ -109,24 +110,28 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
         )
 
     def form_valid(self, form):
-        """ Обработка формы """
-        identifier = form.cleaned_data['channel_identifier']
-        limit = form.cleaned_data['limit']
-        language = form.cleaned_data['language']
-        country = form.cleaned_data['country']
-        category = form.cleaned_data['category']
-        log.info(f'Начинаем обработку данных для канала; '
-                 f'- {identifier} лимит - {limit}')
+        """Обработка формы"""
+        identifier = form.cleaned_data["channel_identifier"]
+        limit = form.cleaned_data["limit"]
+        language = form.cleaned_data["language"]
+        country = form.cleaned_data["country"]
+        category = form.cleaned_data["category"]
+        log.info(
+            f"Начинаем обработку данных для канала; "
+            f"- {identifier} лимит - {limit}"
+        )
         try:
             # Start async parsing function
             async_parser = async_to_sync(self.async_tg_parser)
             parsed_data = async_parser(identifier, limit)
-            parsed_data.update({'language': language,
-                                'country': country,
-                                'category': category})
+            parsed_data.update(
+                {"language": language, "country": country, "category": category}
+            )
 
-            log.info(f'Парсинг завершен для канала;'
-                     f'- {parsed_data['title']} ({parsed_data['channel_id']}')
+            log.info(
+                f"Парсинг завершен для канала;"
+                f"- {parsed_data['title']} ({parsed_data['channel_id']}"
+            )
 
             # Saving data
             channel, created = self.save_channel(parsed_data)
@@ -149,24 +154,25 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
 
 class ParserListView(ListView):
     model = TelegramChannel
-    token = 'TEMP_TOKEN'
+    token = "TEMP_TOKEN"
 
     def get(self, request, *args, **kwargs):
         channels = self.get_queryset()
-    
+
         return inertia_render(
             request,
-            'ChannelAnalytics',
+            "ChannelAnalytics",
             props={
                 "channels": channels,
-                "csrfToken": self.token,   
-            }
+                "csrfToken": self.token,
+            },
         )
 
 
 class ParserDetailView(DetailView):
     model = TelegramChannel
-    template_name = 'parser/channel_detail.html'
+    template_name = "parser/channel_detail.html"
     context_object_name = "channel"
+
 
 # Create your views here.

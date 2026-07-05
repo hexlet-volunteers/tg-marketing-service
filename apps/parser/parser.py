@@ -45,16 +45,24 @@ async def tg_parser(url: str, client: TelegramClient, limit: int = 10) -> dict:
 
         data["title"] = channel.title  # Channel title
         data["channel_id"] = channel.id  # Channel id
-        data["username"] = channel.username if channel.username else '-'  # Channel username
+        data["username"] = (
+            channel.username if channel.username else "-"
+        )  # Channel username
         data["verified"] = channel.verified  # Is channel verified? (boolean)
         # Channel creation date
-        data["creation_date"] = channel.date.isoformat() if channel.date else None
+        data["creation_date"] = (
+            channel.date.isoformat() if channel.date else None
+        )
         # Fetches last channel posts
 
         last_messages = await client.get_messages(channel, limit=limit * 3)
         # Calculates average views of recent posts
         data["last_messages"] = [
-            {"post_id": post.id, "post_text": post.text, "post_views": post.views}
+            {
+                "post_id": post.id,
+                "post_text": post.text,
+                "post_views": post.views,
+            }
             for post in last_messages[:limit]
         ]
         total_views = 0
@@ -71,7 +79,6 @@ async def tg_parser(url: str, client: TelegramClient, limit: int = 10) -> dict:
         log.error("Anti-flood triggered, waiting required")
         # wait recommended time + random interval
 
-
         await asyncio.sleep(e.seconds + random.uniform(1.0, 2.0))
 
     except ChannelInvalidError:
@@ -81,13 +88,10 @@ async def tg_parser(url: str, client: TelegramClient, limit: int = 10) -> dict:
         log.error(f"Username does not exist: {url}")
 
     except AuthKeyError:
-
         log.critical("AUTH SESSION FAILURE")
 
     except Exception as e:
         log.error(f"ERROR - {e}")
-
-
 
     if channel:
         try:
@@ -95,7 +99,6 @@ async def tg_parser(url: str, client: TelegramClient, limit: int = 10) -> dict:
             full_channel = await client(GetFullChannelRequest(channel))
 
         except FloodWaitError as e:
-
             log.error("Anti-flood triggered, waiting required")
             # wait recommended time + random interval
             await asyncio.sleep(e.seconds + random.uniform(1.0, 2.0))
