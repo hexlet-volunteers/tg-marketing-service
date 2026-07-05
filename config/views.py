@@ -1,8 +1,9 @@
-from django.views.generic.base import View
-from inertia import render as inertia_render
-from apps.homepage.models import HomePageComponent
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
+from django.views.generic.base import View
+from inertia import render as inertia_render
+
+from apps.homepage.models import HomePageComponent
 
 
 class IndexView(View):

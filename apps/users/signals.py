@@ -4,16 +4,17 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-from apps.users.models import PartnerProfile, User
 from apps.parser.models import TelegramChannel
+from apps.users.models import PartnerProfile, User
 from apps.users.roles import Role, UserRoleHistory
-
 
 log = logging.getLogger(__name__)
 
 
 """Отлавливаем событие регистрации пользователя"""
 """присваеиваем роль - User"""
+
+
 @receiver(post_save, sender=User)
 def assign_role_partner(sender, instance, created, **kwargs):
     
@@ -27,8 +28,11 @@ def assign_role_partner(sender, instance, created, **kwargs):
     except Role.DoesNotExist:
         log.error("Роль 'moderated_channels' не найдена в базе")
 
+
 """Отлавливаем событие при изменении статуса партнера на Активный"""
 """присваеиваем роль - Partner"""
+
+
 @receiver(post_save, sender=PartnerProfile)
 def assign_role_partner(sender, instance, created, **kwargs):
     
@@ -46,6 +50,8 @@ def assign_role_partner(sender, instance, created, **kwargs):
 
 """Отлавливаем событие регистрации канала"""
 """присваеиваем роль - Moderator_channels"""
+
+
 @receiver(post_save, sender=TelegramChannel)
 def assign_role_moderator_channel(sender, instance, created, **kwargs):
     if not created:

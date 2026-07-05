@@ -24,7 +24,6 @@ class Role(models.Model):
     )
     name = models.CharField(max_length=50, verbose_name='Роль')
     
-    
     class Meta:
         verbose_name = 'Роль'
         verbose_name_plural = 'Роли'
@@ -68,7 +67,6 @@ class UserRoleHistory(models.Model):
     
     def __str__(self):
         return f"Роль {self.role.name} пользователя {self.user.username}"
-    
     
     @property
     def is_current_role(self):

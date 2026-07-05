@@ -20,7 +20,6 @@ from django.views.generic import TemplateView
 
 from config.views import IndexView
 
-
 urlpatterns = [
     path('', IndexView.as_view(), name='main_index'),
     path('dashboard/', include('apps.homepage.urls')),

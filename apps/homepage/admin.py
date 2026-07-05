@@ -1,6 +1,8 @@
 from django.contrib import admin
-from apps.homepage.models import HomePageComponent
 from guardian.admin import GuardedModelAdminMixin
+
+from apps.homepage.models import HomePageComponent
+
 
 @admin.register(HomePageComponent)
 class HomePageComponentAdmin(GuardedModelAdminMixin, admin.ModelAdmin):

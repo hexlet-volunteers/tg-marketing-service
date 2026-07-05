@@ -1,6 +1,6 @@
-import json
 from django.test import TestCase
 from django.urls import reverse
+
 from apps.homepage.models import HomePageComponent
 
 

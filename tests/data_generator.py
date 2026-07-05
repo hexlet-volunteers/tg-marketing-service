@@ -1,11 +1,12 @@
-from rstr import xeger
-from re import sub
 import json
-import django.core.validators
-from django.core.exceptions import ValidationError
 import logging
 import os
 from datetime import datetime
+from re import sub
+
+import django.core.validators
+from django.core.exceptions import ValidationError
+from rstr import xeger
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,7 @@ DEFAULT_TEXT_LEN = 50
 DEFAULT_INT_LEN = 10
 NUM_OF_FIXTURES = 10
 INVALID_DATA_LEN = 20
+
 
 class DataValidator:
     @staticmethod
@@ -78,7 +80,7 @@ class DataGenerator:
     output: lists with data_size num of elements
     '''
 
-    def __init__(self, num_of_fixtures = NUM_OF_FIXTURES) -> None:
+    def __init__(self, num_of_fixtures=NUM_OF_FIXTURES) -> None:
         # how many fixtures to make
         self.data_size = num_of_fixtures
         self.rules = {
@@ -195,35 +197,36 @@ class DataGenerator:
         return tuple(data)
 
     # kwargs because there is too many args and just accept all of them
-    def generate_urls(self, rule: str=None, data_type=str, validator=None, **kwargs) -> tuple:
+    def generate_urls(self, rule: str = None, data_type=str, validator=None, **kwargs) -> tuple:
         # sadly, cannot do generate_urls(self, rule: str=self.fixture_generators),
         # because self is not imported yet
         rule = self.fixtures_generators['url']['rule'] if rule is None else rule
         return self._generate_data(rule, data_type=data_type, validator=validator, **kwargs)
 
-    def generate_emails(self, rule: str=None, data_type=str, validator=None, **kwargs) -> tuple:
+    def generate_emails(self, rule: str = None, data_type=str, validator=None, **kwargs) -> tuple:
         # ensure uniqueness for models like users.User.email (unique=True)
         rule = self.fixtures_generators['email']['rule'] if rule is None else rule
         return self._generate_data(rule, data_type=data_type, validator=validator, ensure_unique=True, **kwargs)
 
-    def generate_text(self, rule: str=None, data_type=str, validator=None, max_len=DEFAULT_TEXT_LEN, **kwargs) -> tuple:
+    def generate_text(self, rule: str = None, data_type=str, validator=None, max_len=DEFAULT_TEXT_LEN, **kwargs) -> tuple:
         # keep whitespace in text
         rule = self.fixtures_generators['text']['rule'] if rule is None else rule
         return self._generate_data(rule, max_len=max_len, data_type=data_type, validator=validator, remove_whitespace=False, **kwargs)
 
-    def generate_datetime(self, rule: str=None, data_type=str, validator=None, **kwargs) -> tuple:
+    def generate_datetime(self, rule: str = None, data_type=str, validator=None, **kwargs) -> tuple:
         # by default keep whitespace as-is for datetime strings
         rule = self.fixtures_generators['datetime']['rule'] if rule is None else rule
         return self._generate_data(rule, data_type=data_type, validator=validator, remove_whitespace=False, **kwargs)
 
-    def generate_int(self, rule: str=None, data_type=int, validator=None, max_len=DEFAULT_INT_LEN, **kwargs) -> tuple:
+    def generate_int(self, rule: str = None, data_type=int, validator=None, max_len=DEFAULT_INT_LEN, **kwargs) -> tuple:
         rule = self.fixtures_generators['int']['rule'] if rule is None else rule
         return self._generate_data(rule, max_len=max_len, data_type=data_type, validator=validator, **kwargs)
 
-    def generate_json_object(self, rule: str=None, data_type=object, validator=None, **kwargs) -> tuple:
+    def generate_json_object(self, rule: str = None, data_type=object, validator=None, **kwargs) -> tuple:
         # a list of dicts
         if rule is not None:
             ...  # honestly i have no energy for this. regex for json is too big for now
+
         def rand_str(max_line_len: int = DEFAULT_TEXT_LEN) -> str:
             # random printable string without leading/trailing whitespace
             s = xeger(self.rules['unlimited']['text'] + '{1,' + str(max_line_len) + '}')
@@ -252,7 +255,7 @@ class DataGenerator:
                 json_obj = tuple([[{"x": "y"}]] for _ in range(self.data_size))
         return json_obj
 
-    def generate_invalid_data(self, rule: str=None, max_len=INVALID_DATA_LEN):
+    def generate_invalid_data(self, rule: str = None, max_len=INVALID_DATA_LEN):
         # random data with choices (random)
         # only restriction is data_size
         rule = self.fixtures_generators['invalid']['rule'] if not rule else rule

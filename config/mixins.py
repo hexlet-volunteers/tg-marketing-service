@@ -1,10 +1,10 @@
-from django.views.generic import View
-from django.shortcuts import reverse, redirect
-from django.contrib.messages import add_message
 from django.contrib import messages
-from guardian.utils import get_anonymous_user
-from django.core.exceptions import PermissionDenied, ImproperlyConfigured
 from django.contrib.auth.mixins import AccessMixin
+from django.contrib.messages import add_message
+from django.core.exceptions import ImproperlyConfigured, PermissionDenied
+from django.shortcuts import redirect, reverse
+from guardian.utils import get_anonymous_user
+
 
 class CheckingUserRolesMixin:
     """
@@ -45,7 +45,7 @@ class RoleRequiredMixin(AccessMixin):
     """
     allowed_roles = None  # Обязательно переопределить в дочерних классах
     permission_denied_message = "У вас нет прав для доступа к этой странице"
-    url_redirect = None # Обязательно переопределить в дочерних классах при
+    url_redirect = None  # Обязательно переопределить в дочерних классах при
     
     def dispatch(self, request, *args, **kwargs):
         if not self._test_role(request):
@@ -76,6 +76,7 @@ class RoleRequiredMixin(AccessMixin):
 """Ниже примеры реализации организации доступа по ролям"""
 """при необходимости добавляем класс  с необходимыми аргументами и их значения"""
 """далее наследуем созданный класс в представлении котором нужно организовать доступ"""
+
 
 class GuestRequiredMixin(RoleRequiredMixin):
     """Только для неавторизованных пользователей"""

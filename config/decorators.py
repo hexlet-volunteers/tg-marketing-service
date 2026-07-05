@@ -1,7 +1,8 @@
 from functools import wraps
+
+from django.contrib import messages
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.urls import reverse
-from django.contrib import messages
 
 
 def role_required(allowed_roles, login_url=None, message=None):

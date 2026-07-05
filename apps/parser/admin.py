@@ -1,6 +1,7 @@
 from django.contrib import admin
-from apps.parser.models import TelegramChannel, ChannelStats, ChannelModerator
 from guardian.admin import GuardedModelAdminMixin
+
+from apps.parser.models import ChannelModerator, ChannelStats, TelegramChannel
 
 
 @admin.register(TelegramChannel)

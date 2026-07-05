@@ -1,20 +1,17 @@
-from django.contrib import messages
-from django.contrib.auth.mixins import UserPassesTestMixin
 from django.conf import settings
-from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.contrib.auth.mixins import UserPassesTestMixin
+from django.shortcuts import get_object_or_404
 from django.views.generic.base import View
 from inertia import render as inertia_render
-
-from apps.parser.models import TelegramChannel
-from config.mixins import UserAuthenticationCheckMixin
 
 from apps.group_channels.forms import (
     AddChannelForm,
     CreateGroupForm,
-    UpdateGroupForm
+    UpdateGroupForm,
 )
 from apps.group_channels.models import Group
+from apps.parser.models import TelegramChannel
+from config.mixins import UserAuthenticationCheckMixin
 
 # константа для дефолтной аватарки
 DEFAULT_AVATAR_GROUP = f'{settings.STATIC_URL}default_avatar_group.jpg'

@@ -71,7 +71,6 @@ async def tg_parser(url: str, client: TelegramClient, limit: int = 10) -> dict:
         log.error("Anti-flood triggered, waiting required")
         # wait recommended time + random interval
 
-
         await asyncio.sleep(e.seconds + random.uniform(1.0, 2.0))
 
     except ChannelInvalidError:
@@ -86,8 +85,6 @@ async def tg_parser(url: str, client: TelegramClient, limit: int = 10) -> dict:
 
     except Exception as e:
         log.error(f"ERROR - {e}")
-
-
 
     if channel:
         try:

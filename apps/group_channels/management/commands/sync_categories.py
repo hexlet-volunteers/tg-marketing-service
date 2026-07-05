@@ -1,10 +1,10 @@
 # config/group_channels/management/commands/sync_categories.py
-from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.db.models import Q
 
-from apps.group_channels.models import Group, AutoGroupRule
+from apps.group_channels.models import AutoGroupRule, Group
 from apps.parser.models import TelegramChannel
 
 

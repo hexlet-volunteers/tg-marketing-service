@@ -22,15 +22,16 @@ P.S.:
 """
 
 import asyncio
-from typing import Optional, Callable, Any
-from pathlib import Path
 from operator import itemgetter
 from os import getenv
-from dotenv import load_dotenv, find_dotenv, set_key
+from pathlib import Path
+from typing import Any, Callable, Optional
+
 from django.core.management.base import BaseCommand, CommandError, CommandParser
+from dotenv import find_dotenv, load_dotenv, set_key
 from telethon import TelegramClient
-from telethon.sessions import StringSession
 from telethon.errors import rpcerrorlist
+from telethon.sessions import StringSession
 
 ENV_STRING_SESSION_KEY = 'TELEGRAM_SESSION_STRING'
 ENV_API_ID_KEY = 'TELEGRAM_API_ID'
@@ -169,7 +170,7 @@ class Command(BaseCommand):
         """
         # Get all key (option) arguments. cool, huh?
         force, string_session, api_id, api_hash, password, phone, env_path = \
-            itemgetter('force', 'string_session', 'api_id', \
+            itemgetter('force', 'string_session', 'api_id', 
                         'api_hash', 'password', 'phone', 'env_path')(options)
 
         # Set env path
@@ -219,8 +220,8 @@ class Command(BaseCommand):
             env_key: str,
             value: Any,
             to_type: Callable[[Any], Any] = str,
-            force: bool=False,
-            remove_whitespace: bool=True
+            force: bool = False,
+            remove_whitespace: bool = True
         ) -> None:
         # Normalize incoming value (CLI value)
         if isinstance(value, str) and remove_whitespace:
@@ -296,9 +297,9 @@ class Command(BaseCommand):
             set_key(self.env_path, string_session_key, self.string_session)
         except ValueError as e:
             raise CommandError(f' Not enough data provided for generating StringSession: {e}') from e
-        except PermissionError as e:
+        except PermissionError:
             raise
-        except OSError as e:
+        except OSError:
             raise
 
     async def start_telegram_session(self) -> None:
@@ -319,8 +320,8 @@ class Command(BaseCommand):
                     elif not password:
                         raise CommandError(f'Password not passed to client: {e}\nPass it via --password.') from e
                     raise CommandError(f'Phone and password not passed to client: {e}\nPass them via --password and --phone.') from e
-                except rpcerrorlist.PasswordHashInvalidError as e:
-                    raise CommandError(f'Wrong password. Please check for typos. Quotation marks \' or \" are not needed.')
+                except rpcerrorlist.PasswordHashInvalidError:
+                    raise CommandError('Wrong password. Please check for typos. Quotation marks \' or \" are not needed.')
                 # Set StrinGseeion
                 self.string_session = client.session.save()
                 set_key(self.env_path, ENV_STRING_SESSION_KEY, self.string_session)

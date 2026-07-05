@@ -1,7 +1,8 @@
 from django.contrib import admin
 from guardian.admin import GuardedModelAdminMixin
-from apps.users.models import User, PartnerProfile
+
 from apps.parser.models import ChannelModerator
+from apps.users.models import PartnerProfile, User
 
 
 class ChannelModeratorInline(admin.TabularInline):

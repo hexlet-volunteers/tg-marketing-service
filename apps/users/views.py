@@ -1,16 +1,14 @@
+from django.conf import settings
 from django.contrib import auth, messages
-from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth import login
+from django.contrib.auth.tokens import default_token_generator
 from django.middleware.csrf import get_token
-from django.utils import timezone
-from inertia import render as inertia_render
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.http import urlsafe_base64_decode
 from django.views.generic.base import View
-from django.conf import settings
-
-from config.mixins import UserAuthenticationCheckMixin
+from inertia import render as inertia_render
 
 from apps.users.forms import (
     AvatarChange,
@@ -21,7 +19,7 @@ from apps.users.forms import (
     UserUpdateForm,
 )
 from apps.users.models import User
-
+from config.mixins import UserAuthenticationCheckMixin
 
 # константа с дефолтной=аватаркой для представления UserRegister
 DEFAULT_AVATAR_URL = f"{settings.STATIC_URL}default_avatar.jpeg"
@@ -277,7 +275,7 @@ class UserRegister(View):
             request,
             'FormRegistration',
             props={
-                "data": { 
+                "data": {
                     "first_name": request.POST.get("first_name", ""),
                     "last_name": request.POST.get("last_name", ""),
                     "username": request.POST.get("username", ""),

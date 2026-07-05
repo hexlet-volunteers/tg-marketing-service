@@ -1,9 +1,14 @@
-from django.db.models import OuterRef, Subquery, Avg
-from apps.parser.models import TelegramChannel, ChannelStats, AIInsight
+from django.db.models import Avg, OuterRef, Subquery
+
 from apps.group_channels.models import Group
 from apps.homepage.dto.dashboard_dto import (
-    DashboardDTO, StatsDTO, ChannelDTO, InsightDTO, CollectionDTO
+    ChannelDTO,
+    CollectionDTO,
+    DashboardDTO,
+    InsightDTO,
+    StatsDTO,
 )
+from apps.parser.models import AIInsight, ChannelStats, TelegramChannel
 
 
 class DashboardService:

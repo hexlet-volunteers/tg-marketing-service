@@ -1,11 +1,12 @@
-from django.apps import AppConfig
 from allauth.socialaccount.signals import social_account_added
+from django.apps import AppConfig
 from django.dispatch import receiver
 
 
 class UsersConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'apps.users'
+
     def ready(self):
         @receiver(social_account_added)
         def handle_yandex_login(sender, request, sociallogin, **kwargs):

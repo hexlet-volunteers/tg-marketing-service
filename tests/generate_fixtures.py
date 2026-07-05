@@ -1,11 +1,10 @@
-from typing import Dict, List, Tuple, Any
 import logging
-
-from tests.data_generator import DataGenerator, NUM_OF_FIXTURES
+from typing import Any, Dict, List, Tuple
 
 # Avoid importing Django app modules (which may require settings/db) just to get constants.
 # Use project defaults, falling back safely if not importable.
-from apps.users.models import ROLE_MAXLENGTH, BIO_MAXLENGTH
+from apps.users.models import BIO_MAXLENGTH, ROLE_MAXLENGTH
+from tests.data_generator import NUM_OF_FIXTURES, DataGenerator
 
 logger = logging.getLogger(__name__)
 
