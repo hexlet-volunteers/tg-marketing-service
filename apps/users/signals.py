@@ -17,14 +17,13 @@ log = logging.getLogger(__name__)
 
 @receiver(post_save, sender=User)
 def assign_role_partner(sender, instance, created, **kwargs):
-    
     try:
         if created:
             user = instance.user
-            if user.role != 'user':
-                user.role = 'user'
-                user.save(update_fields=['role'])
-    
+            if user.role != "user":
+                user.role = "user"
+                user.save(update_fields=["role"])
+
     except Role.DoesNotExist:
         log.error("Роль 'moderated_channels' не найдена в базе")
 
@@ -35,17 +34,16 @@ def assign_role_partner(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=PartnerProfile)
 def assign_role_channel_moderator(sender, instance, created, **kwargs):
-    
     if created:
         return
-    
-    if instance.status == PartnerProfile.STATUS_CHOICES['active']:
+
+    if instance.status == PartnerProfile.STATUS_CHOICES["active"]:
         user = instance.user
-        
-        if user.role != 'partner':
-            user.role = 'partner'
-    
-            user.save(update_fields=['role'])
+
+        if user.role != "partner":
+            user.role = "partner"
+
+            user.save(update_fields=["role"])
 
 
 """Отлавливаем событие регистрации канала"""
@@ -63,10 +61,10 @@ def assign_role_moderator_channel(sender, instance, created, **kwargs):
             return  # владелец не найден
 
         user = owner_relation.user
-        moderator_role = Role.objects.get(code='moderated_channels')
+        moderator_role = Role.objects.get(code="moderated_channels")
 
         # Проверяем текущую роль пользователя
-        if user.role in ['moderated_channels', 'partner']:
+        if user.role in ["moderated_channels", "partner"]:
             return  # уже модератор или партнер
 
         # Закрываем старую роль в истории
@@ -76,18 +74,18 @@ def assign_role_moderator_channel(sender, instance, created, **kwargs):
                 user=user,
                 role=old_role_obj,
                 end_date=timezone.now(),
-                reason='Назначена роль модератора канала'
+                reason="Назначена роль модератора канала",
             )
 
         # Назначаем новую роль
         user.role = moderator_role.code
-        user.save(update_fields=['role'])
+        user.save(update_fields=["role"])
 
         # Создаем запись в истории
         UserRoleHistory.objects.create(
             user=user,
             role=moderator_role,
-            reason='Назначена роль модератора канала'
+            reason="Назначена роль модератора канала",
         )
 
     except Role.DoesNotExist:

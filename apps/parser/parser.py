@@ -48,7 +48,7 @@ async def tg_parser(url: str, client: TelegramClient, limit: int = 10) -> dict:
         data["title"] = channel.title  # Channel title
         data["channel_id"] = channel.id  # Channel id
         data["username"] = (
-            channel.username if channel.username else '-'
+            channel.username if channel.username else "-"
         )  # Channel username
         data["verified"] = channel.verified  # Is channel verified? (boolean)
         # Channel creation date
@@ -90,7 +90,6 @@ async def tg_parser(url: str, client: TelegramClient, limit: int = 10) -> dict:
         log.error(f"Username does not exist: {url}")
 
     except AuthKeyError:
-
         log.critical("AUTH SESSION FAILURE")
 
     except Exception as e:
@@ -102,7 +101,6 @@ async def tg_parser(url: str, client: TelegramClient, limit: int = 10) -> dict:
             full_channel = await client(GetFullChannelRequest(channel))
 
         except FloodWaitError as e:
-
             log.error("Anti-flood triggered, waiting required")
             # wait recommended time + random interval
             await asyncio.sleep(e.seconds + random.uniform(1.0, 2.0))

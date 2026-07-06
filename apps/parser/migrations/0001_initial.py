@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -15,61 +14,219 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='TelegramChannel',
+            name="TelegramChannel",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('channel_id', models.BigIntegerField(unique=True, verbose_name='ID канала')),
-                ('username', models.CharField(blank=True, max_length=255, null=True, verbose_name='Username')),
-                ('title', models.CharField(max_length=255, verbose_name='Название канала')),
-                ('description', models.TextField(blank=True, null=True, verbose_name='Описание канала')),
-                ('participants_count', models.IntegerField(default=0, verbose_name='Количество подписчиков')),
-                ('parsed_at', models.DateTimeField(auto_now_add=True, verbose_name='Дата парсинга')),
-                ('pinned_messages', models.JSONField(blank=True, default=list, null=True, verbose_name='Закрепленное сообщение')),
-                ('creation_date', models.DateTimeField(blank=True, null=True, verbose_name='Дата создания')),
-                ('last_messages', models.JSONField(blank=True, default=list, null=True, verbose_name='Последние сообщения')),
-                ('average_views', models.IntegerField(default=0, verbose_name='Среднее количество просмотров')),
-                ('category', models.CharField(blank=True, db_index=True, null=True, verbose_name='Категория канала')),
-                ('country', models.CharField(blank=True, null=True, verbose_name='Страна канала')),
-                ('language', models.CharField(blank=True, null=True, verbose_name='Язык канала')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "channel_id",
+                    models.BigIntegerField(
+                        unique=True, verbose_name="ID канала"
+                    ),
+                ),
+                (
+                    "username",
+                    models.CharField(
+                        blank=True,
+                        max_length=255,
+                        null=True,
+                        verbose_name="Username",
+                    ),
+                ),
+                (
+                    "title",
+                    models.CharField(
+                        max_length=255, verbose_name="Название канала"
+                    ),
+                ),
+                (
+                    "description",
+                    models.TextField(
+                        blank=True, null=True, verbose_name="Описание канала"
+                    ),
+                ),
+                (
+                    "participants_count",
+                    models.IntegerField(
+                        default=0, verbose_name="Количество подписчиков"
+                    ),
+                ),
+                (
+                    "parsed_at",
+                    models.DateTimeField(
+                        auto_now_add=True, verbose_name="Дата парсинга"
+                    ),
+                ),
+                (
+                    "pinned_messages",
+                    models.JSONField(
+                        blank=True,
+                        default=list,
+                        null=True,
+                        verbose_name="Закрепленное сообщение",
+                    ),
+                ),
+                (
+                    "creation_date",
+                    models.DateTimeField(
+                        blank=True, null=True, verbose_name="Дата создания"
+                    ),
+                ),
+                (
+                    "last_messages",
+                    models.JSONField(
+                        blank=True,
+                        default=list,
+                        null=True,
+                        verbose_name="Последние сообщения",
+                    ),
+                ),
+                (
+                    "average_views",
+                    models.IntegerField(
+                        default=0, verbose_name="Среднее количество просмотров"
+                    ),
+                ),
+                (
+                    "category",
+                    models.CharField(
+                        blank=True,
+                        db_index=True,
+                        null=True,
+                        verbose_name="Категория канала",
+                    ),
+                ),
+                (
+                    "country",
+                    models.CharField(
+                        blank=True, null=True, verbose_name="Страна канала"
+                    ),
+                ),
+                (
+                    "language",
+                    models.CharField(
+                        blank=True, null=True, verbose_name="Язык канала"
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Telegram канал',
-                'verbose_name_plural': 'Telegram каналы',
+                "verbose_name": "Telegram канал",
+                "verbose_name_plural": "Telegram каналы",
             },
         ),
         migrations.CreateModel(
-            name='ChannelStats',
+            name="ChannelStats",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('participants_count', models.IntegerField(verbose_name='Количество участников')),
-                ('daily_growth', models.IntegerField(default=0, verbose_name='Прирост за день')),
-                ('parsed_at', models.DateTimeField(auto_now_add=True)),
-                ('channel', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='parser.telegramchannel', verbose_name='Канал')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "participants_count",
+                    models.IntegerField(verbose_name="Количество участников"),
+                ),
+                (
+                    "daily_growth",
+                    models.IntegerField(
+                        default=0, verbose_name="Прирост за день"
+                    ),
+                ),
+                ("parsed_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "channel",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="parser.telegramchannel",
+                        verbose_name="Канал",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Статистика канала',
-                'verbose_name_plural': 'Статистика каналов',
-                'ordering': ['-parsed_at'],
-                'get_latest_by': 'parsed_at',
+                "verbose_name": "Статистика канала",
+                "verbose_name_plural": "Статистика каналов",
+                "ordering": ["-parsed_at"],
+                "get_latest_by": "parsed_at",
             },
         ),
         migrations.CreateModel(
-            name='ChannelModerator',
+            name="ChannelModerator",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('is_owner', models.BooleanField(default=False, verbose_name='Владелец канала')),
-                ('can_edit', models.BooleanField(default=True, verbose_name='Может редактировать')),
-                ('can_delete', models.BooleanField(default=False, verbose_name='Может удалять')),
-                ('can_manage_moderators', models.BooleanField(default=False, verbose_name='Может управлять модераторами')),
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Дата назначения')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='moderated_channels', to=settings.AUTH_USER_MODEL, verbose_name='Модератор')),
-                ('channel', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='moderators', to='parser.telegramchannel', verbose_name='Канал')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "is_owner",
+                    models.BooleanField(
+                        default=False, verbose_name="Владелец канала"
+                    ),
+                ),
+                (
+                    "can_edit",
+                    models.BooleanField(
+                        default=True, verbose_name="Может редактировать"
+                    ),
+                ),
+                (
+                    "can_delete",
+                    models.BooleanField(
+                        default=False, verbose_name="Может удалять"
+                    ),
+                ),
+                (
+                    "can_manage_moderators",
+                    models.BooleanField(
+                        default=False,
+                        verbose_name="Может управлять модераторами",
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        auto_now_add=True, verbose_name="Дата назначения"
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="moderated_channels",
+                        to=settings.AUTH_USER_MODEL,
+                        verbose_name="Модератор",
+                    ),
+                ),
+                (
+                    "channel",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="moderators",
+                        to="parser.telegramchannel",
+                        verbose_name="Канал",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Модератор канала',
-                'verbose_name_plural': 'Модераторы каналов',
-                'db_table': 'channel_moderators',
-                'unique_together': {('user', 'channel')},
+                "verbose_name": "Модератор канала",
+                "verbose_name_plural": "Модераторы каналов",
+                "db_table": "channel_moderators",
+                "unique_together": {("user", "channel")},
             },
         ),
     ]

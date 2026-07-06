@@ -26,8 +26,7 @@ def parse_channel(channel_id):
         log.error(f"Channel with ID {channel_id} does not exist in database")
         return
     except DatabaseError as e:
-        log.error(f'Database error while fetching channel -;'
-                  f'{channel_id} - {e}')
+        log.error(f"Database error while fetching channel -;{channel_id} - {e}")
         return
 
     async def run_parser(channel_obj):
@@ -47,10 +46,10 @@ def parse_channel(channel_id):
                 await sync_to_async(save_channel_stats)(channel_obj, data)
             except (DatabaseError, IntegrityError) as e:
                 log.error(
-                    f'Database safe error for {channel_obj.username} - {e}'
+                    f"Database safe error for {channel_obj.username} - {e}"
                 )
             except Exception as e:
-                log.error(f'Unexpected error: - {e}', exc_info=True)
+                log.error(f"Unexpected error: - {e}", exc_info=True)
 
     try:
         asyncio.run(run_parser(channel))
@@ -74,7 +73,9 @@ def save_channel_data(channel, data):
 def save_channel_stats(channel, data):
     """Save channel stats"""
     last_stats = (
-        ChannelStats.objects.filter(channel=channel).order_by("-parsed_at").first()
+        ChannelStats.objects.filter(channel=channel)
+        .order_by("-parsed_at")
+        .first()
     )
     current_date = timezone.now()
     current_count = data.get("participants_count", 0)

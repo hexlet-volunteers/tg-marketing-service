@@ -6,47 +6,132 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('parser', '0001_initial'),
+        ("parser", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Group',
+            name="Group",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50, unique=True, verbose_name='Название')),
-                ('slug', models.SlugField(allow_unicode=True, blank=True, max_length=60, unique=True, verbose_name='URL-идентификатор')),
-                ('description', models.CharField(blank=True, max_length=200, verbose_name='Описание')),
-                ('is_editorial', models.BooleanField(default=False, verbose_name='Редакторская подборка')),
-                ('order', models.PositiveIntegerField(default=0, verbose_name='Порядок на главной')),
-                ('image_url', models.CharField(blank=True, verbose_name='обложка группы')),
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Создана')),
-                ('channels', models.ManyToManyField(blank=True, related_name='groups', to='parser.telegramchannel', verbose_name='Каналы')),
-                ('owner', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='owned_groups', related_query_name='owned_group', to=settings.AUTH_USER_MODEL, verbose_name='Владелец')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        max_length=50, unique=True, verbose_name="Название"
+                    ),
+                ),
+                (
+                    "slug",
+                    models.SlugField(
+                        allow_unicode=True,
+                        blank=True,
+                        max_length=60,
+                        unique=True,
+                        verbose_name="URL-идентификатор",
+                    ),
+                ),
+                (
+                    "description",
+                    models.CharField(
+                        blank=True, max_length=200, verbose_name="Описание"
+                    ),
+                ),
+                (
+                    "is_editorial",
+                    models.BooleanField(
+                        default=False, verbose_name="Редакторская подборка"
+                    ),
+                ),
+                (
+                    "order",
+                    models.PositiveIntegerField(
+                        default=0, verbose_name="Порядок на главной"
+                    ),
+                ),
+                (
+                    "image_url",
+                    models.CharField(blank=True, verbose_name="обложка группы"),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        auto_now_add=True, verbose_name="Создана"
+                    ),
+                ),
+                (
+                    "channels",
+                    models.ManyToManyField(
+                        blank=True,
+                        related_name="groups",
+                        to="parser.telegramchannel",
+                        verbose_name="Каналы",
+                    ),
+                ),
+                (
+                    "owner",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="owned_groups",
+                        related_query_name="owned_group",
+                        to=settings.AUTH_USER_MODEL,
+                        verbose_name="Владелец",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Группа',
-                'verbose_name_plural': 'Группы',
-                'db_table': 'groups',
+                "verbose_name": "Группа",
+                "verbose_name_plural": "Группы",
+                "db_table": "groups",
             },
         ),
         migrations.CreateModel(
-            name='AutoGroupRule',
+            name="AutoGroupRule",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('category', models.CharField(max_length=255, verbose_name='Категория')),
-                ('materialize', models.BooleanField(default=True, verbose_name='Материализовать в M2M')),
-                ('group', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='auto_rule', to='group_channels.group', verbose_name='Группа')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "category",
+                    models.CharField(max_length=255, verbose_name="Категория"),
+                ),
+                (
+                    "materialize",
+                    models.BooleanField(
+                        default=True, verbose_name="Материализовать в M2M"
+                    ),
+                ),
+                (
+                    "group",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="auto_rule",
+                        to="group_channels.group",
+                        verbose_name="Группа",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Правило автоподборки',
-                'verbose_name_plural': 'Правила автоподборок',
-                'db_table': 'auto_group_rules',
+                "verbose_name": "Правило автоподборки",
+                "verbose_name_plural": "Правила автоподборок",
+                "db_table": "auto_group_rules",
             },
         ),
     ]

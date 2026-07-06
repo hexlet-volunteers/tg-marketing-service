@@ -9,9 +9,9 @@ from .services.dashboard_service import DashboardService
 class DashboardView(View):
     """
     Inertia view для дашборда авторизованного пользователя.
-    
+
     Пример Inertia payload для фронтенда:
-    
+
     {
         "component": "Dashboard",
         "props": {
@@ -78,7 +78,7 @@ class DashboardView(View):
         },
         "url": "/dashboard/"
     }
-    
+
     Примечания:
     - channels ограничены первыми 5 каналами для производительности
     - ai_insights: до 5 непрочитанных из БД или сгенерированных fallback
@@ -87,19 +87,19 @@ class DashboardView(View):
     - days_left: 0 для неактивной подписки, иначе 30 (пример)
     - is_auto: признак автоматической/ручной коллекции
     """
-    
+
     def get(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect('main_index')
-        
+            return redirect("main_index")
+
         service = DashboardService(request.user)
         dto = service.build()
-        
+
         return inertia_render(
             request,
-            'Dashboard',
+            "Dashboard",
             props={
                 **dto.model_dump(mode="json"),
                 "csrfToken": get_token(request),
-            }
+            },
         )

@@ -13,10 +13,11 @@ class CheckingUserRolesMixin:
     проработки можно со временем избавиться от избыточной проверки на
     ананимность, но только после долгого тестирования миделвары)
     """
+
     def is_anonymous(self):
         # Получаем специальный анонимный экземпляр Guardian
         anonymous_guardian_user = get_anonymous_user()
-        
+
         # Пользователь из текущего запроса
         user = self.request.user
 
@@ -34,26 +35,28 @@ class UserAuthenticationCheckMixin(CheckingUserRolesMixin):
     Класс-миксин для принудительной проверки аутентификации перед
     отображением страницы
     """
+
     def dispatch(self, request, *args, **kwargs):
         if self.is_anonymous():
             add_message(
                 request,
                 messages.ERROR,
-                'Вы не авторизованы! Пожалуйста, выполните вход.',
+                "Вы не авторизованы! Пожалуйста, выполните вход.",
             )
-            return redirect(reverse('users:login'))
+            return redirect(reverse("users:login"))
         return super().dispatch(request, *args, **kwargs)
-    
-    
+
+
 class RoleRequiredMixin(AccessMixin):
     """
     Базовый миксин для проверки ролей.
     Наследуем от AccessMixin для стандартного поведения Django.
     """
+
     allowed_roles = None  # Обязательно переопределить в дочерних классах
     permission_denied_message = "У вас нет прав для доступа к этой странице"
     url_redirect = None  # Обязательно переопределить в дочерних классах при
-    
+
     def dispatch(self, request, *args, **kwargs):
         if not self._test_role(request):
             return self.handle_no_permission()
@@ -72,7 +75,7 @@ class RoleRequiredMixin(AccessMixin):
         """Обработка отказа в доступе"""
         # Показываем сообщение об ошибке
         messages.error(self.request, self.permission_denied_message)
-        next_param = self.request.GET.get('next', '')
+        next_param = self.request.GET.get("next", "")
 
         # Проверяем наличие переменной url_redirect
         if self.url_redirect:
@@ -82,58 +85,60 @@ class RoleRequiredMixin(AccessMixin):
             # Перенаправляем на сохранённую страницу
             return redirect(next_param)
         raise PermissionDenied(self.get_permission_denied_message())
-        
-    
+
+
 # Ниже примеры реализации организации доступа по ролям
 # при необходимости добавляем класс с необходимыми аргументами и их значения
 # далее наследуем созданный класс в представлении, в котором нужно
 # организовать доступ
 
 
-
 class GuestRequiredMixin(RoleRequiredMixin):
     """Только для неавторизованных пользователей"""
-    allowed_roles = ['guest']
+
+    allowed_roles = ["guest"]
     permission_denied_message = "Эта страница доступна только гостям"
 
 
 class UserRequiredMixin(RoleRequiredMixin):
     """Для всех авторизованных пользователей"""
-    allowed_roles = ['user', 'partner', 'channel_moderator']
+
+    allowed_roles = ["user", "partner", "channel_moderator"]
     permission_denied_message = "Требуется авторизация"
 
 
 class PartnerRequiredMixin(RoleRequiredMixin):
     """Только для активных партнеров"""
-    allowed_roles = ['partner']
+
+    allowed_roles = ["partner"]
     permission_denied_message = "Доступ только для партнеров"
 
     def _test_role(self, request):
         """Дополнительная проверка активного статуса партнера"""
         return (
-                super()._test_role(request) and
-                hasattr(request.user, 'is_partner') and
-                request.user.is_partner
+            super()._test_role(request)
+            and hasattr(request.user, "is_partner")
+            and request.user.is_partner
         )
 
 
 class ChannelModeratorRequiredMixin(RoleRequiredMixin):
     """Только для модераторов каналов"""
-    allowed_roles = ['channel_moderator']
+
+    allowed_roles = ["channel_moderator"]
     permission_denied_message = "Доступ только для модераторов каналов"
 
     def _test_role(self, request):
         """Дополнительная проверка статуса модератора канала"""
         return (
-                super()._test_role(request) and
-                hasattr(request.user, 'is_channel_moderator') and
-                request.user.is_channel_moderator
+            super()._test_role(request)
+            and hasattr(request.user, "is_channel_moderator")
+            and request.user.is_channel_moderator
         )
 
 
 class StaffRequiredMixin(RoleRequiredMixin):
     """Пример добавления новой роли - персонал"""
-    allowed_roles = ['staff', 'admin']
+
+    allowed_roles = ["staff", "admin"]
     permission_denied_message = "Доступ только для сотрудников"
-
-
