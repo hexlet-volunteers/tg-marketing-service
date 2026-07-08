@@ -25,8 +25,10 @@ jobs:
         id: cache-uv
         uses: actions/cache@v3
         with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
+          path: 
+          - ~/.cache/uv 
+          - .venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock', 'pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-uv-
 
