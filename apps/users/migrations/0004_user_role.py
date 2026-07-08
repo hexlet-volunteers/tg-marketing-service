@@ -4,15 +4,24 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0003_remove_user_company'),
+        ("users", "0003_remove_user_company"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='user',
-            name='role',
-            field=models.CharField(choices=[('guest', 'Guest'), ('user', 'User'), ('partner', 'Partner'), ('channel_moderator', 'Сhannel_moderator'), ('staff', 'Staff')], default='guest', max_length=50),
+            model_name="user",
+            name="role",
+            field=models.CharField(
+                choices=[
+                    ("guest", "Guest"),
+                    ("user", "User"),
+                    ("partner", "Partner"),
+                    ("channel_moderator", "Сhannel_moderator"),
+                    ("staff", "Staff"),
+                ],
+                default="guest",
+                max_length=50,
+            ),
         ),
     ]

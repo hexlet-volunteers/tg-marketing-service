@@ -1,6 +1,6 @@
 # conftest.py
-import sys
 import os
+import sys
 
 # Добавляем корень проекта в sys.path, чтобы Python видел все подпапки
 sys.path.append(os.path.dirname(__file__))

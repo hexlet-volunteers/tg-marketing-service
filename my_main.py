@@ -1,15 +1,16 @@
 import asyncio
-from telethon.sessions import StringSession
-from telethon import TelegramClient
 import os
+
 from dotenv import load_dotenv
+from telethon import TelegramClient
+from telethon.sessions import StringSession
 
 load_dotenv()
 
-SESSION_NAME = 'test_session' # любое название
+SESSION_NAME = "test_session"  # любое название
 
-API_ID = os.getenv('API_ID')  # значения из лк телеграма
-API_HASH = os.getenv('API_HASH')
+API_ID = os.getenv("API_ID")  # значения из лк телеграма
+API_HASH = os.getenv("API_HASH")
 
 
 async def main():
