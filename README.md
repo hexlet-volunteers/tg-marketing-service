@@ -84,7 +84,7 @@ make install   # uv sync
 
 ### 1. Telegram
 
-Настройка Telegram нужна для парсинга данных.
+Настройка Telegram нужна только для парсинга данных; запуск проекта и тестов работает без неё.
 
 1. Авторизуйтесь на [my.telegram.org/apps](https://my.telegram.org/apps) по номеру телефона вашего Telegram-аккаунта.
 2. Откройте **API development tools**, заполните поля **App configuration** (если уже заполнены — не меняйте) и сохраните настройки.

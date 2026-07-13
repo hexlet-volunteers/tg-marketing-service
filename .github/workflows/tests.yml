@@ -42,9 +42,6 @@ jobs:
           DJANGO_SETTINGS_MODULE: config.settings
           DATABASE_URL: ${{ secrets.DB_URL }}
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
-          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
-          TELEGRAM_SESSION_STRING: ${{ secrets.TELEGRAM_SESSION_STRING }}
         run: |
           uv run python3 -c "from tests.generate_fixtures import ModelAndFormFixtureGenerator; ModelAndFormFixtureGenerator().generate_all()"
 
@@ -53,9 +50,6 @@ jobs:
           DJANGO_SETTINGS_MODULE: config.settings
           DATABASE_URL: ${{ secrets.DB_URL }}
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
-          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
-          TELEGRAM_SESSION_STRING: ${{ secrets.TELEGRAM_SESSION_STRING }}
         run: |
           uv run pytest --cov=config --cov-report=xml
 
