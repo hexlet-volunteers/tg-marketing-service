@@ -9,7 +9,7 @@ class IndexViewTest(TestCase):
     def setUpTestData(cls):
         cls.component = HomePageComponent.objects.create(
             title="My Component Title",
-            content="Some content here",
+            content={"content": "Some content here"},
             order=1,
             is_active=True,
         )
@@ -39,7 +39,9 @@ class IndexViewTest(TestCase):
         components = props["components"]
         self.assertGreater(len(components), 0)
 
-        first_component = components[0]
+        first_component = components[0]["props"]
         self.assertEqual(first_component["title"], self.component.title)
-        self.assertEqual(first_component["content"], self.component.content)
+        self.assertEqual(
+            first_component["content"], self.component.content["content"]
+        )
         self.assertEqual(first_component["order"], self.component.order)
