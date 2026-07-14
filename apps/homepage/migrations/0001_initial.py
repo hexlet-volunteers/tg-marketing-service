@@ -4,29 +4,68 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='HomePageComponent',
+            name="HomePageComponent",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=200, verbose_name='Заголовок')),
-                ('content', models.JSONField(help_text='JSON с данными компонента', verbose_name='Содержимое')),
-                ('component_type', models.CharField(choices=[('hero', 'Hero секция'), ('features', 'Возможности'), ('screenshots', 'Скриншоты'), ('ai_assistant', 'ИИ-помощник'), ('how_it_works', 'Как это работает'), ('subscriptions', 'Подписки'), ('faq', 'FAQ'), ('footer', 'Футер')], max_length=50, verbose_name='Тип компонента')),
-                ('is_active', models.BooleanField(default=True, verbose_name='Активен')),
-                ('order', models.PositiveIntegerField(default=0, verbose_name='Порядок отображения')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "title",
+                    models.CharField(max_length=200, verbose_name="Заголовок"),
+                ),
+                (
+                    "content",
+                    models.JSONField(
+                        help_text="JSON с данными компонента",
+                        verbose_name="Содержимое",
+                    ),
+                ),
+                (
+                    "component_type",
+                    models.CharField(
+                        choices=[
+                            ("hero", "Hero секция"),
+                            ("features", "Возможности"),
+                            ("screenshots", "Скриншоты"),
+                            ("ai_assistant", "ИИ-помощник"),
+                            ("how_it_works", "Как это работает"),
+                            ("subscriptions", "Подписки"),
+                            ("faq", "FAQ"),
+                            ("footer", "Футер"),
+                        ],
+                        max_length=50,
+                        verbose_name="Тип компонента",
+                    ),
+                ),
+                (
+                    "is_active",
+                    models.BooleanField(default=True, verbose_name="Активен"),
+                ),
+                (
+                    "order",
+                    models.PositiveIntegerField(
+                        default=0, verbose_name="Порядок отображения"
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'verbose_name': 'Компонент главной страницы',
-                'verbose_name_plural': 'Компоненты главной страницы',
-                'ordering': ['order', 'created_at'],
+                "verbose_name": "Компонент главной страницы",
+                "verbose_name_plural": "Компоненты главной страницы",
+                "ordering": ["order", "created_at"],
             },
         ),
     ]
