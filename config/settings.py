@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_vite",
     "guardian",
     "inertia",
     "widget_tweaks",
@@ -215,10 +216,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "static"),
-]
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATICFILES_DIRS = [str(BASE_DIR / "frontend" / "static")]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -242,11 +241,15 @@ INERTIA_LAYOUT = "base.html"
 CSRF_HEADER_NAME = "HTTP_X_XSRF_TOKEN"
 CSRF_COOKIE_NAME = "XSRF-TOKEN"
 
-# При переходе на инерцию раскоментировать
-# STATICFILES_DIRS = [
-#    BASE_DIR / "frontend" / "public",
-# ]
+# Django Vite settings
 
+DJANGO_VITE = {
+    "default": {
+        "dev_mode": DEBUG,
+        "dev_server_port": 5173,
+        "manifest_path": os.path.join(STATIC_ROOT, "manifest.json"),
+    }
+}
 
 LOGGING = {
     "version": 1,
