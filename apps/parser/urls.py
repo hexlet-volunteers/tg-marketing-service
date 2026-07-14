@@ -2,7 +2,7 @@ from django.urls import path
 
 from apps.parser import views
 
-app_name = 'parser'
+app_name = "parser"
 
 urlpatterns = [
     path('', views.ParserView.as_view(), name='parser'),

@@ -7,58 +7,236 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('auth', '0012_alter_user_first_name_max_length'),
+        ("auth", "0012_alter_user_first_name_max_length"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='User',
+            name="User",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('password', models.CharField(max_length=128, verbose_name='password')),
-                ('last_login', models.DateTimeField(blank=True, null=True, verbose_name='last login')),
-                ('is_superuser', models.BooleanField(default=False, help_text='Designates that this user has all permissions without explicitly assigning them.', verbose_name='superuser status')),
-                ('username', models.CharField(error_messages={'unique': 'A user with that username already exists.'}, help_text='Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.', max_length=150, unique=True, validators=[django.contrib.auth.validators.UnicodeUsernameValidator()], verbose_name='username')),
-                ('first_name', models.CharField(blank=True, max_length=150, verbose_name='first name')),
-                ('last_name', models.CharField(blank=True, max_length=150, verbose_name='last name')),
-                ('is_staff', models.BooleanField(default=False, help_text='Designates whether the user can log into this admin site.', verbose_name='staff status')),
-                ('is_active', models.BooleanField(default=True, help_text='Designates whether this user should be treated as active. Unselect this instead of deleting accounts.', verbose_name='active')),
-                ('date_joined', models.DateTimeField(default=django.utils.timezone.now, verbose_name='date joined')),
-                ('avatar_image', models.CharField(blank=True, null=True, verbose_name='url изображения профиля')),
-                ('bio', models.CharField(blank=True, max_length=200, verbose_name='о себе')),
-                ('email', models.EmailField(blank=True, max_length=254, unique=True, verbose_name='email адрес')),
-                ('groups', models.ManyToManyField(blank=True, help_text='The groups this user belongs to. A user will get all permissions granted to each of their groups.', related_name='user_set', related_query_name='user', to='auth.group', verbose_name='groups')),
-                ('user_permissions', models.ManyToManyField(blank=True, help_text='Specific permissions for this user.', related_name='user_set', related_query_name='user', to='auth.permission', verbose_name='user permissions')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "password",
+                    models.CharField(max_length=128, verbose_name="password"),
+                ),
+                (
+                    "last_login",
+                    models.DateTimeField(
+                        blank=True, null=True, verbose_name="last login"
+                    ),
+                ),
+                (
+                    "is_superuser",
+                    models.BooleanField(
+                        default=False,
+                        help_text="Designates that this user has all permissions without explicitly assigning them.",
+                        verbose_name="superuser status",
+                    ),
+                ),
+                (
+                    "username",
+                    models.CharField(
+                        error_messages={
+                            "unique": "A user with that username already exists."
+                        },
+                        help_text="Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.",
+                        max_length=150,
+                        unique=True,
+                        validators=[
+                            django.contrib.auth.validators.UnicodeUsernameValidator()
+                        ],
+                        verbose_name="username",
+                    ),
+                ),
+                (
+                    "first_name",
+                    models.CharField(
+                        blank=True, max_length=150, verbose_name="first name"
+                    ),
+                ),
+                (
+                    "last_name",
+                    models.CharField(
+                        blank=True, max_length=150, verbose_name="last name"
+                    ),
+                ),
+                (
+                    "is_staff",
+                    models.BooleanField(
+                        default=False,
+                        help_text="Designates whether the user can log into this admin site.",
+                        verbose_name="staff status",
+                    ),
+                ),
+                (
+                    "is_active",
+                    models.BooleanField(
+                        default=True,
+                        help_text="Designates whether this user should be treated as active. Unselect this instead of deleting accounts.",
+                        verbose_name="active",
+                    ),
+                ),
+                (
+                    "date_joined",
+                    models.DateTimeField(
+                        default=django.utils.timezone.now,
+                        verbose_name="date joined",
+                    ),
+                ),
+                (
+                    "avatar_image",
+                    models.CharField(
+                        blank=True,
+                        null=True,
+                        verbose_name="url изображения профиля",
+                    ),
+                ),
+                (
+                    "bio",
+                    models.CharField(
+                        blank=True, max_length=200, verbose_name="о себе"
+                    ),
+                ),
+                (
+                    "email",
+                    models.EmailField(
+                        blank=True,
+                        max_length=254,
+                        unique=True,
+                        verbose_name="email адрес",
+                    ),
+                ),
+                (
+                    "groups",
+                    models.ManyToManyField(
+                        blank=True,
+                        help_text="The groups this user belongs to. A user will get all permissions granted to each of their groups.",
+                        related_name="user_set",
+                        related_query_name="user",
+                        to="auth.group",
+                        verbose_name="groups",
+                    ),
+                ),
+                (
+                    "user_permissions",
+                    models.ManyToManyField(
+                        blank=True,
+                        help_text="Specific permissions for this user.",
+                        related_name="user_set",
+                        related_query_name="user",
+                        to="auth.permission",
+                        verbose_name="user permissions",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Пользователь',
-                'verbose_name_plural': 'Пользователи',
-                'db_table': 'users',
-                'permissions': [('can_add_channel', 'Может добавлять каналы'), ('can_apply_partnership', 'Может подавать заявку на партнерство')],
+                "verbose_name": "Пользователь",
+                "verbose_name_plural": "Пользователи",
+                "db_table": "users",
+                "permissions": [
+                    ("can_add_channel", "Может добавлять каналы"),
+                    (
+                        "can_apply_partnership",
+                        "Может подавать заявку на партнерство",
+                    ),
+                ],
             },
             managers=[
-                ('objects', django.contrib.auth.models.UserManager()),
+                ("objects", django.contrib.auth.models.UserManager()),
             ],
         ),
         migrations.CreateModel(
-            name='PartnerProfile',
+            name="PartnerProfile",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('status', models.CharField(choices=[('active', 'Активен'), ('pending', 'На рассмотрении'), ('rejected', 'Отклонён'), ('suspended', 'Приостановлен')], default='pending', max_length=20, verbose_name='Статус')),
-                ('partner_since', models.DateTimeField(auto_now_add=True, verbose_name='Партнёр с')),
-                ('balance', models.DecimalField(decimal_places=2, default=0, max_digits=10, verbose_name='Баланс')),
-                ('payment_details', models.TextField(blank=True, verbose_name='Платёжные реквизиты')),
-                ('partner_code', models.CharField(blank=True, max_length=50, null=True, unique=True, verbose_name='Партнерский код')),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='partner_profile', to=settings.AUTH_USER_MODEL, verbose_name='Пользователь')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("active", "Активен"),
+                            ("pending", "На рассмотрении"),
+                            ("rejected", "Отклонён"),
+                            ("suspended", "Приостановлен"),
+                        ],
+                        default="pending",
+                        max_length=20,
+                        verbose_name="Статус",
+                    ),
+                ),
+                (
+                    "partner_since",
+                    models.DateTimeField(
+                        auto_now_add=True, verbose_name="Партнёр с"
+                    ),
+                ),
+                (
+                    "balance",
+                    models.DecimalField(
+                        decimal_places=2,
+                        default=0,
+                        max_digits=10,
+                        verbose_name="Баланс",
+                    ),
+                ),
+                (
+                    "payment_details",
+                    models.TextField(
+                        blank=True, verbose_name="Платёжные реквизиты"
+                    ),
+                ),
+                (
+                    "partner_code",
+                    models.CharField(
+                        blank=True,
+                        max_length=50,
+                        null=True,
+                        unique=True,
+                        verbose_name="Партнерский код",
+                    ),
+                ),
+                (
+                    "user",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="partner_profile",
+                        to=settings.AUTH_USER_MODEL,
+                        verbose_name="Пользователь",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Профиль партнёра',
-                'verbose_name_plural': 'Профили партнёров',
-                'permissions': [('access_partner_dashboard', 'Доступ к партнерскому кабинету'), ('request_payout', 'Может запрашивать выплаты'), ('view_traffic_analytics', 'Может просматривать аналитику трафика')],
+                "verbose_name": "Профиль партнёра",
+                "verbose_name_plural": "Профили партнёров",
+                "permissions": [
+                    (
+                        "access_partner_dashboard",
+                        "Доступ к партнерскому кабинету",
+                    ),
+                    ("request_payout", "Может запрашивать выплаты"),
+                    (
+                        "view_traffic_analytics",
+                        "Может просматривать аналитику трафика",
+                    ),
+                ],
             },
         ),
     ]

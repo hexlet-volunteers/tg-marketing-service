@@ -35,3 +35,10 @@ find = { where = [], include = ["apps/*", "config"] }
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = "test_*.py"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "pytest-django>=4.12.0",
+]

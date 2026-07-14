@@ -4,18 +4,26 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0005_staff'),
+        ("users", "0005_staff"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='user',
-            name='role',
-            field=models.CharField(choices=[('guest', 'Guest'), ('user', 'User'), ('partner', 'Partner'), ('channel_moderator', 'Сhannel_moderator')], default='guest', max_length=50),
+            model_name="user",
+            name="role",
+            field=models.CharField(
+                choices=[
+                    ("guest", "Guest"),
+                    ("user", "User"),
+                    ("partner", "Partner"),
+                    ("channel_moderator", "Сhannel_moderator"),
+                ],
+                default="guest",
+                max_length=50,
+            ),
         ),
         migrations.DeleteModel(
-            name='Staff',
+            name="Staff",
         ),
     ]
