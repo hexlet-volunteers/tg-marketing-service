@@ -304,10 +304,7 @@ class UserRegister(View):
     def _bound_form_data(self, request):
         data = self._empty_form_data()
         data.update(
-            {
-                field: request.POST.get(field, "")
-                for field in self.form_fields
-            }
+            {field: request.POST.get(field, "") for field in self.form_fields}
         )
         return data
 
