@@ -14,7 +14,7 @@ prod-run:
 	uv run gunicorn -b 0.0.0.0:$(PORT) config.wsgi
 
 lint:
-	uv run ruff
+	uv run ruff check
 
 lint-fix:
 	uv run ruff check --fix

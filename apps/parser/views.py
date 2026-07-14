@@ -8,7 +8,6 @@ from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import DetailView, FormView, ListView, View
-
 from inertia import render as inertia_render
 from telethon import TelegramClient
 from telethon.sessions import StringSession
