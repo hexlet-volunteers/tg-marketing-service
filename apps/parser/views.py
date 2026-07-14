@@ -8,7 +8,12 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from django.urls import reverse_lazy
 from django.utils import timezone
-from django.views.generic import DetailView, FormView, ListView
+from django.views.generic import DetailView, FormView, ListView, View
+
+from django.http import JsonResponse
+
+from django.db.models import Q
+
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
@@ -168,5 +173,19 @@ class ParserDetailView(DetailView):
     model = TelegramChannel
     template_name = 'parser/channel_detail.html'
     context_object_name = "channel"
+
+
+class ChannelLookupView(View):
+
+    def get(self, request, *args, **kwargs):
+        q = request.GET.get('q')
+
+        if not q:
+            return JsonResponse([], safe=False)
+
+        channels = TelegramChannel.objects.filter(Q(title__icontains=q) | Q(username__icontains=q))[:10]
+        result = list(channels.values('id', 'title', 'username', 'participants_count', 'category'))
+        return JsonResponse(result, safe=False)
+
 
 # Create your views here.
