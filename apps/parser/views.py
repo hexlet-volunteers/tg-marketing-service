@@ -181,7 +181,7 @@ class ParserDetailView(DetailView):
 
 
 class ChannelLookupView(View):
-    '''
+    """
     API endpoint для поиска каналов
 
     GET /parser/lookup/?q=<query>
@@ -202,25 +202,23 @@ class ChannelLookupView(View):
 
     - Пустой q / Нет совпадений - возвращает []
     - Максимум 10 результатов
-    '''
+    """
 
     def get(self, request, *args, **kwargs):
-        q = request.GET.get('q')
+        q = request.GET.get("q")
 
         if not q:
             return JsonResponse([], safe=False)
 
         channels = TelegramChannel.objects.filter(
             Q(title__icontains=q) | Q(username__icontains=q)
-        ).order_by('-participants_count')[:10]
+        ).order_by("-participants_count")[:10]
 
-        result = list(channels.values(
-            'id',
-            'title',
-            'username',
-            'participants_count',
-            'category'
-        ))
+        result = list(
+            channels.values(
+                "id", "title", "username", "participants_count", "category"
+            )
+        )
         return JsonResponse(result, safe=False)
 
 
