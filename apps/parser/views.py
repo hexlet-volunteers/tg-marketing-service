@@ -3,10 +3,11 @@ from typing import Any
 
 from asgiref.sync import async_to_sync
 from django.contrib import messages
-from django.http import HttpRequest, HttpResponse
+from django.db.models import Q
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.urls import reverse_lazy
 from django.utils import timezone
-from django.views.generic import DetailView, FormView, ListView
+from django.views.generic import DetailView, FormView, ListView, View
 from inertia import render as inertia_render
 from telethon import TelegramClient
 from telethon.sessions import StringSession
@@ -177,6 +178,59 @@ class ParserDetailView(DetailView):
     model = TelegramChannel
     template_name = "parser/channel_detail.html"
     context_object_name = "channel"
+
+
+class ChannelLookupView(View):
+    """
+    API endpoint для поиска каналов
+
+    GET /parser/lookup/?q=<query>
+
+    Параметры:
+    - q (str): поисковая строка по title или username
+
+    Возвращает JSON:
+    [
+        {
+            "id": 123456789,
+            "title": "Channel Name",
+            "username": "channelname",
+            "participants_count": 5000,
+            "category": "news"
+        }
+    ]
+
+    - Пустой q / Нет совпадений - возвращает []
+    - Максимум 10 результатов
+    """
+
+    def get(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> JsonResponse:
+        q = request.GET.get("q", "").strip()
+
+        if not q:
+            return JsonResponse([], safe=False)
+
+        channels = TelegramChannel.objects.filter(
+            Q(title__icontains=q) | Q(username__icontains=q)
+        ).order_by("-participants_count")[:10]
+
+        result = list(
+            channels.values(
+                "id",
+                "title",
+                "username",
+                "participants_count",
+                "category",
+            )
+        )
+
+        # Временно заглушка, пока в модели TelegramChannel нету аватарки
+        for item in result:
+            item["avatar"] = None
+
+        return JsonResponse(result, safe=False)
 
 
 # Create your views here.
