@@ -225,7 +225,7 @@ class ChannelLookupView(View):
                 "category",
             )
         )
-        
+
         # Временно заглушка, пока в модели TelegramChannel нету аватарки
         for item in result:
             item["avatar"] = None
