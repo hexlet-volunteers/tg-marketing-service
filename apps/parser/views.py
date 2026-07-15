@@ -207,7 +207,7 @@ class ChannelLookupView(View):
     def get(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> JsonResponse:
-        q = request.GET.get("q")
+        q = request.GET.get("q", "").strip()
 
         if not q:
             return JsonResponse([], safe=False)
@@ -218,9 +218,18 @@ class ChannelLookupView(View):
 
         result = list(
             channels.values(
-                "id", "title", "username", "participants_count", "category"
+                "id",
+                "title",
+                "username",
+                "participants_count",
+                "category",
             )
         )
+        
+        # Временно заглушка, пока в модели TelegramChannel нету аватарки
+        for item in result:
+            item["avatar"] = None
+
         return JsonResponse(result, safe=False)
 
 
