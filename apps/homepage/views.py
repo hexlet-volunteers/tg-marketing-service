@@ -1,4 +1,3 @@
-from django.middleware.csrf import get_token
 from django.shortcuts import redirect
 from django.views import View
 from inertia import render as inertia_render
@@ -98,8 +97,5 @@ class DashboardView(View):
         return inertia_render(
             request,
             "Dashboard",
-            props={
-                **dto.model_dump(mode="json"),
-                "csrfToken": get_token(request),
-            },
+            props={**dto.model_dump(mode="json")},
         )

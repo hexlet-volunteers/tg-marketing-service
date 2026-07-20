@@ -2,7 +2,6 @@ from django.conf import settings
 from django.contrib import auth, messages
 from django.contrib.auth import login
 from django.contrib.auth.tokens import default_token_generator
-from django.middleware.csrf import get_token
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -142,7 +141,6 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
                 "first_name": user.first_name,
                 "email": user.email,
             },
-            "csrfToken": get_token(request),
             "subscription": {
                 "plan": "Pro",
                 "price": "$29",

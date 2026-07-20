@@ -58,15 +58,7 @@ class IndexView(View):
                 }
             )
 
-        # Flach сообщение временное явление, пока не будет готова
-        # на фронте страница login. Сейчас представление UserRegister
-        # делает редирект с сообщением на главную страницу
-
-        flash = {}
-        if "flash_success" in request.session:
-            flash["success"] = request.session.pop("flash_success")
-
-        page_props = {"components": components_data, "flash": flash}
+        page_props = {"components": components_data}
 
         # коментируем до изменеий в UserRegister
         # page_props = {
