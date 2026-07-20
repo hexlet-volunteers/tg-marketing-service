@@ -54,10 +54,10 @@ export const theme: MantineThemeOverride = {
   headings: {
     fontFamily: "'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     sizes: {
-      h1: { fontSize: '44px', fontWeight: '800', lineHeight: '1.15', letterSpacing: '-0.02em' },
-      h2: { fontSize: '32px', fontWeight: '800', lineHeight: '1.3', letterSpacing: '-0.025em' },
-      h3: { fontSize: '16px', fontWeight: '800', lineHeight: '1.4', letterSpacing: '-0.01em' },
-      h4: { fontSize: '14px', fontWeight: '700', lineHeight: '1.4', letterSpacing: '-0.01em' },
+      h1: { fontSize: '44px', fontWeight: '800', lineHeight: '1.15' },
+      h2: { fontSize: '32px', fontWeight: '800', lineHeight: '1.3' },
+      h3: { fontSize: '16px', fontWeight: '800', lineHeight: '1.4' },
+      h4: { fontSize: '14px', fontWeight: '700', lineHeight: '1.4' },
     },
   },
 
@@ -85,6 +85,14 @@ export const theme: MantineThemeOverride = {
       defaultProps: {
         px: { base: 20 },
         py: { base: 40 },
+      },
+    },
+
+    Heading: {
+      styles: {
+        root: {
+          letterSpacing: '-0.02em',
+        },
       },
     },
 
