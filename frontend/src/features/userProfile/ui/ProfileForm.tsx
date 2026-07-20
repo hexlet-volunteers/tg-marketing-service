@@ -1,4 +1,5 @@
 import React from 'react';
+import { Text, TextInput, Title, Paper, Stack, Group, Button, Box } from '@mantine/core';
 import { useUserProfileForm } from '../model/useUserProfileForm';
 
 export const ProfileForm: React.FC = () => {
@@ -11,89 +12,70 @@ export const ProfileForm: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col md:flex-row gap-6">
-        <form
+    <Stack gap="lg">
+      <Group grow wrap="wrap">
+        <Box
+          component="form"
           onSubmit={handleSubmit}
-          className="bg-white border border-gray-300 shadow-sm rounded p-6 space-y-4 w-full md:w-2/3"
+          flex="2 1 0"
+          miw={0}
         >
-          <h3 className="text-2xl font-semibold text-gray-800 mb-4 text-left">
-            Информация о профиле
-          </h3>
-
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <label className="block text-gray-700 font-medium mb-1">Имя</label>
-              <input
+          <Paper p="lg" radius="sm">
+            <Title order={3} mb="md" ta="left">Информация о профиле</Title>
+            <Stack>
+              <Group grow wrap="wrap">
+                <TextInput
+                  label="Имя"
+                  type="text"
+                  value={data.first_name}
+                  onChange={handleChange('first_name')}
+                  error={errors.first_name || undefined}
+                />
+                <TextInput
+                  label="Email"
+                  type="email"
+                  value={data.email}
+                  onChange={handleChange('email')}
+                  error={errors.email || undefined}
+                />
+              </Group>
+              <TextInput
+                label="Компания"
                 type="text"
-                value={data.first_name}
-                onChange={handleChange('first_name')}
-                className="border border-gray-300 rounded p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={data.company}
+                onChange={handleChange('company')}
+                error={errors.company || undefined}
               />
-              {errors.first_name && (
-                <p className="text-red-500 text-sm mt-1">{errors.first_name}</p>
-              )}
-            </div>
+              <Button
+                type="submit"
+                loading={processing}
+                variant="gradient"
+                gradient={{ from: 'tgblue', to: 'tgblue.7' }}
+                w="fit-content"
+              >
+                {processing ? 'Сохранение...' : 'Сохранить изменения'}
+              </Button>
+            </Stack>
+          </Paper>
+        </Box>
 
-            <div className="flex-1">
-              <label className="block text-gray-700 font-medium mb-1">Email</label>
-              <input
-                type="email"
-                value={data.email}
-                onChange={handleChange('email')}
-                className="border border-gray-300 rounded p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {errors.email && (
-                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-              )}
-            </div>
-          </div>
+        <Paper p="lg" radius="sm" flex="1 1 0" miw={0}>
+          <Title order={3} mb="md" ta="left">Подписка Pro</Title>
+          <Text c="dimmed">Заглушка для формы подписки.</Text>
+        </Paper>
+      </Group>
 
-          <div>
-            <label className="block text-gray-700 font-medium mb-1">Компания</label>
-            <input
-              type="text"
-              value={data.company}
-              onChange={handleChange('company')}
-              className="border border-gray-300 rounded p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            {errors.company && (
-              <p className="text-red-500 text-sm mt-1">{errors.company}</p>
-            )}
-          </div>
+      <Group grow wrap="wrap">
+        <Paper p="lg" radius="sm" flex="2 1 0" miw={0}>
+          <Title order={3} mb="md" ta="left">Уведомления</Title>
+          <Text c="dimmed">Заглушка для формы уведомлений.</Text>
+        </Paper>
 
-          <button
-            type="submit"
-            disabled={processing}
-            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg px-6 py-2 shadow-md disabled:opacity-50 transition-colors duration-200"
-          >
-            {processing ? 'Сохранение...' : 'Сохранить изменения'}
-          </button>
-        </form>
-
-        <div className="bg-white border border-gray-300 shadow-sm rounded p-6 w-full md:w-1/3">
-          <h3 className="text-2xl font-semibold text-gray-800 mb-4 text-left">
-            Подписка Pro
-          </h3>
-          <p className="text-gray-500">Заглушка для формы подписки.</p>
-        </div>
-      </div>
-
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="bg-white border border-gray-300 shadow-sm rounded p-6 w-full md:w-2/3">
-          <h3 className="text-2xl font-semibold text-gray-800 mb-4 text-left">
-            Уведомления
-          </h3>
-          <p className="text-gray-500">Заглушка для формы уведомлений.</p>
-        </div>
-
-        <div className="bg-white border border-gray-300 shadow-sm rounded p-6 w-full md:w-1/3">
-          <h3 className="text-2xl font-semibold text-gray-800 mb-4 text-left">
-            Статистика использования
-          </h3>
-          <p className="text-gray-500">Заглушка для статистики.</p>
-        </div>
-      </div>
-    </div>
+        <Paper p="lg" radius="sm" flex="1 1 0" miw={0}>
+          <Title order={3} mb="md" ta="left">Статистика использования</Title>
+          <Text c="dimmed">Заглушка для статистики.</Text>
+        </Paper>
+      </Group>
+    </Stack>
   );
 };
