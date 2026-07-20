@@ -1,69 +1,79 @@
+import { Badge, Button, Card, Flex, Group, Stack, Text } from '@mantine/core';
 import React from 'react';
 import type { Tariff } from '../model/types';
 
-export const TariffCard: React.FC<Tariff & { onClick?: () => void }> = ({
+interface TariffCardProps extends Tariff {
+  onClick?: () => void;
+}
+
+export const TariffCard: React.FC<TariffCardProps> = ({
   name,
-  label,
-  description,
-  price,
+  period,
+  monthlyPrice,
   features,
   button,
   isHighlighted,
+  isPopular,
   onClick,
 }) => {
-  const isPrimary = isHighlighted;
-
   return (
-    <div
+    <Card
       onClick={onClick}
-      className={`
-        border rounded-xl p-5 flex flex-col gap-2 cursor-pointer
-        bg-white
-        transition-shadow transform hover:scale-[1.02] hover:shadow-lg
-        ${isPrimary ? '!border-[#155CFA] shadow-md' : 'border-gray-200'}
-      `}
+      padding="xl"
+      radius="lg"
+      pos="relative"
+      withBorder
+      bd={isHighlighted ? "1px solid var(--mantine-color-tgblue-5)" : "1px solid var(--mantine-color-gray-3)"}
+      styles={{ root: { overflow: 'visible', transition: 'border 150ms ease, box-shadow 150ms ease' } }}
     >
-      <div className="flex items-center justify-between">
-        <h3 className="text-xl font-bold text-black">{name}</h3>
-        {label && (
-          <span className="px-2 py-1 text-xs rounded-md bg-[#EEF5FE] text-[#155CFA] font-medium">
-            {label}
-          </span>
-        )}
-      </div>
+      {isPopular && (
+        <Badge
+          pos="absolute"
+          top={-10}
+          left={80}
+          bg="tgblue.5"
+          c="white"
+          p="4px 14px"
+          bdrs={12}
+        >
+          Популярный
+        </Badge>
+      )}
 
-      <p className="text-sm text-[#6D7F96] mt-0.5">{description}</p>
+      <Flex direction="column" justify="space-between" h="100%">
+        <Stack flex={1}>
+          <Text size="md" fw={800} c="primary">{name}</Text>
 
-      <div className="mt-1 flex items-end gap-1">
-        <span className="text-3xl font-bold text-black leading-none">
-          {price.split('/')[0]}
-        </span>
-        <span className="text-sm font-semibold text-[#6D7F96] leading-none">
-          /{price.split('/')[1]}
-        </span>
-      </div>
+          <Stack gap={2}>
+            <Text fw={800} c="primary" lh={1.1} fz="34px">
+              {monthlyPrice === 0 ? '0 ₽' : `${monthlyPrice} ₽`}
+            </Text>
+            <Text size="xs" c="gray.5">
+              {period}
+            </Text>
+          </Stack>
 
-      <ul className="flex flex-col gap-1.5 mt-3">
-        {features.map((f) => (
-          <li key={f.id} className="flex items-center gap-2 text-black text-sm">
-            <span className="w-4 h-4 bg-[#47BD71] rounded-full flex items-center justify-center text-white text-xs">
-              ✓
-            </span>
-            {f.text}
-          </li>
-        ))}
-      </ul>
+          <Stack gap="sm" mt="md" mb="xl">
+            {features.map((feat) => (
+              <Group key={feat.id} gap={8} wrap="nowrap" align="flex-start">
+                <Text size="sm" fw={600} c="tggreen.5">✓</Text>
+                <Text size="sm" c="muted">{feat.text}</Text>
+              </Group>
+            ))}
+          </Stack>
+        </Stack>
 
-      <button
-        className={`
-          mt-4 w-full py-2 rounded-lg border text-sm
-          ${isPrimary
-            ? '!bg-[#155CFA] !text-white !border-[#155CFA]'
-            : 'bg-white text-black border-gray-300'}
-        `}
-      >
-        {button.label}
-      </button>
-    </div>
+        <Button
+          size="md"
+          color="tgblue"
+          fw={700}
+          h={44}
+          mt="auto"
+          styles={{ root: { visibility: isHighlighted ? 'visible' : 'hidden' } }}
+        >
+          {button.label}
+        </Button>
+      </Flex>
+    </Card>
   );
 };
