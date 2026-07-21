@@ -207,3 +207,5 @@ make lint-fix   # ruff check --fix
 | `make s` | Генерация Telegram-сессии |
 | `make redis` / `make celery` / `make celery-beat` / `make flower` | Фоновые задачи |
 | `make test` / `make lint` / `make lint-fix` | Тесты и линтер |
+
+ 
