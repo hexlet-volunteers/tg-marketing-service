@@ -6,6 +6,7 @@ from django.contrib.auth.forms import (
     UserChangeForm,
     UserCreationForm,
 )
+from django.utils.crypto import get_random_string
 
 from apps.users.models import User
 
@@ -13,7 +14,7 @@ from apps.users.models import User
 class UserLoginForm(AuthenticationForm):
     class Meta:
         model = User
-        fields = ["usernme", "password"]
+        fields = ["username", "password"]
 
     username = forms.CharField(
         label="Имя пользователя",
@@ -43,7 +44,6 @@ class UserRegForm(UserCreationForm):
         fields = (
             "first_name",
             "last_name",
-            "username",
             "password1",
             "password2",
             "email",
@@ -52,25 +52,17 @@ class UserRegForm(UserCreationForm):
         )
 
     first_name = forms.CharField(
+        required=False,
         label="Имя",
         widget=forms.TextInput(
             attrs={"class": "form-control", "placeholder": "Имя"}
         ),
     )
     last_name = forms.CharField(
+        required=False,
         label="Фамилия",
         widget=forms.TextInput(
             attrs={"class": "form-control", "placeholder": "Фамилия"}
-        ),
-    )
-    username = forms.CharField(
-        label="Имя пользователя",
-        widget=forms.TextInput(
-            attrs={
-                "autofocus": True,
-                "class": "form-control",
-                "placeholder": "Имя пользователя",
-            }
         ),
     )
     password1 = forms.CharField(
@@ -89,7 +81,7 @@ class UserRegForm(UserCreationForm):
             }
         ),
     )
-    email = forms.CharField(
+    email = forms.EmailField(
         label="Email",
         widget=forms.EmailInput(
             attrs={"class": "form-control", "placeholder": "Email"}
@@ -97,13 +89,17 @@ class UserRegForm(UserCreationForm):
     )
     bio = forms.CharField(
         required=False,
-        label="Email",
+        label="О себе",
         widget=forms.Textarea(
-            attrs={"class": "form-control", "placeholder": "О себе", "rows": 3}
+            attrs={
+                "class": "form-control",
+                "placeholder": "О себе",
+                "rows": 3,
+            }
         ),
     )
     terms = forms.BooleanField(
-        required=True,
+        required=False,
         widget=forms.CheckboxInput(
             attrs={
                 "class": "form-check-input",
@@ -117,6 +113,35 @@ class UserRegForm(UserCreationForm):
             attrs={"name": "avatar_image", "class": "form-control"}
         ),
     )
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError(
+                "Пользователь с таким email уже существует."
+            )
+        return email
+
+    def _generate_username(self):
+        email_local_part = self.cleaned_data["email"].split("@", 1)[0]
+        username_base = "".join(
+            char if char.isalnum() or char in "@.+-_" else "_"
+            for char in email_local_part
+        ).strip("._-+")
+        username_base = (username_base or "user")[:140]
+
+        while True:
+            username = f"{username_base}_{get_random_string(8)}"
+            if not User.objects.filter(username=username).exists():
+                return username
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.username = self._generate_username()
+        if commit:
+            user.save()
+            self.save_m2m()
+        return user
 
 
 class UserUpdateForm(UserChangeForm):
@@ -179,9 +204,13 @@ class UserUpdateForm(UserChangeForm):
     )
     bio = forms.CharField(
         required=False,
-        label="Email",
+        label="О себе",
         widget=forms.Textarea(
-            attrs={"class": "form-control", "placeholder": "О себе", "rows": 3}
+            attrs={
+                "class": "form-control",
+                "placeholder": "О себе",
+                "rows": 3,
+            }
         ),
     )
     avatar_image = forms.CharField(

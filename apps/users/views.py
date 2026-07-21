@@ -1,9 +1,9 @@
-from django.conf import settings
 from django.contrib import auth, messages
 from django.contrib.auth import login
 from django.contrib.auth.tokens import default_token_generator
 from django.middleware.csrf import get_token
 from django.shortcuts import redirect
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import urlsafe_base64_decode
@@ -22,7 +22,7 @@ from apps.users.models import User
 from config.mixins import UserAuthenticationCheckMixin
 
 # константа с дефолтной=аватаркой для представления UserRegister
-DEFAULT_AVATAR_URL = f"{settings.STATIC_URL}default_avatar.jpeg"
+DEFAULT_AVATAR_URL = static("users/default-avatar.svg")
 
 
 class LogoutView(UserAuthenticationCheckMixin, View):
@@ -204,86 +204,69 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
 
 
 class UserRegister(View):
-    """
-    Страница регистрации и аутентификации пользователя
-    При первом посещении рендерится страница регистрации GET запрос.
-    Props возвращает пустые поля формы email и password:
-        {
-            "first_name": "",
-            "last_name": "",
-            "username": "",
-            "password1": "",
-            "password2": "",
-            "email": "",
-            "bio": "",
-            "avatar_image": ""
+    form_fields = (
+        "first_name",
+        "last_name",
+        "password1",
+        "password2",
+        "email",
+        "bio",
+        "avatar_image",
+    )
+
+    def _empty_form_data(self):
+        return {field: "" for field in self.form_fields}
+
+    def _bound_form_data(self, request):
+        data = self._empty_form_data()
+        data.update(
+            {field: request.POST.get(field, "") for field in self.form_fields}
+        )
+        data["password1"] = ""
+        data["password2"] = ""
+        return data
+
+    def _form_props(self, data=None, errors=None):
+        return {
+            "form": {
+                "data": data or self._empty_form_data(),
+                "errors": errors or {},
+            }
         }
-
-    POST /register/
-    Назначение: обрабатывает отправку данных формы регистрации.
-    Входные данные (request.POST):
-
-    {
-        "data": {
-            "first_name": "",
-            "last_name": "",
-            "username": "",
-            "password1": "",
-            "password2": "",
-            "email": "",
-            "bio": "",
-            "avatar_image": ""
-        },
-        "errors": form.errors
-    }
-    """
 
     def get(self, request):
         return inertia_render(
             request,
             "FormRegistration",
-            props={
-                "first_name": "",
-                "last_name": "",
-                "username": "",
-                "password1": "",
-                "password2": "",
-                "email": "",
-                "bio": "",
-                "avatar_image": "",
-            },
+            props=self._form_props(),
         )
 
     def post(self, request, *args, **kwargs):
         form = UserRegForm(data=request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            # Устанавливаем роль пользователя
             user.role = "user"
-
             if not user.avatar_image:
                 user.avatar_image = DEFAULT_AVATAR_URL
             user.save()
+
             request.session["flash_success"] = (
                 "Пользователь успешно зарегистрирован"
             )
-            return redirect("/home")
+            login(
+                request,
+                user,
+                backend="django.contrib.auth.backends.ModelBackend",
+            )
+            return redirect(reverse("homepage:dashboard"))
+
         return inertia_render(
             request,
             "FormRegistration",
-            props={
-                "data": {
-                    "first_name": request.POST.get("first_name", ""),
-                    "last_name": request.POST.get("last_name", ""),
-                    "username": request.POST.get("username", ""),
-                    "password1": request.POST.get("password1", ""),
-                    "password2": request.POST.get("password2", ""),
-                    "email": request.POST.get("email", ""),
-                    "bio": request.POST.get("bio", ""),
-                    "avatar_image": request.POST.get("avatar_image", ""),
-                },
-                "errors": form.errors,
-            },
+            props=self._form_props(
+                data=self._bound_form_data(request),
+                errors=form.errors.get_json_data(),
+            ),
         )
 
 
