@@ -68,6 +68,10 @@ class Group(models.Model):
             self.slug = slugify(unidecode(self.name))
         super().save(*args, **kwargs)
 
+    @property
+    def saves_count(self):
+        return self.saves.count()
+
     def get_data(self):
         """
         Метод возвращает представление данных группы в виде словаря,
@@ -83,7 +87,38 @@ class Group(models.Model):
             "order": self.order,
             "image_url": self.image_url,
             "created_at": self.created_at.isoformat(),
+            "saves_count": self.saves_count,
         }
+
+
+class SavedCollection(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="saved_collections",
+        verbose_name="Пользователь",
+    )
+    group = models.ForeignKey(
+        Group,
+        on_delete=models.CASCADE,
+        related_name="saves",
+        verbose_name="Подборка",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создано")
+
+    class Meta:
+        db_table = "saved_collections"
+        verbose_name = "Сохраненная подборка"
+        verbose_name_plural = "Сохраненные подборки"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "group"],
+                name="unique_saved_collection_user_group",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user} -> {self.group}"
 
 
 class AutoGroupRule(models.Model):
