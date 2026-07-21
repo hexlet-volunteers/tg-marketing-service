@@ -525,4 +525,3 @@ class RestorePasswordView(View):
                 "errors": form.errors,
             },
         )
-
