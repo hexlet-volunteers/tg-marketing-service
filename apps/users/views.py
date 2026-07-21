@@ -203,90 +203,6 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
         return redirect(reverse("users:user_cabinet"))
 
 
-class LegacyUserRegister(View):
-    """
-    Страница регистрации и аутентификации пользователя
-    При первом посещении рендерится страница регистрации GET запрос.
-    Props возвращает пустые поля формы email и password:
-        {
-            "first_name": "",
-            "last_name": "",
-            "username": "",
-            "password1": "",
-            "password2": "",
-            "email": "",
-            "bio": "",
-            "avatar_image": ""
-        }
-
-    POST /register/
-    Назначение: обрабатывает отправку данных формы регистрации.
-    Входные данные (request.POST):
-
-    {
-        "data": {
-            "first_name": "",
-            "last_name": "",
-            "username": "",
-            "password1": "",
-            "password2": "",
-            "email": "",
-            "bio": "",
-            "avatar_image": ""
-        },
-        "errors": form.errors
-    }
-    """
-
-    def get(self, request):
-        return inertia_render(
-            request,
-            "FormRegistration",
-            props={
-                "first_name": "",
-                "last_name": "",
-                "username": "",
-                "password1": "",
-                "password2": "",
-                "email": "",
-                "bio": "",
-                "avatar_image": "",
-            },
-        )
-
-    def post(self, request, *args, **kwargs):
-        form = UserRegForm(data=request.POST)
-        if form.is_valid():
-            user = form.save(commit=False)
-            # Устанавливаем роль пользователя
-            user.role = "user"
-
-            if not user.avatar_image:
-                user.avatar_image = DEFAULT_AVATAR_URL
-            user.save()
-            request.session["flash_success"] = (
-                "Пользователь успешно зарегистрирован"
-            )
-            return redirect(reverse("homepage:dashboard"))
-        return inertia_render(
-            request,
-            "FormRegistration",
-            props={
-                "data": {
-                    "first_name": request.POST.get("first_name", ""),
-                    "last_name": request.POST.get("last_name", ""),
-                    "username": request.POST.get("username", ""),
-                    "password1": request.POST.get("password1", ""),
-                    "password2": request.POST.get("password2", ""),
-                    "email": request.POST.get("email", ""),
-                    "bio": request.POST.get("bio", ""),
-                    "avatar_image": request.POST.get("avatar_image", ""),
-                },
-                "errors": form.errors,
-            },
-        )
-
-
 class UserRegister(View):
     form_fields = (
         "first_name",
@@ -306,6 +222,8 @@ class UserRegister(View):
         data.update(
             {field: request.POST.get(field, "") for field in self.form_fields}
         )
+        data["password1"] = ""
+        data["password2"] = ""
         return data
 
     def _form_props(self, data=None, errors=None):
@@ -607,3 +525,4 @@ class RestorePasswordView(View):
                 "errors": form.errors,
             },
         )
+

@@ -73,6 +73,8 @@ class UserRegisterTest(TestCase):
             payload["props"]["form"]["data"]["email"],
             "taken@example.com",
         )
+        self.assertEqual(payload["props"]["form"]["data"]["password1"], "")
+        self.assertEqual(payload["props"]["form"]["data"]["password2"], "")
         self.assertIn("email", payload["props"]["form"]["errors"])
         self.assertIn("password2", payload["props"]["form"]["errors"])
         self.assertEqual(
