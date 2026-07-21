@@ -262,10 +262,10 @@ class UserRegister(View):
             if not user.avatar_image:
                 user.avatar_image = DEFAULT_AVATAR_URL
             user.save()
-            request.session["flash_success"] = (
-                "Пользователь успешно зарегистрирован"
-            )
-            return redirect("/home")
+            request.session["flash"] = {
+                "success": "Пользователь успешно зарегистрирован"
+            }
+            return redirect(reverse("main_index"))
         return inertia_render(
             request,
             "FormRegistration",
@@ -336,9 +336,9 @@ class UserUpdate(UserAuthenticationCheckMixin, View):
                 request, "UpdateUserProfile", props={"form": data, "errors": {}}
             )
 
-        request.session["flash_error"] = (
-            "У вас нет прав для изменения другого пользователя."
-        )
+        request.session["flash"] = {
+            "error": "У вас нет прав для изменения другого пользователя."
+        }
         return redirect(reverse("users:profile"))
 
     def post(self, request, *args, **kwargs):
@@ -347,7 +347,7 @@ class UserUpdate(UserAuthenticationCheckMixin, View):
         form = UserUpdateForm(data=request.POST, instance=user)
         if form.is_valid():
             form.save()
-            request.session["flash_success"] = "Профиль успешно изменен."
+            request.session["flash"] = {"success": "Профиль успешно изменен."}
             return redirect(reverse("users:profile"))
 
         data = {
@@ -374,11 +374,11 @@ class AvatarChangeView(View):
         avatar_form = AvatarChange(data=request.POST, instance=user)
         if avatar_form.is_valid():
             avatar_form.save()
-            request.session["flash_success"] = "Аватар успешно изменен"
+            request.session["flash"] = {"success": "Аватар успешно изменен"}
             return redirect(reverse("users:profile"))
         if avatar_form.errors.get("avatar_url"):
             avatar_url = avatar_form.errors.get("avatar_url").as_text()
-            request.session["flash_error"] = f"{avatar_url[1:]}"
+            request.session["flash"] = {"error": f"{avatar_url[1:]}"}
         return redirect(reverse("users:profile"))
 
 
@@ -410,10 +410,12 @@ class RestorePasswordRequestView(View):
                 use_https=request.is_secure(),
                 email_template_name="emails/restore-password-email.html",
             )
-            request.session["flash_success"] = (
-                "Ссылка на восстановление пароля \
-                отправлена на указанный вами Email"
-            )
+            request.session["flash"] = {
+                "success": (
+                    "Ссылка на восстановление пароля "
+                    "отправлена на указанный вами Email"
+                )
+            }
             return redirect("users:login")
         return inertia_render(
             request,
@@ -457,26 +459,26 @@ class RestorePasswordView(View):
             token = None
 
         if uid is None or token is None:
-            request.session["flash_error"] = (
-                "Некорректная ссылка для восстановления пароля"
-            )
+            request.session["flash"] = {
+                "error": "Некорректная ссылка для восстановления пароля"
+            }
             return redirect("users:login")
 
         try:
             uid_decoded = urlsafe_base64_decode(uid).decode()
         except TypeError:
-            request.session["flash_error"] = "Некорректный id пользователя"
+            request.session["flash"] = {"error": "Некорректный id пользователя"}
             return redirect("users:login")
         try:
             user = User.objects.get(pk=uid_decoded)
         except User.DoesNotExist:
-            request.session["flash_error"] = "Пользователь не найден"
+            request.session["flash"] = {"error": "Пользователь не найден"}
             return redirect("users:login")
 
         if not default_token_generator.check_token(user, token):
-            request.session["flash_error"] = (
-                "Некорректная ссылка для восстановления пароля"
-            )
+            request.session["flash"] = {
+                "error": "Некорректная ссылка для восстановления пароля"
+            }
             return redirect("users:login")
 
         return inertia_render(
@@ -501,32 +503,32 @@ class RestorePasswordView(View):
             token = None
 
         if uid is None or token is None:
-            request.session["flash_error"] = (
-                "Некорректная ссылка для восстановления пароля"
-            )
+            request.session["flash"] = {
+                "error": "Некорректная ссылка для восстановления пароля"
+            }
             return redirect("users:login")
 
         try:
             uid_decoded = urlsafe_base64_decode(uid).decode()
         except TypeError:
-            request.session["flash_error"] = "Некорректный id пользователя"
+            request.session["flash"] = {"error": "Некорректный id пользователя"}
             return redirect("users:login")
         try:
             user = User.objects.get(pk=uid_decoded)
         except User.DoesNotExist:
-            request.session["flash_error"] = "Пользователь не найден"
+            request.session["flash"] = {"error": "Пользователь не найден"}
             return redirect("users:login")
 
         if not default_token_generator.check_token(user, token):
-            request.session["flash_error"] = (
-                "Некорректная ссылка для восстановления пароля"
-            )
+            request.session["flash"] = {
+                "error": "Некорректная ссылка для восстановления пароля"
+            }
             return redirect("users:login")
 
         form = RestorePasswordForm(user=user, data=request.POST)
         if form.is_valid():
             form.save()
-            request.session["flash_success"] = "Пароль успешно изменен"
+            request.session["flash"] = {"success": "Пароль успешно изменен"}
             return redirect("users:login")
 
         return inertia_render(

@@ -72,8 +72,7 @@ class DashboardView(View):
                 "Добавить канал",
                 "Экспорт данных",
                 "Настройки"
-            ],
-            "csrfToken": "abc123xyz456..."
+            ]
         },
         "url": "/dashboard/"
     }

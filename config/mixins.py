@@ -103,7 +103,7 @@ class GuestRequiredMixin(RoleRequiredMixin):
 class UserRequiredMixin(RoleRequiredMixin):
     """Для всех авторизованных пользователей"""
 
-    allowed_roles = ["user", "partner", "channel_moderator"]
+    allowed_roles = ["user", "partner", "admin", "channel_moderator"]
     permission_denied_message = "Требуется авторизация"
 
 

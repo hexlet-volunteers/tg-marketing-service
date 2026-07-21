@@ -109,8 +109,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "inertia.middleware.InertiaMiddleware",
-    "config.middleware.InertiaMiddleware",
     "apps.users.middleware.RoleMiddleware",
+    "config.middleware.SharedInertiaPropsMiddleware",
 ]
 
 
