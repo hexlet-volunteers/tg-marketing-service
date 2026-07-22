@@ -110,6 +110,7 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     "inertia.middleware.InertiaMiddleware",
     "apps.users.middleware.RoleMiddleware",
+    "config.middleware.SharedInertiaPropsMiddleware",
 ]
 
 

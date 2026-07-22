@@ -154,7 +154,6 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
 
 class ParserListView(ListView):
     model = TelegramChannel
-    token = "TEMP_TOKEN"
 
     def get(
         self,
@@ -167,10 +166,7 @@ class ParserListView(ListView):
         return inertia_render(
             request,
             "ChannelAnalytics",
-            props={
-                "channels": channels,
-                "csrfToken": self.token,
-            },
+            props={"channels": channels},
         )
 
 

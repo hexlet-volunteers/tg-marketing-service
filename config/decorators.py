@@ -97,11 +97,11 @@ def guest_required(view_func=None, login_url=None, message=None):
 
 def user_required(view_func=None, login_url=None, message=None):
     """
-    Для всех авторизованных пользователей (user и partner).
+    Для всех авторизованных пользователей.
     Гостей перенаправляет на страницу входа.
     """
     actual_decorator = role_required(
-        allowed_roles=["user", "partner"],
+        allowed_roles=["user", "partner", "admin", "channel_moderator"],
         login_url=login_url or reverse("login"),
         message=message or "Требуется авторизация",
     )

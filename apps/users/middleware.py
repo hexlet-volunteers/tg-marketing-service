@@ -15,13 +15,15 @@ class RoleMiddleware:
         role_obj = Role.objects.filter(code=user_role).first()
 
         # Если роль пользователя не найдена, ставим гостевую роль
-        final_role = role_obj.name if role_obj else "Guest"
+        if role_obj:
+            final_role = role_obj.code
+        elif user_role:
+            final_role = user_role
+        else:
+            final_role = "guest"
 
         # Ставим роль в запрос
         request.role = final_role
         response = self.get_response(request)
-
-        # !!!!!! Для деплоя эту отдалдку удалить!!!!!!!
-        print(f"Middleware: Current role of the user is '{request.role}'")
 
         return response
