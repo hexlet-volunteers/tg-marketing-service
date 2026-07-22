@@ -26,6 +26,7 @@ dependencies = [
     "django-vite>=3.1.0",
     "django-guardian>=3.2.0",
     "pydantic>=2.13.4",
+    "anthropic>=0.117.0",
 ]
 
 
