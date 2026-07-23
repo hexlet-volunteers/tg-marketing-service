@@ -237,3 +237,6 @@ telegram_configuration
 
 django.log
 errors.log
+
+# Local Netlify folder
+.netlify

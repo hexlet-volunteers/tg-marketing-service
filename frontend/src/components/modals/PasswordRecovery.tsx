@@ -1,5 +1,6 @@
-import React from "react";
-import { useForm } from "react-hook-form";
+import React from 'react';
+import { Modal, TextInput, Stack, Text, Group, Button } from '@mantine/core';
+import { useForm } from '@mantine/form';
 
 interface PasswordRecoveryProps {
   isVisible: boolean;
@@ -7,58 +8,36 @@ interface PasswordRecoveryProps {
 }
 
 const PasswordRecovery: React.FC<PasswordRecoveryProps> = ({ isVisible, onClose }) => {
-  const { register } = useForm();
+  const form = useForm({
+    initialValues: { email: '' },
+    validate: {
+      email: (val) => (!val || !/^\S+@\S+\.\S+$/.test(val) ? 'Некорректный email' : null),
+    },
+  });
 
-  if (!isVisible) return null;
-
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
+  const handleSubmit = (values: { email: string }) => {
+    console.log('Password recovery:', values.email);
+    onClose();
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-neutral-800 flex items-center justify-center z-50"
-      onClick={handleBackdropClick}
-    >
-      <form
-        className="rounded-lg p-5 bg-white w-sm"
-      >
-        <h2
-          className="text-2xl mb-1 font-bold"
-        >
-          Восстановление пароля
-        </h2>
-        <label
-          className="text-sm flex flex-col gap-2.5 mb-4"
-        >
-          Введите ваш email
-          <input
-            {...register("email", {
-              required: "This is required.",
-            })}
+    <Modal opened={isVisible} onClose={onClose} title="Восстановление пароля" centered>
+      <form onSubmit={form.onSubmit(handleSubmit)}>
+        <Stack>
+          <Text size="sm">Введите ваш email</Text>
+          <TextInput
+            {...form.getInputProps('email')}
             type="email"
             placeholder="E-mail"
-            className="border-1 rounded-sm w-full pl-4 pt-2 pb-2"
           />
-        </label>
-        <div className="flex justify-between">
-          <button
-            className="!bg-blue-600 text-white">
-            Отправить ссылку
-          </button>
-          <button
-            type="button"
-            onClick={() => onClose()}
-            className="!bg-white"
-          >
-            Отмена
-          </button>
-        </div>
-      </form >
-    </div >
-  )
-}
+          <Group justify="space-between">
+            <Button type="submit" color="tgblue">Отправить ссылку</Button>
+            <Button variant="subtle" onClick={onClose}>Отмена</Button>
+          </Group>
+        </Stack>
+      </form>
+    </Modal>
+  );
+};
 
 export default PasswordRecovery;

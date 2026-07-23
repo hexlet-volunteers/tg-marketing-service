@@ -1,21 +1,28 @@
 import React from 'react';
+import { Text, Paper, Flex } from '@mantine/core';
 import type { AiDemoBlockProps } from '../model/types';
 
 export const AiDemoWindow: React.FC<AiDemoBlockProps> = (props) => {
   const { demoTitle } = props;
-  
+
   return (
-    <div
-      className="flex-1 w-full rounded-xl border p-4 bg-white flex min-h-[15rem] lg:min-h-0"
+    <Paper
+      p="md"
+      radius="xl"
+      flex={1}
+      mih="15rem"
     >
-      <div
-        className="w-full h-full rounded-lg flex items-center justify-center p-4"
-        style={{ backgroundColor: '#F8F9FB' }}
+      <Flex
+        w="100%"
+        h="100%"
+        justify="center"
+        align="center"
+        p={16}
+        bg="muted.0"
+        bdrs={8}
       >
-        <span className="text-5xl" style={{ color: '#94A2B8' }}>
-          {demoTitle || 'AI Assistant Chat'}
-        </span>
-      </div>
-    </div>
+        <Text fz={48} c="dimmed">{demoTitle || 'AI Assistant Chat'}</Text>
+      </Flex>
+    </Paper>
   );
 };

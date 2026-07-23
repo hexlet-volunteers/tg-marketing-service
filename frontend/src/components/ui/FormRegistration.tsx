@@ -1,114 +1,76 @@
 import React from 'react';
-import { useState } from 'react';
-import PasswordRecovery from '../modals/PasswordRecovery';
-import { useForm } from 'react-hook-form';
-import { Inertia } from '@inertiajs/inertia';
+import { Text, TextInput, PasswordInput, Checkbox, Stack, Divider, Group, Title, Button, Box, Flex, Anchor } from '@mantine/core';
+import { useForm } from '@mantine/form';
 import { SocialIcon } from 'react-social-icons';
-
-interface FormData {
-  email: string;
-  password: string;
-  remember?: boolean;
-}
+import PasswordRecovery from '../modals/PasswordRecovery';
 
 const FormRegistration: React.FC = () => {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormData>();
+  const form = useForm({
+    initialValues: { email: '', password: '', remember: false },
+    validate: {
+      email: (val) => (!val || !/^\S+@\S+\.\S+$/.test(val) ? 'Некорректный email' : null),
+      password: (val) => (!val || val.length < 6 ? 'Минимум 6 символов' : null),
+    },
+  });
 
-  console.log(errors);
+  const [showModal, setShowModal] = React.useState(false);
 
-  const [showModal, setShowModal] = useState(false);
+  const openModal = () => setShowModal(true);
+  const closeModal = () => setShowModal(false);
 
-  const openModal = () => {
-    setShowModal(true);
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-  };
-
-  const onSubmit = (data: FormData) => {
-    Inertia.post('/users', data as Record<string, any>, {
-      onSuccess: (page) => {
-        console.log('Успешный ответ от сервера:', page);
-      },
-      onError: (errors) => {
-        console.log('Ошибки формы:', errors);
-      },
-    });
+  const onSubmit = (values: { email: string; password: string; remember: boolean }) => {
+    console.log('Login:', values.email);
   };
 
   return (
     <>
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="max-w-sm flex flex-col justify-center m-auto h-screen gap-3 p-5"
+      <Box
+        component="form"
+        onSubmit={form.onSubmit(onSubmit)}
+        maw={380}
+        mx="auto"
+        p={20}
       >
-        <div>
-          <h2 className="font-bold text-center text-2xl mb-2">
-            Войти в систему
-          </h2>
-          <p className="text-center">Используйте привычный способ входа</p>
-        </div>
-        <div className="flex gap-3 justify-center">
-          <a href="#" className="!p-0 cursor-pointer">
-            <SocialIcon
-              network="yandex"
-              style={{ height: 40, width: 40 }}
-            ></SocialIcon>
-          </a>
-          <a href="#" className="!p-0 cursor-pointer">
-            <SocialIcon
-              network="vk"
-              style={{ height: 40, width: 40 }}
-            ></SocialIcon>
-          </a>
-          <a href="#" className="!p-0 cursor-pointer">
-            <SocialIcon
-              network="github"
-              style={{ height: 40, width: 40 }}
-            ></SocialIcon>
-          </a>
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="w-full h-px bg-gray-300 block"></span>
-          <span className="text-lg text-gray-400">или</span>
-          <span className="w-full h-px bg-gray-300 block"></span>
-        </div>
-        <input
-          {...register('email', {
-            required: 'This is required.',
-          })}
-          type="email"
-          placeholder="E-mail"
-          className="border-1 rounded-sm pl-3 pt-2 pb-2"
-        />
-        <input
-          {...register('password', { required: 'This is required.' })}
-          type="password"
-          placeholder="Пароль"
-          className="border-1 rounded-sm pl-3 pt-2 pb-2"
-        />
-        <label className="flex gap-2 items-center cursor-pointer">
-          <input
-            {...register('remember')}
-            type="checkbox"
-            className="appearance-none w-5 h-5 border border-gray-300 cursor-pointer rounded-sm checked:bg-blue-500 checked:border-blue-600 checked:bg-[url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48cGF0aCBkPSJNOSAxNi4xN0w0LjgzIDEybC0xLjQyIDEuNDFMOSAxOSAyMSA3bC0xLjQxLTEuNDFMOSAxNi4xN3oiIGZpbGw9IndoaXRlIi8+PC9zdmc+)] checked:bg-[length:14px_14px] checked:bg-center checked:bg-no-repeat"
+        <Flex direction="column" gap="md">
+          <Box ta="center">
+            <Title order={2} fw={700}>Войти в систему</Title>
+            <Text c="dimmed">Используйте привычный способ входа</Text>
+          </Box>
+
+          <Group justify="center" gap="sm">
+            <Box w={40} h={40}><SocialIcon network="yandex" /></Box>
+            <Box w={40} h={40}><SocialIcon network="vk" /></Box>
+            <Box w={40} h={40}><SocialIcon network="github" /></Box>
+          </Group>
+
+          <Divider label="или" labelPosition="center" />
+
+          <TextInput
+            {...form.getInputProps('email')}
+            type="email"
+            placeholder="E-mail"
           />
-          Запомнить меня
-        </label>
-        <div className="flex flex-col gap-2.5 items-center">
-          <button type="submit" className="!bg-blue-600 text-white w-full">
-            Войти
-          </button>
-          <button type="button" onClick={openModal} className="!bg-white w-max">
-            Забыли пароль?
-          </button>
-        </div>
-      </form>
+
+          <PasswordInput
+            {...form.getInputProps('password')}
+            placeholder="Пароль"
+          />
+
+          <Checkbox
+            {...form.getInputProps('remember', { type: 'checkbox' })}
+            label="Запомнить меня"
+          />
+
+          <Stack gap="sm" align="center">
+            <Button type="submit" fullWidth color="tgblue">
+              Войти
+            </Button>
+            <Anchor component="button" size="sm" onClick={openModal}>
+              Забыли пароль?
+            </Anchor>
+          </Stack>
+        </Flex>
+      </Box>
       <PasswordRecovery isVisible={showModal} onClose={closeModal} />
     </>
   );

@@ -1,35 +1,30 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Accordion, Container, Title, Box } from '@mantine/core';
 import type { FaqBlockProps } from '../model/types';
-import { FaqItem } from './FaqItem';
 import { useFaqBlock } from '../model/useFaqBlock';
 
 export const FaqBlock: React.FC<FaqBlockProps> = ({ faqs: propsFaqs }) => {
   const { faqs: faqsFromPage } = useFaqBlock();
   const faqs = propsFaqs ?? faqsFromPage;
 
-  const [openFaqId, setOpenFaqId] = useState<number | null>(null);
-
-  const handleToggle = (id: number) => {
-    setOpenFaqId(prev => (prev === id ? null : id));
-  };
+  if (!faqs || faqs.length === 0) return null;
 
   return (
-    <section className="bg-[#F8F9FB] py-12">
-      <div className="container mx-auto px-4 sm:px-6 text-center">
-        <h2 className="text-2xl font-bold mb-8">Частые вопросы</h2>
+    <Box component="section" bg="muted.0" p={48}>
+      <Container size="md" px="md">
+        <Title order={2} ta="center" mb="lg">Частые вопросы</Title>
 
-        <div className="max-w-2xl mx-auto bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm">
-          {faqs.map(faq => (
-            <FaqItem
-              key={faq.id}
-              question={faq.question}
-              answer={faq.answer}
-              isOpen={openFaqId === faq.id}
-              onToggle={() => handleToggle(faq.id)}
-            />
+        <Accordion variant="separated" radius="md">
+          {faqs.map((faq) => (
+            <Accordion.Item key={faq.id} value={String(faq.id)}>
+              <Accordion.Control>{faq.question}</Accordion.Control>
+              <Accordion.Panel>
+                {faq.answer}
+              </Accordion.Panel>
+            </Accordion.Item>
           ))}
-        </div>
-      </div>
-    </section>
+        </Accordion>
+      </Container>
+    </Box>
   );
 };

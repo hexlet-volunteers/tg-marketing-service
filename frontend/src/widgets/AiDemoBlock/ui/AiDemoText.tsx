@@ -1,11 +1,8 @@
 import React from 'react';
+import { Text, Stack, Group, ThemeIcon, Button } from '@mantine/core';
+import { IconSparkles, IconPlayerPlay } from '@tabler/icons-react';
+import { IconCheck } from '@tabler/icons-react';
 import type { AiDemoTextProps } from '../model/types';
-
-import {
-  PlayCircleIcon,
-  SparklesIcon,
-  CheckCircleIcon,
-} from '@heroicons/react/24/outline';
 
 export const AiDemoText: React.FC<AiDemoTextProps> = (props) => {
   const {
@@ -16,60 +13,46 @@ export const AiDemoText: React.FC<AiDemoTextProps> = (props) => {
     activeButton,
     onButtonClick,
   } = props;
-  
+
   return (
-    <div className="flex flex-col gap-4">
+    <Stack>
       {description && (
-        <p className="text-[#6D7F96] text-base">{description}</p>
+        <Text c="dimmed">{description}</Text>
       )}
 
-      <ul className="flex flex-col gap-2">
+      <Stack gap={8}>
         {features.map((f) => (
-          <li
-            key={f.id}
-            className="flex items-center gap-2 text-[#6D7F96] text-sm"
-          >
-            <CheckCircleIcon className="w-5 h-5 text-[#47BD71]" />
-            {f.text}
-          </li>
+          <Group key={f.id} gap={8} wrap="nowrap">
+            <ThemeIcon size="sm" color="green.6" variant="subtle">
+              <IconCheck size={18} />
+            </ThemeIcon>
+            <Text size="sm" c="dimmed">{f.text}</Text>
+          </Group>
         ))}
-      </ul>
+      </Stack>
 
-      <div className="flex gap-3 mt-4">
+      <Group gap="md" mt="md">
         {tryButton && (
-          <button
+          <Button
             onClick={() => onButtonClick(tryButton)}
-            className={`
-              px-5 py-2 rounded-lg border text-sm flex items-center gap-2 transition
-              ${
-                activeButton === tryButton.label
-                  ? '!bg-[#155CFA] !text-white !border-[#155CFA]'
-                  : 'bg-white text-black border-gray-300'
-              }
-            `}
+            variant={activeButton === tryButton.label ? 'filled' : 'outline'}
+            color={activeButton === tryButton.label ? 'blue.6' : 'gray'}
+            leftSection={<IconSparkles size={18} />}
           >
-            <SparklesIcon className="w-5 h-5" />
             {tryButton.label}
-          </button>
+          </Button>
         )}
-
         {demoButton && (
-          <button
+          <Button
             onClick={() => onButtonClick(demoButton)}
-            className={`
-              px-5 py-2 rounded-lg border text-sm flex items-center gap-2 transition
-              ${
-                activeButton === demoButton.label
-                  ? '!bg-[#155CFA] !text-white !border-[#155CFA]'
-                  : 'bg-white text-black border-gray-300'
-              }
-            `}
+            variant={activeButton === demoButton.label ? 'filled' : 'outline'}
+            color={activeButton === demoButton.label ? 'blue.6' : 'gray'}
+            leftSection={<IconPlayerPlay size={18} />}
           >
-            <PlayCircleIcon className="w-5 h-5" />
             {demoButton.label}
-          </button>
+          </Button>
         )}
-      </div>
-    </div>
+      </Group>
+    </Stack>
   );
 };
