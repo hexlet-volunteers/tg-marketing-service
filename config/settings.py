@@ -29,6 +29,13 @@ TELEGRAM_API_ID: str | None = os.getenv("TELEGRAM_API_ID")
 TELEGRAM_API_HASH: str | None = os.getenv("TELEGRAM_API_HASH")
 TELEGRAM_SESSION_STRING: str | None = os.getenv("TELEGRAM_SESSION_STRING")
 
+# AI settings
+AI_API_KEY: str | None = os.getenv("AI_API_KEY")
+AI_MODEL: str | None = os.getenv("AI_MODEL", "claude-sonnet-5")
+AI_ENABLED: bool | None = env_bool("AI_ENABLED", default=True)
+AI_TIMEOUT_SECONDS: int | None = int(os.getenv("AI_TIMEOUT_SECONDS", 30))
+AI_MAX_TOKENS: int | None = int(os.getenv("AI_MAX_TOKENS", 1024))
+
 # Celery settings
 CELERY_BROKER_URL = "redis://localhost:6379/0"  # Redis like messages brocker
 CELERY_RESULT_BACKEND = "redis://localhost:6379/0"  # tasks results
@@ -81,6 +88,7 @@ INSTALLED_APPS = [
     "apps.group_channels",
     "apps.parser",
     "apps.homepage",
+    "apps.ai",
 ]
 
 AUTHENTICATION_BACKENDS = [
