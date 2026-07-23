@@ -20,7 +20,7 @@ class AIClientTest(TestCase):
     def test_generate_success(self, mock_anthropic_cls):
         mock_client = mock_anthropic_cls.return_value
         mock_client.messages.create.return_value.content = [
-            SimpleNamespace(text="Ответ модели")
+            SimpleNamespace(type="text", text="Ответ модели")
         ]
 
         result = generate(
@@ -41,7 +41,7 @@ class AIClientTest(TestCase):
     def test_generate_default_max_tokens(self, mock_anthropic_cls):
         mock_client = mock_anthropic_cls.return_value
         mock_client.messages.create.return_value.content = [
-            SimpleNamespace(text="Ответ модели")
+            SimpleNamespace(type="text", text="Ответ модели")
         ]
 
         result = generate(
@@ -61,7 +61,7 @@ class AIClientTest(TestCase):
     def test_generate_without_system_and_max_tokens(self, mock_anthropic_cls):
         mock_client = mock_anthropic_cls.return_value
         mock_client.messages.create.return_value.content = [
-            SimpleNamespace(text="Ответ модели")
+            SimpleNamespace(type="text", text="Ответ модели")
         ]
 
         result = generate(prompt="тест")
@@ -73,7 +73,30 @@ class AIClientTest(TestCase):
             system="",
             messages=[{"role": "user", "content": "тест"}],
         )
-    
+
+    @patch("apps.ai.client.Anthropic")
+    def test_generate_empty_content(self, mock_anthropic_cls):
+        mock_client = mock_anthropic_cls.return_value
+        mock_client.messages.create.return_value.content = []
+
+        with self.assertRaises(AIUnavailable) as ctx:
+            generate("тест")
+
+        self.assertIn("Invalid provider response: empty content", str(ctx.exception))
+
+    @patch("apps.ai.client.Anthropic")
+    def test_generate_no_text_block(self, mock_anthropic_cls):
+        mock_client = mock_anthropic_cls.return_value
+        mock_client.messages.create.return_value.content = [
+            SimpleNamespace(type="tool_use", text=""),
+            SimpleNamespace(type="image", text=""),
+        ]
+
+        with self.assertRaises(AIUnavailable) as ctx:
+            generate("тест")
+
+        self.assertIn("Invalid response: no text block found", str(ctx.exception))
+
     @override_settings(AI_ENABLED=True, AI_API_KEY=None)
     @patch("apps.ai.client.Anthropic")
     def test_generate_missing_api_key(self, mock_anthropic_cls):
@@ -92,22 +115,6 @@ class AIClientTest(TestCase):
     @patch("apps.ai.client.Anthropic")
     def test_generate_provider_error(self, mock_anthropic_cls):
         mock_client = mock_anthropic_cls.return_value
-        mock_client.messages.create.side_effect = Exception("boom")
-
-        with self.assertRaises(AIUnavailable) as ctx:
-            generate("тест")
-
-        self.assertIn("Provider error", str(ctx.exception))
-        mock_client.messages.create.assert_called_once_with(
-            model="claude-sonnet-5",
-            max_tokens=1024,
-            system="",
-            messages=[{"role": "user", "content": "тест"}],
-        )
-
-    @patch("apps.ai.client.Anthropic")
-    def test_generate_timeout_error(self, mock_anthropic_cls):
-        mock_client = mock_anthropic_cls.return_value
         mock_client.messages.create.side_effect = APITimeoutError(
             "Request timed out"
             )
@@ -115,7 +122,7 @@ class AIClientTest(TestCase):
         with self.assertRaises(AIUnavailable) as ctx:
             generate(prompt="тест")
 
-        self.assertIn("Provider error", str(ctx.exception))
+        self.assertIn("Anthropic error", str(ctx.exception))
         mock_client.messages.create.assert_called_once_with(
             model="claude-sonnet-5",
             max_tokens=1024,

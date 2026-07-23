@@ -1,4 +1,4 @@
-from anthropic import Anthropic
+from anthropic import Anthropic, APIError
 from django.conf import settings
 
 from apps.ai.exceptions import AIUnavailable
@@ -24,7 +24,6 @@ def generate(
     )
     if not settings.AI_ENABLED:
         raise AIUnavailable("AI is disabled")
-
     if not settings.AI_API_KEY:
         raise AIUnavailable("missing AI API key")
 
@@ -40,6 +39,14 @@ def generate(
             system=system or "",
             messages=[{"role": "user", "content": prompt}]  
         )
-        return response.content[0].text
-    except Exception as e:
-        raise AIUnavailable(f"Provider error: {e}") from e
+    except APIError as e:
+        raise AIUnavailable(f"Anthropic error: {e}") from e
+
+    if not response.content:
+        raise AIUnavailable("Invalid provider response: empty content")
+
+    for block in response.content:
+        if block.type == "text" and block.text:
+            return block.text
+
+    raise AIUnavailable("Invalid response: no text block found")
