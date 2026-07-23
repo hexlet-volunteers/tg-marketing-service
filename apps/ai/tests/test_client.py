@@ -82,7 +82,10 @@ class AIClientTest(TestCase):
         with self.assertRaises(AIUnavailable) as ctx:
             generate("тест")
 
-        self.assertIn("Invalid provider response: empty content", str(ctx.exception))
+        self.assertIn(
+            "Invalid provider response: empty content", 
+            str(ctx.exception)
+            )
 
     @patch("apps.ai.client.Anthropic")
     def test_generate_no_text_block(self, mock_anthropic_cls):
@@ -95,7 +98,10 @@ class AIClientTest(TestCase):
         with self.assertRaises(AIUnavailable) as ctx:
             generate("тест")
 
-        self.assertIn("Invalid response: no text block found", str(ctx.exception))
+        self.assertIn(
+            "Invalid response: no text block found",
+            str(ctx.exception)
+            )
 
     @override_settings(AI_ENABLED=True, AI_API_KEY=None)
     @patch("apps.ai.client.Anthropic")
