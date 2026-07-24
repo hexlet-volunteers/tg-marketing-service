@@ -36,7 +36,7 @@ class AIClientTest(TestCase):
             system="Ты аналитик",
             messages=[{"role": "user", "content": "Проанализируй пост"}],
         )
-    
+
     @patch("apps.ai.client.Anthropic")
     def test_generate_default_max_tokens(self, mock_anthropic_cls):
         mock_client = mock_anthropic_cls.return_value
@@ -83,9 +83,8 @@ class AIClientTest(TestCase):
             generate("тест")
 
         self.assertIn(
-            "Invalid provider response: empty content", 
-            str(ctx.exception)
-            )
+            "Invalid provider response: empty content", str(ctx.exception)
+        )
 
     @patch("apps.ai.client.Anthropic")
     def test_generate_no_text_block(self, mock_anthropic_cls):
@@ -99,9 +98,8 @@ class AIClientTest(TestCase):
             generate("тест")
 
         self.assertIn(
-            "Invalid response: no text block found",
-            str(ctx.exception)
-            )
+            "Invalid response: no text block found", str(ctx.exception)
+        )
 
     @override_settings(AI_ENABLED=True, AI_API_KEY=None)
     @patch("apps.ai.client.Anthropic")
@@ -123,7 +121,7 @@ class AIClientTest(TestCase):
         mock_client = mock_anthropic_cls.return_value
         mock_client.messages.create.side_effect = APITimeoutError(
             "Request timed out"
-            )
+        )
 
         with self.assertRaises(AIUnavailable) as ctx:
             generate(prompt="тест")
