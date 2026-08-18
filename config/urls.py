@@ -29,6 +29,10 @@ urlpatterns = [
     path("blog/", include("apps.blog.urls")),
     path("accounts/", include("allauth.urls")),
     path("parser/", include("apps.parser.urls")),
+    path(
+        "admin/moderation/",
+        include("apps.admin.moderation.urls"),
+    ),
     path("admin/", admin.site.urls),
     path(
         "robots.txt",

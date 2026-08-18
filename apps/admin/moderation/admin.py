@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from apps.moderation.models import ModerationRequest
+from apps.admin.moderation.models import ModerationRequest
 
 
 @admin.register(ModerationRequest)
