@@ -20,6 +20,8 @@ class ChannelDTO(BaseModel):
     category: Optional[str]
     country: Optional[str]
     language: Optional[str]
+    is_verified: bool = False
+    verified_at: Optional[datetime] = None
 
 
 class ChannelListDTO(BaseModel):

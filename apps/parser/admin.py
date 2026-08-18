@@ -22,8 +22,10 @@ class TelegramChannelAdmin(GuardedModelAdmin):
         "participants_count",
         "average_views",
         "parsed_at",
+        "is_verified",
+        "verified_at",
     ]
-    list_filter = ["parsed_at", "creation_date"]
+    list_filter = ["parsed_at", "creation_date", "is_verified", "verified_at"]
     search_fields = ["title", "username", "description"]
     readonly_fields = ["channel_id", "parsed_at", "creation_date"]
     ordering = ["-parsed_at"]
@@ -43,6 +45,10 @@ class TelegramChannelAdmin(GuardedModelAdmin):
                     "last_messages",
                 )
             },
+        ),
+        (
+            "Верификация",
+            {"fields": ("is_verified", "verified_at")},
         ),
         (
             "Метаданные",
