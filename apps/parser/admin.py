@@ -7,6 +7,7 @@ from apps.parser.models import (
     ChannelModerator,
     ChannelStats,
     Post,
+    PostAnalysis,
     PostReaction,
     TelegramChannel,
 )
@@ -143,12 +144,33 @@ class PostReactionInline(admin.TabularInline):
     fields = ["emoji", "count"]
 
 
+class PostAnalysisInline(admin.StackedInline):
+    """
+    Inline для отображения нового AI-анализа (дизайн §4)
+    внутри карточки поста.
+    """
+
+    model = PostAnalysis
+    can_delete = False
+    verbose_name = "AI Анализ (Новый формат)"
+    verbose_name_plural = "AI Анализы (Новый формат)"
+    extra = 0
+    fields = [
+        "why_worked",
+        "how_to_improve",
+        "similar_posts",
+        "model_version",
+        "created_at",
+    ]
+    readonly_fields = ["created_at"]
+
+
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
     list_display = PostSerializer.get_admin_list_display()
     list_filter = PostSerializer.get_admin_list_filter()
     search_fields = PostSerializer.get_admin_search_fields()
-    inlines = [PostReactionInline]
+    inlines = [PostReactionInline, PostAnalysisInline]
 
     def text_preview(self, obj):
         return obj.text[:50] + "..." if len(obj.text) > 50 else obj.text
@@ -162,6 +184,13 @@ class PostAdmin(admin.ModelAdmin):
             .select_related("channel")
             .prefetch_related("reactions")
         )
+
+
+@admin.register(PostAnalysis)
+class PostAnalysisAdmin(admin.ModelAdmin):
+    list_display = ("post", "created_at", "model_version")
+    list_filter = ("created_at",)
+    search_fields = ("post__telegram_message_id",)
 
 
 # Добавляем inline для модераторов в админку каналов

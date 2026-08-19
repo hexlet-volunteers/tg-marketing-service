@@ -359,3 +359,52 @@ class PostReaction(models.Model):
         verbose_name = "Реакция на пост"
         verbose_name_plural = "Реакции на пост"
         unique_together = ("post", "emoji")
+
+
+class PostAnalysis(models.Model):
+    """
+    НОВАЯ МОДЕЛЬ: Хранит AI-разбор поста
+    в соответствии с дизайном страницы (§4)
+    Соответствует трем колонкам: «Почему зашёл», «Что улучшить», «Похожие идеи»
+    """
+
+    post = models.OneToOneField(
+        "Post",
+        on_delete=models.CASCADE,
+        related_name="post_analysis",
+        verbose_name="Пост",
+    )
+
+    why_worked = models.TextField(
+        verbose_name="Почему зашёл",
+    )
+
+    how_to_improve = models.TextField(
+        verbose_name="Что улучшить",
+    )
+
+    similar_posts = models.ManyToManyField(
+        "Post",
+        related_name="similar_to",
+        blank=True,
+        verbose_name="Похожие идеи",
+    )  # type: ignore
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Дата генерации",
+    )
+
+    model_version = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="Версия модели AI",
+    )
+
+    class Meta:
+        verbose_name = "AI анализ поста"
+        verbose_name_plural = "AI анализы постов"
+
+    def __str__(self):
+        return f"AI Analysis for Post #{self.post.telegram_message_id}"

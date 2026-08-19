@@ -10,8 +10,9 @@ from django.utils import timezone
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
-from apps.parser.models import ChannelStats, TelegramChannel
+from apps.parser.models import ChannelStats, Post, TelegramChannel
 from apps.parser.parser import tg_parser
+from apps.parser.services.analysis import PostAnalysisService
 from apps.parser.types import (
     ParsedChannelData,
     normalize_channel_data,
@@ -148,3 +149,19 @@ def parse_all_channels() -> None:
             f"next one in {pause:.2f} s"
         )
         time.sleep(pause)
+
+
+@shared_task
+def run_post_analysis_task(post_id: int):
+    try:
+        post = Post.objects.get(id=post_id)
+        # Создаем экземпляр сервиса и запускаем тяжелый метод
+        service = PostAnalysisService()
+        service.get_analysis(post)
+        log.info(f"Analysis completed for post {post_id}")
+    except Post.DoesNotExist:
+        log.error(f"Post {post_id} not found for analysis")
+    except Exception as e:
+        log.error(
+            f"Error during analysis for post {post_id}: {e}", exc_info=True
+        )
