@@ -3,7 +3,6 @@ from typing import Any, cast
 from django.contrib import auth, messages
 from django.contrib.auth import login
 from django.contrib.auth.tokens import default_token_generator
-from django.db.models import Count
 from django.http import (
     HttpRequest,
     HttpResponseRedirect,
@@ -115,52 +114,15 @@ class LoginView(View):
             )
 
 
-class UserProfileView(UserAuthenticationCheckMixin, View):
-    def get(
-        self,
-        request: HttpRequest,
-        *args: Any,
-        **kwargs: Any,
-    ) -> InertiaResponse:
-        user = cast(User, request.user)
-        groups = user.owned_groups.annotate(
-            annotated_saves_count=Count("saves"),
-        )
-
-        user_data = {
-            "id": user.id,
-            "username": user.username,
-            "full_name": user.get_full_name(),
-            "email": user.email,
-            "avatar": user.avatar_image,
-            "role": user.role,
-            "bio": user.bio,
-            "is_active": user.is_active,
-        }
-
-        groups_data = [group.get_data() for group in groups]
-
-        create_form_data = {"name": "", "description": "", "image_url": ""}
-
-        update_form_data = {"name": "", "description": "", "image_url": ""}
-
-        return inertia_render(
-            request,
-            "UserProfilePage",
-            props={
-                "user": user_data,
-                "groups": groups_data,
-                "form": {
-                    "create_form": create_form_data,
-                    "update_form": update_form_data,
-                    "avatar_form": {"avatar": ""},
-                },
-                "errors": {},
-            },
-        )
-
-
 class UserCabinetView(UserAuthenticationCheckMixin, View):
+    """
+    Account page view.
+
+    component: UserProfilePage
+    props: user, subscription, notifications, usage_stats, user_role
+    url: /auth/profile/
+    """
+
     def _build_base_props(
         self,
         request: HttpRequest,
@@ -181,8 +143,14 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
 
         return {
             "user": {
+                "id": user.id,
                 "first_name": user.first_name,
+                "last_name": user.last_name,
+                "username": user.username,
                 "email": user.email,
+                "avatar": user.avatar_image,
+                "role": user.role,
+                "bio": user.bio,
             },
             "subscription": {
                 "plan": "Pro",
@@ -247,7 +215,10 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
                 props["errors"] = form.errors.get_json_data()
                 props["values"] = {
                     "first_name": request.POST.get("first_name", ""),
+                    "last_name": request.POST.get("last_name", ""),
                     "email": request.POST.get("email", ""),
+                    "bio": request.POST.get("bio", ""),
+                    "avatar_image": request.POST.get("avatar_image", ""),
                 }
                 return inertia_render(request, "UserProfilePage", props=props)
 
@@ -399,7 +370,7 @@ class UserUpdate(UserAuthenticationCheckMixin, View):
         request.session["flash"] = {
             "error": "У вас нет прав для изменения другого пользователя."
         }
-        return redirect(reverse("users:profile"))
+        return redirect(reverse("users:user_cabinet"))
 
     def post(
         self,
@@ -413,7 +384,7 @@ class UserUpdate(UserAuthenticationCheckMixin, View):
         if form.is_valid():
             form.save()
             request.session["flash"] = {"success": "Профиль успешно изменен."}
-            return redirect(reverse("users:profile"))
+            return redirect(reverse("users:user_cabinet"))
 
         data = {
             "first_name": user.first_name,
@@ -445,12 +416,12 @@ class AvatarChangeView(View):
         if avatar_form.is_valid():
             avatar_form.save()
             request.session["flash"] = {"success": "Аватар успешно изменен"}
-            return redirect(reverse("users:profile"))
+            return redirect(reverse("users:user_cabinet"))
         avatar_error = avatar_form.errors.get("avatar_url")
         if avatar_error is not None:
             avatar_url = avatar_error.as_text()
             request.session["flash"] = {"error": f"{avatar_url[1:]}"}
-        return redirect(reverse("users:profile"))
+        return redirect(reverse("users:user_cabinet"))
 
 
 class RestorePasswordRequestView(View):
