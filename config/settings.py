@@ -94,6 +94,7 @@ INSTALLED_APPS = [
     "apps.ai",
     "apps.blog",
     "apps.moderation",
+    "apps.billing",
 ]
 
 AUTHENTICATION_BACKENDS = [
