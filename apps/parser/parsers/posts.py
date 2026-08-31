@@ -39,23 +39,44 @@ class PostsParser:
                 else None
             )
 
+            current_forwards = message.forwards or 0
+            current_comments = message.replies.replies if message.replies else 0
+            current_views = message.views or 0
+
+            # 1. Создание или получение поста
             post, created = await Post.objects.aget_or_create(
                 channel=channel_model,
                 telegram_message_id=message.id,
                 defaults={
                     "text": message.text or "",
                     "published_at": message.date,
-                    "views": message.views or 0,
+                    "views": current_views,
                     "permalink": permalink,
+                    "forwards": current_forwards,
+                    "comments_count": current_comments,
                 },
             )
 
-            # Обновление просмотров (если уже существует)
-            if not created and message.views:
-                post.views = max(post.views, message.views)
-                await post.asave(update_fields=["views"])
+            # 2. Обновление полей для существующих постов
+            if not created:
+                update_fields = []
 
-            # Обработка реакций
+                if current_views > post.views:
+                    post.views = current_views
+                    update_fields.append("views")
+
+                if current_forwards > post.forwards:
+                    post.forwards = current_forwards
+                    update_fields.append("forwards")
+
+                if current_comments > post.comments_count:
+                    post.comments_count = current_comments
+                    update_fields.append("comments_count")
+
+                if update_fields:
+                    await post.asave(update_fields=update_fields)
+
+            # 3. Обработка реакций
             if message.reactions:
                 for reaction in message.reactions.results:
                     await PostReaction.objects.aupdate_or_create(
@@ -64,13 +85,13 @@ class PostsParser:
                         defaults={"count": reaction.count},
                     )
 
-            # Сбор статистики
-            if message.views:
-                total_views += message.views
-            if message.replies and message.replies.replies:
-                total_comments += message.replies.replies
-            if message.forwards:
-                total_reposts += message.forwards
+            # Сбор статистики для возвращаемого агрегата
+            if current_views:
+                total_views += current_views
+            if current_comments:
+                total_comments += current_comments
+            if current_forwards:
+                total_reposts += current_forwards
             post_count += 1
 
         return {
