@@ -312,6 +312,17 @@ class Post(models.Model):
         verbose_name="Ссылка на пост",
     )
 
+    fwd_from = models.BigIntegerField(
+        blank=True,
+        null=True,
+        verbose_name="ID канала-источника репоста",
+    )
+    mentions = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Упоминания каналов",
+    )
+
     class Meta:
         verbose_name = "Пост"
         verbose_name_plural = "Посты"
