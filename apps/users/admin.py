@@ -156,8 +156,7 @@ class PartnerProfileAdmin(GuardedModelAdmin):
         )
 
     def get_queryset(self, request: HttpRequest):
-        # type: ignore[no-untyped-call]
-        return super().get_queryset(request).select_related("user")
+        return super().get_queryset(request).select_related("user")  # type: ignore[no-untyped-call]
 
 
 @admin.register(NotificationSettings)

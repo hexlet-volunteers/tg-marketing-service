@@ -193,14 +193,14 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
             notification_settings, _ = (
                 NotificationSettings.objects.get_or_create(user=user)
             )
-            form = NotificationSettingsForm(
+            notification_form = NotificationSettingsForm(
                 data=request.POST,
                 instance=notification_settings,
             )
 
-            if form.is_valid():
+            if notification_form.is_valid():
                 try:
-                    form.save()
+                    notification_form.save()
                     request.session["flash"] = {
                         "success": "Настройки уведомлений сохранены"
                     }
@@ -213,10 +213,10 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
                     "error": "Не удалось сохранить настройки уведомлений."
                 }
         else:
-            form = UserUpdateForm(data=request.POST, instance=user)
-            if form.is_valid():
+            profile_form = UserUpdateForm(data=request.POST, instance=user)
+            if profile_form.is_valid():
                 try:
-                    form.save()
+                    profile_form.save()
                     messages.add_message(
                         request, messages.SUCCESS, "Профиль успешно изменен"
                     )
@@ -229,7 +229,7 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
                     return redirect(reverse("users:user_cabinet"))
             else:
                 props = self._build_base_props(request, user)
-                props["errors"] = form.errors.get_json_data()
+                props["errors"] = profile_form.errors.get_json_data()
                 props["values"] = {
                     "first_name": request.POST.get("first_name", ""),
                     "last_name": request.POST.get("last_name", ""),
