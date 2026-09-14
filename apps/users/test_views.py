@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.users.models import User
+from apps.users.models import NotificationSettings, User
 from apps.users.views import DEFAULT_AVATAR_URL
 
 
@@ -124,7 +124,15 @@ class UserCabinetViewTest(TestCase):
         self.assertEqual(user["role"], "user")
         self.assertEqual(user["bio"], "Old bio")
         self.assertIsNone(data["props"]["subscription"])
-        self.assertIsNone(data["props"]["notifications"])
+        self.assertEqual(
+            data["props"]["notifications"],
+            {
+                "weekly_reports": True,
+                "trend_notifications": True,
+                "limit_exceeded": False,
+                "new_features": True,
+            },
+        )
 
     def test_post_updates_user_profile(self) -> None:
         response = self.client.post(
@@ -177,3 +185,94 @@ class UserCabinetViewTest(TestCase):
 
         self.user.refresh_from_db()
         self.assertEqual(self.user.email, "ivan@example.com")
+
+    @patch("apps.users.views.inertia_render", side_effect=inertia_json_response)
+    def test_get_returns_saved_notification_settings(
+        self,
+        _render: Any,
+    ) -> None:
+        settings = NotificationSettings.objects.create(user=self.user)
+        settings.weekly_reports = False
+        settings.trend_notifications = True
+        settings.new_features = False
+        settings.save()
+
+        response = self.client.get(reverse("users:user_cabinet"))
+
+        notifications = response.json()["props"]["notifications"]
+        self.assertEqual(
+            notifications,
+            {
+                "weekly_reports": False,
+                "trend_notifications": True,
+                "limit_exceeded": False,
+                "new_features": False,
+            },
+        )
+
+    def test_post_notifications_saves_settings_and_sets_success_flash(
+        self,
+    ) -> None:
+        settings = NotificationSettings.objects.create(user=self.user)
+
+        response = self.client.post(
+            reverse("users:user_cabinet"),
+            data={
+                "action": "notifications",
+                "weekly_reports": "false",
+                "trend_notifications": "true",
+                "new_features": "false",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("users:user_cabinet"),
+            fetch_redirect_response=False,
+        )
+
+        settings.refresh_from_db()
+        self.assertFalse(settings.weekly_reports)
+        self.assertTrue(settings.trend_notifications)
+        self.assertFalse(settings.new_features)
+
+        self.assertEqual(
+            self.client.session.get("flash"),
+            {"success": "Настройки уведомлений сохранены"},
+        )
+
+    @patch(
+        "apps.users.views.NotificationSettingsForm.save",
+        side_effect=Exception("Database error"),
+    )
+    def test_post_notifications_sets_error_flash_when_save_fails(
+        self,
+        _save: Any,
+    ) -> None:
+        settings = NotificationSettings.objects.create(user=self.user)
+
+        response = self.client.post(
+            reverse("users:user_cabinet"),
+            data={
+                "action": "notifications",
+                "weekly_reports": "false",
+                "trend_notifications": "true",
+                "new_features": "false",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("users:user_cabinet"),
+            fetch_redirect_response=False,
+        )
+
+        self.assertEqual(
+            self.client.session.get("flash"),
+            {"error": "Не удалось сохранить настройки уведомлений."},
+        )
+
+        settings.refresh_from_db()
+        self.assertTrue(settings.weekly_reports)
+        self.assertTrue(settings.trend_notifications)
+        self.assertTrue(settings.new_features)

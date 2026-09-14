@@ -3,7 +3,7 @@ from django.http import HttpRequest
 from guardian.admin import GuardedModelAdmin
 
 from apps.parser.models import ChannelModerator
-from apps.users.models import PartnerProfile, User
+from apps.users.models import NotificationSettings, PartnerProfile, User
 
 
 class ChannelModeratorInline(admin.TabularInline):
@@ -157,3 +157,28 @@ class PartnerProfileAdmin(GuardedModelAdmin):
 
     def get_queryset(self, request: HttpRequest):
         return super().get_queryset(request).select_related("user")  # type: ignore[no-untyped-call]
+
+
+@admin.register(NotificationSettings)
+class NotificationSettingsAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "weekly_reports",
+        "trend_notifications",
+        "new_features",
+    )
+    list_filter = (
+        "weekly_reports",
+        "trend_notifications",
+        "new_features",
+    )
+    search_fields = (
+        "user__username",
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+    )
+    raw_id_fields = ("user",)
+
+    def get_queryset(self, request: HttpRequest):
+        return super().get_queryset(request).select_related("user")
