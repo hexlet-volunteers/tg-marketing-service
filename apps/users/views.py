@@ -21,6 +21,7 @@ from inertia import render as inertia_render
 
 from apps.users.forms import (
     AvatarChange,
+    NotificationSettingsForm,
     RestorePasswordForm,
     RestorePasswordRequestForm,
     UserLoginForm,
@@ -28,7 +29,7 @@ from apps.users.forms import (
     UserUpdateForm,
 )
 from apps.users.middleware import RoleRequest
-from apps.users.models import User
+from apps.users.models import NotificationSettings, User
 from config.mixins import UserAuthenticationCheckMixin
 
 # константа с дефолтной=аватаркой для представления UserRegister
@@ -178,7 +179,9 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
             ),
             "total_time": f"{total_hours:.0f} часов",
         }
-
+        notification_settings, _ = NotificationSettings.objects.get_or_create(
+            user=user
+        )
         return {
             "user": {
                 "first_name": user.first_name,
@@ -194,10 +197,12 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
                 "ai_requests_limit": 1000,
             },
             "notifications": {
-                "weekly_reports": True,
-                "trend_notifications": True,
+                "weekly_reports": notification_settings.weekly_reports,
+                "trend_notifications": (
+                    notification_settings.trend_notifications
+                ),
                 "limit_exceeded": False,
-                "new_features": True,
+                "new_features": notification_settings.new_features,
             },
             "usage_stats": usage_stats,
             "user_role": cast(RoleRequest, request).role,
@@ -223,10 +228,28 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
         action = request.POST.get("action")
 
         if action == "notifications":
-            # Уведомления сейчас заглушки
-            messages.add_message(
-                request, messages.SUCCESS, "Настройки уведомлений сохранены"
+            notification_settings, _ = (
+                NotificationSettings.objects.get_or_create(user=user)
             )
+            form = NotificationSettingsForm(
+                data=request.POST,
+                instance=notification_settings,
+            )
+
+            if form.is_valid():
+                try:
+                    form.save()
+                    request.session["flash"] = {
+                        "success": "Настройки уведомлений сохранены"
+                    }
+                except Exception:
+                    request.session["flash"] = {
+                        "error": "Не удалось сохранить настройки уведомлений."
+                    }
+            else:
+                request.session["flash"] = {
+                    "error": "Не удалось сохранить настройки уведомлений."
+                }
         else:
             form = UserUpdateForm(data=request.POST, instance=user)
             if form.is_valid():

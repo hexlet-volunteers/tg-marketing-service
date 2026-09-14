@@ -47,6 +47,36 @@ class User(AbstractUser):
         return self.moderated_channels.exists()
 
 
+class NotificationSettings(models.Model):
+    """Настройки уведомлений пользователя."""
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="notification_settings",
+        verbose_name="Пользователь",
+    )
+    weekly_reports = models.BooleanField(
+        default=True,
+        verbose_name="Еженедельные отчёты",
+    )
+    trend_notifications = models.BooleanField(
+        default=True,
+        verbose_name="Уведомления о трендах",
+    )
+    new_features = models.BooleanField(
+        default=True,
+        verbose_name="Новости о новых функциях",
+    )
+
+    class Meta:
+        verbose_name = "Настройки уведомлений"
+        verbose_name_plural = "Настройки уведомлений"
+
+    def __str__(self) -> str:
+        return f"Настройки уведомлений: {self.user}"
+
+
 class PartnerProfile(models.Model):
     """Расширенный профиль для партнеров."""
 

@@ -8,7 +8,7 @@ from django.contrib.auth.forms import (
 )
 from django.utils.crypto import get_random_string
 
-from apps.users.models import User
+from apps.users.models import NotificationSettings, User
 
 
 class UserLoginForm(AuthenticationForm):
@@ -234,6 +234,18 @@ class UserUpdateForm(UserChangeForm):
             attrs={"name": "avatar_image", "class": "form-control"}
         ),
     )
+
+
+class NotificationSettingsForm(forms.ModelForm):
+    """Форма изменения настроек уведомлений пользователя."""
+
+    class Meta:
+        model = NotificationSettings
+        fields = (
+            "weekly_reports",
+            "trend_notifications",
+            "new_features",
+        )
 
 
 class AvatarChange(UserChangeForm):
