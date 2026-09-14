@@ -100,6 +100,7 @@ class DashboardService:
                     views=views,
                     engagement=round(engagement, 2),
                     growth=round(growth_percent, 2),
+                    is_verified=c.is_verified,
                 )
             )
 

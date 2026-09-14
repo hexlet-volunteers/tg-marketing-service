@@ -5,6 +5,7 @@ from asgiref.sync import async_to_sync
 from django.contrib import messages
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import DetailView, FormView, ListView, View
@@ -12,9 +13,11 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 
 from apps.parser.dto.channel_dto import ChannelDTO, ChannelListDTO
+from apps.parser.dto.post_analysis_dto import PostDataDTO, PostPagePropsDTO
 from apps.parser.forms import ChannelParseForm
-from apps.parser.models import ChannelStats, TelegramChannel
+from apps.parser.models import ChannelStats, Post, TelegramChannel
 from apps.parser.parser import tg_parser
+from apps.parser.serializers import PostSerializer
 from apps.parser.types import (
     ChannelDataForSave,
     ParsedChannelResult,
@@ -240,4 +243,19 @@ class ChannelLookupView(View):
         return JsonResponse(result, safe=False)
 
 
-# Create your views here.
+class PostAIAnalysisView(View):
+    def get(self, request, channel_id, post_id):
+        post = get_object_or_404(
+            Post, channel_id=channel_id, telegram_message_id=post_id
+        )
+
+        # Чистый словарь из сериализатора
+        post_data_dict = PostSerializer.get_post_data(post)
+
+        props = PostPagePropsDTO(post=PostDataDTO(**post_data_dict))
+
+        return render_inertia_from_dto(
+            request,
+            "PostPage",
+            props=props,
+        )

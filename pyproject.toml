@@ -27,6 +27,7 @@ dependencies = [
     "django-guardian>=3.2.0",
     "pydantic>=2.13.4",
     "anthropic>=0.117.0",
+    "pytest-asyncio>=1.4.0",
 ]
 
 
@@ -36,6 +37,7 @@ find = { where = [], include = ["apps/*", "config"] }
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = "test_*.py"
+asyncio_mode = "auto"
 
 [dependency-groups]
 dev = [

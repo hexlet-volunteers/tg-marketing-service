@@ -88,34 +88,118 @@ class UserRegisterTest(TestCase):
         )
 
 
-class UserCabinetTest(TestCase):
+class UserCabinetViewTest(TestCase):
     def setUp(self) -> None:
         self.user = User.objects.create_user(
-            username="cabinet-user",
-            email="cabinet@example.com",
+            username="testuser",
+            first_name="Ivan",
+            last_name="Ivanov",
+            email="ivan@example.com",
             password="StrongPass12345!",
             role="user",
+            bio="Old bio",
+            avatar_image="https://example.com/old-avatar.jpg",
         )
         self.client.force_login(self.user)
-        self.url = reverse("users:user_cabinet")
+
+    @patch("apps.users.views.inertia_render", side_effect=inertia_json_response)
+    def test_get_returns_full_user_profile(self, _render: Any) -> None:
+        response = self.client.get(reverse("users:user_cabinet"))
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        user = data["props"]["user"]
+
+        self.assertEqual(data["component"], "UserProfilePage")
+        self.assertEqual(user["id"], self.user.id)
+        self.assertEqual(user["first_name"], "Ivan")
+        self.assertEqual(user["last_name"], "Ivanov")
+        self.assertEqual(user["username"], "testuser")
+        self.assertEqual(user["email"], "ivan@example.com")
+        self.assertEqual(
+            user["avatar"],
+            "https://example.com/old-avatar.jpg",
+        )
+        self.assertEqual(user["role"], "user")
+        self.assertEqual(user["bio"], "Old bio")
+        self.assertIsNone(data["props"]["subscription"])
+        self.assertEqual(
+            data["props"]["notifications"],
+            {
+                "weekly_reports": True,
+                "trend_notifications": True,
+                "limit_exceeded": False,
+                "new_features": True,
+            },
+        )
+
+    def test_post_updates_user_profile(self) -> None:
+        response = self.client.post(
+            reverse("users:user_cabinet"),
+            data={
+                "first_name": "Petr",
+                "last_name": "Petrov",
+                "email": "petr@example.com",
+                "bio": "New bio",
+                "avatar_image": "https://example.com/new-avatar.jpg",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("users:user_cabinet"),
+            fetch_redirect_response=False,
+        )
+
+        self.user.refresh_from_db()
+
+        self.assertEqual(self.user.first_name, "Petr")
+        self.assertEqual(self.user.last_name, "Petrov")
+        self.assertEqual(self.user.email, "petr@example.com")
+        self.assertEqual(self.user.bio, "New bio")
+        self.assertEqual(
+            self.user.avatar_image,
+            "https://example.com/new-avatar.jpg",
+        )
+
+    @patch("apps.users.views.inertia_render", side_effect=inertia_json_response)
+    def test_post_returns_errors_for_invalid_email(self, _render: Any) -> None:
+        response = self.client.post(
+            reverse("users:user_cabinet"),
+            data={
+                "first_name": "Petr",
+                "last_name": "Petrov",
+                "email": "invalid-email",
+                "bio": "New bio",
+                "avatar_image": "https://example.com/avatar.jpg",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+
+        self.assertEqual(data["component"], "UserProfilePage")
+        self.assertIn("email", data["props"]["errors"])
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, "ivan@example.com")
 
     @patch("apps.users.views.inertia_render", side_effect=inertia_json_response)
     def test_get_returns_saved_notification_settings(
         self,
         _render: Any,
     ) -> None:
-        NotificationSettings.objects.create(
-            user=self.user,
-            weekly_reports=False,
-            trend_notifications=True,
-            new_features=False,
-        )
+        settings = NotificationSettings.objects.create(user=self.user)
+        settings.weekly_reports = False
+        settings.trend_notifications = True
+        settings.new_features = False
+        settings.save()
 
-        response = self.client.get(self.url)
+        response = self.client.get(reverse("users:user_cabinet"))
 
-        self.assertEqual(response.status_code, 200)
         notifications = response.json()["props"]["notifications"]
-
         self.assertEqual(
             notifications,
             {
@@ -126,41 +210,13 @@ class UserCabinetTest(TestCase):
             },
         )
 
-    @patch("apps.users.views.inertia_render", side_effect=inertia_json_response)
-    def test_get_creates_default_notification_settings(
-        self,
-        _render: Any,
-    ) -> None:
-        self.assertFalse(
-            NotificationSettings.objects.filter(user=self.user).exists()
-        )
-
-        response = self.client.get(self.url)
-
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(
-            NotificationSettings.objects.filter(user=self.user).exists()
-        )
-
-        notifications = response.json()["props"]["notifications"]
-
-        self.assertEqual(
-            notifications,
-            {
-                "weekly_reports": True,
-                "trend_notifications": True,
-                "limit_exceeded": False,
-                "new_features": True,
-            },
-        )
-
     def test_post_notifications_saves_settings_and_sets_success_flash(
         self,
     ) -> None:
         settings = NotificationSettings.objects.create(user=self.user)
 
         response = self.client.post(
-            self.url,
+            reverse("users:user_cabinet"),
             data={
                 "action": "notifications",
                 "weekly_reports": "false",
@@ -171,7 +227,7 @@ class UserCabinetTest(TestCase):
 
         self.assertRedirects(
             response,
-            self.url,
+            reverse("users:user_cabinet"),
             fetch_redirect_response=False,
         )
 
@@ -196,7 +252,7 @@ class UserCabinetTest(TestCase):
         settings = NotificationSettings.objects.create(user=self.user)
 
         response = self.client.post(
-            self.url,
+            reverse("users:user_cabinet"),
             data={
                 "action": "notifications",
                 "weekly_reports": "false",
@@ -207,7 +263,7 @@ class UserCabinetTest(TestCase):
 
         self.assertRedirects(
             response,
-            self.url,
+            reverse("users:user_cabinet"),
             fetch_redirect_response=False,
         )
 

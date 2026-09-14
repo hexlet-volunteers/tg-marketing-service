@@ -9,4 +9,9 @@ urlpatterns = [
     path("list", views.ParserListView.as_view(), name="list"),
     path("<int:pk>/", views.ParserDetailView.as_view(), name="detail"),
     path("lookup/", views.ChannelLookupView.as_view(), name="channel_lookup"),
+    path(
+        "ai/channels/<int:channel_id>/posts/<int:post_id>/analysis",
+        views.PostAIAnalysisView.as_view(),
+        name="post_ai_analysis",
+    ),
 ]

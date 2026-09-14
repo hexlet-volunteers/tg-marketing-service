@@ -158,15 +158,12 @@ class UserRegForm(UserCreationForm):
         return user
 
 
-class UserUpdateForm(UserChangeForm):
+class UserUpdateForm(forms.ModelForm):
     class Meta:
         model = User
         fields = (
             "first_name",
             "last_name",
-            "username",
-            "password1",
-            "password2",
             "email",
             "bio",
             "avatar_image",
@@ -184,33 +181,7 @@ class UserUpdateForm(UserChangeForm):
             attrs={"class": "form-control", "placeholder": "Фамилия"}
         ),
     )
-    username = forms.CharField(
-        label="Имя пользователя",
-        widget=forms.TextInput(
-            attrs={
-                "autofocus": True,
-                "class": "form-control",
-                "placeholder": "Имя пользователя",
-            }
-        ),
-    )
-    password1 = forms.CharField(
-        label="Пароль",
-        widget=forms.PasswordInput(
-            attrs={"class": "form-control", "placeholder": "Пароль"}
-        ),
-    )
-    password2 = forms.CharField(
-        label="Подтверждение пароля",
-        widget=forms.PasswordInput(
-            attrs={
-                "autocomplete": "current-password",
-                "class": "form-control",
-                "placeholder": "Подтверждение пароля",
-            }
-        ),
-    )
-    email = forms.CharField(
+    email = forms.EmailField(
         label="Email",
         widget=forms.EmailInput(
             attrs={"class": "form-control", "placeholder": "Email"}
