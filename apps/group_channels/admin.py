@@ -21,14 +21,28 @@ class AutoGroupRuleInline(admin.StackedInline):
 
 @admin.register(Group)
 class GroupAdmin(GuardedModelAdmin):
-    list_display = ("name", "is_editorial", "order", "owner")
+    list_display = (
+        "name",
+        "is_editorial",
+        "order",
+        "owner",
+        "curator",
+        "channel_count",
+        "saves_count",
+        "views_count",
+    )
     list_filter = ("is_editorial",)
-    search_fields = ("name", "description")
+    search_fields = ("name", "description", "curator__username")
     ordering = ("order", "name")
     filter_horizontal = ("channels",)
 
+    @admin.display(description="Каналов")
+    def channel_count(self, obj: Group) -> int:
+        return obj.channel_count
+
     def get_readonly_fields(self, request, obj=None):
         ro = super().get_readonly_fields(request, obj) or []
+        ro = tuple(set(ro) | {"saves_count", "views_count"})
         if obj and hasattr(obj, "auto_rule"):
             return tuple(set(ro) | {"channels"})
         return ro

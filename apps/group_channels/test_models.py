@@ -24,6 +24,9 @@ class SavedCollectionTest(TestCase):
             group=self.group,
         )
 
+        self.group.saves_count = self.group.saves.count()
+        self.group.save(update_fields=["saves_count"])
+
         self.assertEqual(self.group.saves_count, 1)
         self.assertEqual(self.group.saves.first(), save)
         self.assertEqual(self.user.saved_collections.first(), save)

@@ -33,6 +33,15 @@ class Group(models.Model):
         related_query_name="owned_group",
         verbose_name="Владелец",
     )
+    curator = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="curated_groups",
+        related_query_name="curated_group",
+        verbose_name="Куратор",
+        blank=True,
+        null=True,
+    )
     is_editorial = models.BooleanField(
         default=False,
         verbose_name="Редакторская подборка",
@@ -51,6 +60,14 @@ class Group(models.Model):
         validators=[URLValidator()],
         blank=True,
         verbose_name="обложка группы",
+    )
+    saves_count = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Количество сохранений",
+    )
+    views_count = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Количество просмотров",
     )
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -71,11 +88,16 @@ class Group(models.Model):
         super().save(*args, **kwargs)
 
     @property
-    def saves_count(self) -> int:
-        if hasattr(self, "annotated_saves_count"):
-            return self.annotated_saves_count
+    def channel_count(self) -> int:
+        if hasattr(self, "annotated_channel_count"):
+            return self.annotated_channel_count
 
-        return self.saves.count()
+        if hasattr(self, "auto_rule"):
+            return self.channels.model.objects.filter(
+                category=self.auto_rule.category
+            ).count()
+
+        return self.channels.count()
 
     def get_data(self) -> dict[str, Any]:
         """
@@ -88,11 +110,14 @@ class Group(models.Model):
             "slug": self.slug,
             "description": self.description,
             "owner": self.owner.username,
+            "cover": self.image_url,
+            "curator": (self.curator.username if self.curator else None),
             "is_editorial": self.is_editorial,
             "order": self.order,
-            "image_url": self.image_url,
+            "channel_count": self.channel_count,
             "created_at": self.created_at.isoformat(),
             "saves_count": self.saves_count,
+            "views_count": self.views_count,
         }
 
 
