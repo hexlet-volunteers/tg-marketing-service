@@ -17,46 +17,10 @@ import {
 import {
   IconShield,
 } from "@tabler/icons-react";
-const rows = [
-  {
-    color: "indigo",
-    initials: "НЕ",
-    title: "Нейросети на практике",
-    username: "@ml_practice",
-    author: "@ivan_dev",
-    time: "2 часа назад",
-    category: "Технологии",
-  },
-  {
-    color: "orange",
-    initials: "МА",
-    title: "Маркетинг с нуля",
-    username: "@mktg_zero",
-    author: "@olga_smm",
-    time: "5 часов назад",
-    category: "Маркетинг",
-  },
-  {
-    color: "teal",
-    initials: "КР",
-    title: "Крипто-сигналы 24/7",
-    username: "@crypto_sig",
-    author: "@trader_x",
-    time: "вчера",
-    category: "Крипта",
-  },
-  {
-    color: "pink",
-    initials: "ДИ",
-    title: "Дизайн-дайджест",
-    username: "@design_digest",
-    author: "@anna_ux",
-    time: "вчера",
-    category: "Дизайн",
-  },
-];
+import type { UserRequestProps } from "@/types/user";
+import { mockUserRequests } from "@/utils/addColors";
 
-export default function AdminPage() {
+export default function AdminPage({ userRequests = mockUserRequests }: UserRequestProps ) {
   return (
     <Container>
       <Group mb={8}>
@@ -115,32 +79,34 @@ export default function AdminPage() {
             </Table.Thead>
 
             <Table.Tbody>
-              {rows.map((row) => (
-                <Table.Tr key={row.title}>
+              {userRequests.map((userRequest) => (
+                <Table.Tr key={userRequest.title}>
                   <Table.Td>
                     <Group>
-                      <Avatar color={row.color}>{row.initials}</Avatar>
+                      <Avatar color={userRequest.color}>
+                        {userRequest.title.slice(0, 2).toUpperCase()}
+                      </Avatar>
 
                       <Box>
-                        <Text fw={600}>{row.title}</Text>
+                        <Text fw={600}>{userRequest.title}</Text>
                         <Text size="sm" c="dimmed">
-                          {row.username}
+                          {userRequest.username}
                         </Text>
                       </Box>
                     </Group>
                   </Table.Td>
 
                   <Table.Td>
-                    <Text>{row.author}</Text>
+                    <Text>{userRequest.author}</Text>
 
                     <Text size="sm" c="dimmed">
-                      {row.time}
+                      {userRequest.time}
                     </Text>
                   </Table.Td>
 
                   <Table.Td w={220}>
                     <Select
-                      defaultValue={row.category}
+                      defaultValue={userRequest.category}
                       data={[
                         "Технологии",
                         "Маркетинг",

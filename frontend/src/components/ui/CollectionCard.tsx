@@ -10,11 +10,10 @@ import {
 import {
     IconStarFilled
 } from "@tabler/icons-react";
-import type { collections } from "../pages/CollectionsPage";
+import type { CollectionWithColor } from "@/types/collection";
 
 
-
-export default function CollectionCard(props: (typeof collections)[0] & { onClick?: () => void }) {
+export default function CollectionCard(props: CollectionWithColor) {
     return (
         <Card
             withBorder

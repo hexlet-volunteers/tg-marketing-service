@@ -18,79 +18,22 @@ import {
 } from '@mantine/core';
 import { InsightCard } from '@/components/ui/InsightCard';
 import { SectionCard } from '@/components/ui/SectionCard';
-import { IconBulb, IconSend, IconSparkles, IconTrendingUp, IconAlertTriangle, IconThumbUp } from '@tabler/icons-react';
+import { IconSend, IconSparkles } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
+import type { AiCabinetPageProps } from '@/types/aiCabinet';
+import { mockCompetitors, mockHeatMapData } from '@/shared/mocks/aiPageData';
+import { mockIdeas, mockInsights } from '@/utils/makeIdeasAndInsights';
+import { formatNumber } from '@/utils/formatNumberShort';
+import getHeatColor from '@/utils/getHeatColor';
+import staticData from '@/shared/const/AICabinetPageStaticData';
 
-const ideas = [
-  {
-    icon: IconBulb,
-    title: 'Обзор новых функций Telegram',
-    reason: 'Актуальная тема, растущий интерес',
-    chips: ['~48K охват', 'чт 19:30'],
-  },
-  {
-    icon: IconTrendingUp,
-    title: 'Как монетизировать Telegram-канал',
-    reason: 'Высокий спрос среди авторов',
-    chips: ['~62K охват', 'ср 20:00'],
-  },
-  {
-    icon: IconBulb,
-    title: 'Топ-10 ботов для автоматизации',
-    reason: 'Техническая аудитория ищет инструменты',
-    chips: ['~35K охват', 'пт 18:00'],
-  },
-];
-
-const insightColorMap: Record<string, 'green' | 'blue' | 'orange' | 'purple'> = {
-  green: 'green',
-  tgblue: 'blue',
-  orange: 'orange',
-};
-
-const insights = [
-  { type: 'recommendation', icon: IconBulb, color: 'green', bg: 'var(--mantine-color-tggreen-0)', text: 'Публикуйте посты в среду в 19:00 — пик активности' },
-  { type: 'trend', icon: IconTrendingUp, color: 'tgblue', bg: 'var(--mantine-color-tgblue-0)', text: 'Вовлечённость выросла на 12% за месяц' },
-  { type: 'warning', icon: IconAlertTriangle, color: 'orange', bg: 'var(--mantine-color-tgorange-0)', text: 'Частота публикаций упала — рекомендуем 3-4 поста в неделю' },
-  { type: 'positive', icon: IconThumbUp, color: 'green', bg: 'var(--mantine-color-tggreen-0)', text: 'Новых подписчиков больше, чем отписок в 3.2 раза' },
-];
-
-const competitors = [
-  { name: '@techreview', er: 9.2, delta: +1.1 },
-  { name: '@droider', er: 7.8, delta: -0.5 },
-  { name: '@habr', er: 6.1, delta: -2.2 },
-];
-
-const quickQuestions = [
-  'Лучшее время для постов',
-  'Как увеличить охват',
-  'Тренды недели',
-  'Анализ конкурентов',
-];
-
-const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-const hours = Array.from({ length: 24 }, (_, i) => i);
-
-const heatmapData: Record<string, Record<number, number>> = {
-  Пн: { 9: 3, 10: 5, 12: 7, 14: 6, 17: 8, 19: 9, 20: 10, 21: 8 },
-  Вт: { 10: 4, 12: 6, 14: 5, 17: 7, 19: 8, 20: 9, 21: 7 },
-  Ср: { 9: 4, 10: 6, 12: 8, 14: 7, 17: 9, 19: 10, 20: 10, 21: 9 },
-  Чт: { 10: 5, 12: 7, 14: 6, 17: 8, 19: 9, 20: 8, 21: 7 },
-  Пт: { 10: 4, 12: 6, 14: 5, 17: 6, 19: 7, 20: 8, 21: 6 },
-  Сб: { 11: 3, 13: 4, 15: 5, 17: 5, 19: 6, 20: 7 },
-  Вс: { 12: 3, 14: 4, 16: 5, 18: 5, 20: 6, 21: 5 },
-};
-
-const getHeatColor = (value: number) => {
-  if (value === 0) return 'var(--mantine-color-gray-1)';
-  if (value <= 3) return 'var(--mantine-color-tgblue-1)';
-  if (value <= 5) return 'var(--mantine-color-tgblue-2)';
-  if (value <= 7) return 'var(--mantine-color-tgblue-3)';
-  if (value <= 9) return 'var(--mantine-color-tgblue-4)';
-  return 'var(--mantine-color-tgblue-5)';
-};
-
-const AICabinetPage: React.FC = () => {
+const AICabinetPage = ({
+  ideas = mockIdeas, 
+  insights = mockInsights, 
+  competitors= mockCompetitors, 
+  heatMapData = mockHeatMapData,
+}: AiCabinetPageProps) => {
+  const { quickQuestions, daysOfWeek, hours} = staticData
   const navigate = useNavigate();
   const [questionText, setQuestionText] = useState('');
 
@@ -122,11 +65,12 @@ const AICabinetPage: React.FC = () => {
                   </Text>
                   <Group justify="space-between">
                     <Group gap="xs">
-                      {idea.chips.map((chip) => (
-                        <Badge key={chip} size="xs" color="gray">
-                          {chip}
-                        </Badge>
-                      ))}
+                      <Badge size="xs" color="gray">
+                          {`~${formatNumber(idea.scope)} охват`}
+                      </Badge>
+                      <Badge size="xs" color="gray">
+                          {idea.date}
+                      </Badge>
                     </Group>
                     <Button
                       size="xs"
@@ -204,7 +148,7 @@ const AICabinetPage: React.FC = () => {
                       </Text>
                     </Grid.Col>
                     {hours.filter((h) => h >= 8 && h <= 22).map((h) => {
-                      const val = heatmapData[day]?.[h] ?? 0;
+                      const val = heatMapData[day]?.[h] ?? 0;
                       return (
                         <Grid.Col key={`${day}-${h}`} span={1}>
                           <Box
@@ -235,9 +179,9 @@ const AICabinetPage: React.FC = () => {
           <SectionCard title="Инсайты недели">
             <Stack gap="sm">
               {insights.map((ins, i) => (
-                <InsightCard key={i} color={insightColorMap[ins.color] ?? 'blue'}>
+                <InsightCard key={i} color={ins.color ?? 'blue'}>
                   <Group gap="xs">
-                    <ins.icon size={14} color={`var(--mantine-color-${ins.color}-6)`} />
+                    <ins.icon size={14} color={`var(--mantine-color-tg${ins.color}-6)`} />
                     <Text size="sm">{ins.text}</Text>
                   </Group>
                 </InsightCard>

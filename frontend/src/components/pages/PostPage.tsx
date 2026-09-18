@@ -14,15 +14,10 @@ import {
 import { InsightCard } from '@/components/ui/InsightCard';
 import { IconArrowLeft } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
+import type { PostReactionsProps } from '@/types/post';
+import { mockReactions } from '@/shared/mocks/posts';
 
-const reactions = [
-  { emoji: '🔥', label: 'Огонь', percent: 42, count: 374 },
-  { emoji: '❤️', label: 'Сердце', percent: 28, count: 250 },
-  { emoji: '👍', label: 'Лайк', percent: 20, count: 178 },
-  { emoji: '🤯', label: 'Восторг', percent: 10, count: 89 },
-];
-
-const PostPage: React.FC = () => {
+const PostPage: React.FC<PostReactionsProps> = ({ reactions = mockReactions }) => {
   const navigate = useNavigate();
 
   return (

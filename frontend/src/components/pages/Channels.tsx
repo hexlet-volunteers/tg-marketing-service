@@ -10,7 +10,7 @@ import {
 import React, { useMemo, useState } from 'react';
 import ChannelCard from '../ui/ChannelCard';
 import type { ChannelsProps } from '@/types/channel';
-import channelsCol from '@/fixtures/channelsCollection';
+import channelsCol from '@/shared/mocks/channelsCollection';
 
 const defaultChannels = channelsCol;
 
