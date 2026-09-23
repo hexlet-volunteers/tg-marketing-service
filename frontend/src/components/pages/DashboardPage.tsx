@@ -25,6 +25,7 @@ import type { PostProps } from "@/types/post";
 import { mockKpis, mockGrowthData } from "@/shared/mocks/channelKpis";
 import { mockPosts } from "@/shared/mocks/posts";
 import deltaFormatter from "@/utils/deltaFormatter";
+import getErBadgeColor from "@/utils/getErBadgeColor";
 
 interface DashBoardProps extends ChannelData, PostProps {}
 
@@ -171,9 +172,7 @@ const DashboardPage: React.FC<DashBoardProps> = ({
          <Table.Td ta="right">
           <Badge
            size="sm"
-           color={
-            post.er >= 25 ? "tggreen" : post.er >= 15 ? "tgorange" : "tgred"
-           }
+           color={getErBadgeColor(post.er)}
           >
            {post.er}%
           </Badge>

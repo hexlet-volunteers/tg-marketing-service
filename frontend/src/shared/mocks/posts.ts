@@ -1,4 +1,4 @@
-import type { Post, PostReaction } from "@/types/post";
+import type { Post, PostReaction, PostAnalysis } from "@/types/post";
 
 const mockPosts: Post[] = [
   { title: 'Обзор нового iPhone 16 Pro', views: 52100, reactions: 890, forwards: 234, er: 31.2 },
@@ -14,4 +14,39 @@ const mockReactions: PostReaction[] = [
   { emoji: '🤯', label: 'Восторг', percent: 10, count: 89 },
 ];
 
-export { mockPosts, mockReactions }
+const MOCK_ANALYSIS_DATA: PostAnalysis = {
+ status: "processing",
+ model_version: "GPT-4o",
+ why_worked: [
+  "Конкретный список + эмоция в заголовке и понятная польза",
+  "Реакции на 34% выше среднего по каналу",
+ ],
+ how_to_improve: [
+  "Добавить больше данных и графиков",
+  "Сократить воду в начале",
+  "Добавить CTA в конце",
+ ],
+ similar_posts: [
+  {
+   id: 1,
+   text: "7 ошибок в продуктовой аналитике",
+   permalink: "#",
+   telegram_message_id: 101,
+   published_at: "",
+   views: 0,
+   forwards: 0,
+   comments_count: 0,
+  },
+  {
+   id: 2,
+   text: "Метрики активации по шагам воронки",
+   permalink: "#",
+   telegram_message_id: 102,
+   published_at: "",
+   views: 0,
+   forwards: 0,
+   comments_count: 0,
+  },
+ ],
+};
+export { mockPosts, mockReactions, MOCK_ANALYSIS_DATA }

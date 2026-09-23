@@ -20,74 +20,8 @@ import {
 import { InsightCard } from "@/components/ui/InsightCard";
 import { IconArrowLeft, IconSparkles, IconBrain } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
-import { mockReactions } from "@/shared/mocks/posts";
-
-type SimilarPost = {
- id: number;
- telegram_message_id: number;
- text: string;
- published_at: string;
- views: number;
- forwards: number;
- comments_count: number;
- permalink: string;
-};
-
-type PostAnalysis = {
- status: "processing" | "completed";
- why_worked: string[];
- how_to_improve: string[];
- similar_posts: SimilarPost[];
- model_version: string | null;
-};
-
-const MOCK_ANALYSIS_DATA: PostAnalysis = {
- status: "processing",
- model_version: "GPT-4o",
- why_worked: [
-  "Конкретный список + эмоция в заголовке и понятная польза",
-  "Реакции на 34% выше среднего по каналу",
- ],
- how_to_improve: [
-  "Добавить больше данных и графиков",
-  "Сократить воду в начале",
-  "Добавить CTA в конце",
- ],
- similar_posts: [
-  {
-   id: 1,
-   text: "7 ошибок в продуктовой аналитике",
-   permalink: "#",
-   telegram_message_id: 101,
-   published_at: "",
-   views: 0,
-   forwards: 0,
-   comments_count: 0,
-  },
-  {
-   id: 2,
-   text: "Метрики активации по шагам воронки",
-   permalink: "#",
-   telegram_message_id: 102,
-   published_at: "",
-   views: 0,
-   forwards: 0,
-   comments_count: 0,
-  },
- ],
-};
-
-interface PostReaction {
- emoji: "🔥" | "❤️" | "👍" | "🤯";
- label: "Огонь" | "Сердце" | "Лайк" | "Восторг";
- percent: number;
- count: number;
-}
-
-export interface PostPageProps {
- analysis?: PostAnalysis | null;
- reactions?: PostReaction[];
-}
+import { mockReactions, MOCK_ANALYSIS_DATA } from "@/shared/mocks/posts";
+import type { PostPageProps, PostAnalysis } from "@/types/post";
 
 const PostPage: React.FC<PostPageProps> = ({
  reactions = mockReactions,
