@@ -1,5 +1,5 @@
 import { BrandAvatar } from '@/components/ui/BrandAvatar';
-import channelsCol from '@/fixtures/channelsCollection';
+import channelsCol from '@/shared/mocks/channelsCollection';
 import {
   Badge,
   Container,
@@ -11,30 +11,13 @@ import {
 } from '@mantine/core';
 import { IconTrophy } from '@tabler/icons-react';
 import React from 'react';
+import type { ComparePageProps } from '@/types/channel';
+import { mockMetrics } from '@/shared/mocks/metrics';
 
-const channels = channelsCol.slice(0, 3);
-
-function formatNumberShort(n: number): string {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
-  if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
-  return String(n);
-}
-
-interface MetricDef {
-  key: string;
-  label: string;
-  format: (v: number) => string;
-}
-
-const metrics: MetricDef[] = [
-  { key: 'subscribers', label: 'Подписчики', format: (v) => formatNumberShort(v) },
-  { key: 'er', label: 'ER', format: (v) => `${v.toFixed(1)}%` },
-  { key: 'growth30d', label: 'Прирост 30д', format: (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%` },
-  { key: 'avgReach', label: 'Средний охват', format: (v) => formatNumberShort(v) },
-  { key: 'reachPerSub', label: 'Охват/подписчик', format: (v) => `${v.toFixed(1)}%` },
-];
-
-const ComparePage: React.FC = () => {
+const ComparePage: React.FC<ComparePageProps> = ({
+  metrics = mockMetrics, 
+  channels = channelsCol.slice(0, 3)
+}) => {
   const getVal = (ch: (typeof channels)[number], key: string): number => {
     const map: Record<string, number> = {
       subscribers: ch.subscribers,

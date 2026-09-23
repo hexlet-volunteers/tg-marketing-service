@@ -1,7 +1,6 @@
 import { BrandAvatar } from "@/components/ui/BrandAvatar";
 import { InsightCard } from "@/components/ui/InsightCard";
-import channelsCol from "@/fixtures/channelsCollection";
-import getErBadgeColor from "@/utils/getErBadgeColor";
+import channelsCol from "@/shared/mocks/channelsCollection";
 import { AreaChart } from "@mantine/charts";
 import {
  Badge,
@@ -21,63 +20,21 @@ import {
 import { IconCheck, IconDownload } from "@tabler/icons-react";
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import type { ChannelData } from "@/types/channel";
+import type { PostProps } from "@/types/post";
+import { mockKpis, mockGrowthData } from "@/shared/mocks/channelKpis";
+import { mockPosts } from "@/shared/mocks/posts";
+import deltaFormatter from "@/utils/deltaFormatter";
+
+interface DashBoardProps extends ChannelData, PostProps {}
 
 const channel = channelsCol[0];
 
-const kpis = [
- {
-  label: "Подписчики",
-  value: "142 340",
-  delta: "+2 480 · 1.8%",
-  positive: true,
- },
- { label: "Ср. охват", value: "38 200", delta: "+4.1%", positive: true },
- { label: "ER", value: "26.9%", delta: "−1.2%", positive: false },
- { label: "Индекс цитирования", value: "184", delta: "+9", positive: true },
-];
-
-const growthData = [
- { date: "01.06", подписчики: 134200 },
- { date: "05.06", подписчики: 135800 },
- { date: "10.06", подписчики: 136400 },
- { date: "15.06", подписчики: 137900 },
- { date: "20.06", подписчики: 139100 },
- { date: "25.06", подписчики: 140300 },
- { date: "30.06", подписчики: 142340 },
-];
-
-const posts = [
- {
-  title: "Обзор нового iPhone 16 Pro",
-  views: "42.1K",
-  reactions: 890,
-  forwards: 234,
-  er: 31.2,
- },
- {
-  title: "Сравнение Android vs iOS в 2026",
-  views: "38.7K",
-  reactions: 756,
-  forwards: 189,
-  er: 28.4,
- },
- {
-  title: "Топ-10 приложений для продуктивности",
-  views: "31.2K",
-  reactions: 567,
-  forwards: 123,
-  er: 22.1,
- },
- {
-  title: "Как заработать на Telegram-канале",
-  views: "12.3K",
-  reactions: 198,
-  forwards: 45,
-  er: 14.8,
- },
-];
-
-const DashboardPage: React.FC = () => {
+const DashboardPage: React.FC<DashBoardProps> = ({
+ kpis = mockKpis,
+ growthData = mockGrowthData,
+ posts = mockPosts,
+}) => {
  const navigate = useNavigate();
 
  return (
@@ -124,10 +81,12 @@ const DashboardPage: React.FC = () => {
        {kpi.label}
       </Text>
       <Text fw={800} size="xl" mb={4}>
-       {kpi.value}
+       {kpi.label === "ER"
+        ? `${kpi.value}%`
+        : kpi.value.toLocaleString("ru-RU")}
       </Text>
       <Text size="xs" fw={600} c={kpi.positive ? "tggreen" : "tgred"}>
-       {kpi.positive ? "▲" : "▼"} {kpi.delta}
+       {kpi.positive ? "▲" : "▼"} {deltaFormatter(kpi.delta, kpi.percentDelta)}
       </Text>
      </Paper>
     ))}
@@ -204,13 +163,18 @@ const DashboardPage: React.FC = () => {
          onClick={() => navigate("/post")}
         >
          <Table.Td>{post.title}</Table.Td>
-         <Table.Td ta="right">{post.views}</Table.Td>
+         <Table.Td ta="right">{post.views.toLocaleString("ru-RU")}</Table.Td>
          <Table.Td ta="right" c="tggreen">
           {post.reactions}
          </Table.Td>
          <Table.Td ta="right">{post.forwards}</Table.Td>
          <Table.Td ta="right">
-          <Badge size="sm" color={getErBadgeColor(post.er)}>
+          <Badge
+           size="sm"
+           color={
+            post.er >= 25 ? "tggreen" : post.er >= 15 ? "tgorange" : "tgred"
+           }
+          >
            {post.er}%
           </Badge>
          </Table.Td>

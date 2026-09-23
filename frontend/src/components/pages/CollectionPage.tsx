@@ -10,39 +10,10 @@ import {
 } from "@mantine/core";
 import { IconChevronLeft } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
+import type { CollectionPageProps } from "@/types/channel";
+import { mockCollection } from "@/utils/addColors";
 
-const channels = [
-    {
-        initials: "PR",
-        color: "var(--mantine-color-tgblue-5)",
-        name: "Product Radar",
-        username: "@product_radar",
-        subs: "142K",
-        er: "26.9%",
-        growth: "+2 480",
-    },
-    {
-        initials: "AI",
-        color: "var(--mantine-color-tgpurple-5)",
-        name: "Тренды AI",
-        username: "@ai_trends",
-        subs: "98.3K",
-        er: "29.5%",
-        growth: "+4 300",
-    },
-    {
-        initials: "KH",
-        color: "var(--mantine-color-tgblue-4)",
-        name: "Код на ночь",
-        username: "@night_code",
-        subs: "47.8K",
-        er: "33.2%",
-        growth: "+610",
-    },
-];
-
-
-export default function CollectionPage() {
+export default function CollectionPage({ channels = mockCollection }: CollectionPageProps) {
     const navigate = useNavigate();
 
     return (

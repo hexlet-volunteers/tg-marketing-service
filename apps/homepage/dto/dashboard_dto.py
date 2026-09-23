@@ -17,6 +17,7 @@ class ChannelDTO(BaseModel):
     views: int = Field(ge=0)
     engagement: float = Field(ge=0, le=100)
     growth: float
+    is_verified: bool = False
 
 
 class InsightDTO(BaseModel):

@@ -11,35 +11,10 @@ import {
 } from "@mantine/core";
 import { useNavigate } from "react-router-dom";
 import SmallArticle from "@/components/ui/SmallArticle";
+import type { BlogPageProps } from '@/types/article';
+import { mockArticles } from "@/utils/addColors";
 
-const articles = [
-  {
-    id: "er-err-i-ohvat",
-    title: "ER, ERR и охват: какие метрики Telegram реально важны",
-    category: "Аналитика",
-    color: "var(--mantine-color-tgblue-5)",
-    date: "21 июня 2026",
-    time: "8 мин",
-  },
-  {
-    id: "kak-vybrat-kanal-dlya-reklamy",
-    title: "Как выбрать канал для рекламы и не слить бюджет",
-    category: "Реклама",
-    color: "var(--mantine-color-tggreen-5)",
-    date: "14 июня 2026",
-    time: "5 мин",
-  },
-  {
-    id: "luchshee-vremya-dlya-postov",
-    title: "Лучшее время для постов: миф или реальность",
-    category: "Практика",
-    color: "var(--mantine-color-tgorange-5)",
-    date: "7 июня 2026",
-    time: "4 мин",
-  },
-];
-
-export default function BlogPage() {
+export default function BlogPage ({ articles = mockArticles }: BlogPageProps) {
   const navigate = useNavigate();
 
   return (

@@ -1,3 +1,5 @@
+from typing import Any
+
 from django import forms
 from django.contrib.auth.forms import (
     AuthenticationForm,
@@ -6,6 +8,7 @@ from django.contrib.auth.forms import (
     UserChangeForm,
     UserCreationForm,
 )
+from django.contrib.auth.password_validation import validate_password
 from django.utils.crypto import get_random_string
 
 from apps.users.models import User
@@ -158,15 +161,12 @@ class UserRegForm(UserCreationForm):
         return user
 
 
-class UserUpdateForm(UserChangeForm):
+class UserUpdateForm(forms.ModelForm):
     class Meta:
         model = User
         fields = (
             "first_name",
             "last_name",
-            "username",
-            "password1",
-            "password2",
             "email",
             "bio",
             "avatar_image",
@@ -184,33 +184,7 @@ class UserUpdateForm(UserChangeForm):
             attrs={"class": "form-control", "placeholder": "Фамилия"}
         ),
     )
-    username = forms.CharField(
-        label="Имя пользователя",
-        widget=forms.TextInput(
-            attrs={
-                "autofocus": True,
-                "class": "form-control",
-                "placeholder": "Имя пользователя",
-            }
-        ),
-    )
-    password1 = forms.CharField(
-        label="Пароль",
-        widget=forms.PasswordInput(
-            attrs={"class": "form-control", "placeholder": "Пароль"}
-        ),
-    )
-    password2 = forms.CharField(
-        label="Подтверждение пароля",
-        widget=forms.PasswordInput(
-            attrs={
-                "autocomplete": "current-password",
-                "class": "form-control",
-                "placeholder": "Подтверждение пароля",
-            }
-        ),
-    )
-    email = forms.CharField(
+    email = forms.EmailField(
         label="Email",
         widget=forms.EmailInput(
             attrs={"class": "form-control", "placeholder": "Email"}
@@ -234,6 +208,45 @@ class UserUpdateForm(UserChangeForm):
             attrs={"name": "avatar_image", "class": "form-control"}
         ),
     )
+    password1 = forms.CharField(
+        required=False,
+        label="Новый пароль",
+        strip=False,
+        widget=forms.PasswordInput(
+            attrs={"class": "form-control", "autocomplete": "new-password"}
+        ),
+    )
+    password2 = forms.CharField(
+        required=False,
+        label="Подтверждение пароля",
+        strip=False,
+        widget=forms.PasswordInput(
+            attrs={"class": "form-control", "autocomplete": "new-password"}
+        ),
+    )
+
+    def clean(self) -> dict[str, Any]:
+        cleaned_data: dict[str, Any] = super().clean() or {}
+        password1 = cleaned_data.get("password1")
+        password2 = cleaned_data.get("password2")
+
+        if password1 or password2:
+            if password1 != password2:
+                self.add_error("password2", "Пароли не совпадают.")
+            elif password1:
+                validate_password(password1, self.instance)
+
+        return cleaned_data
+
+    def save(self, commit: bool = True) -> User:
+        user = super().save(commit=False)
+        password = self.cleaned_data.get("password1")
+        if password:
+            user.set_password(password)
+        if commit:
+            user.save()
+            self.save_m2m()
+        return user
 
 
 class AvatarChange(UserChangeForm):

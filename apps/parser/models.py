@@ -76,6 +76,12 @@ class TelegramChannel(models.Model):
         null=True,
         verbose_name="Язык канала",
     )
+    is_verified = models.BooleanField(
+        default=False, db_index=True, verbose_name="Прошел верификацию"
+    )
+    verified_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Дата верификации"
+    )
 
     class Meta:
         verbose_name = "Telegram канал"
@@ -107,6 +113,8 @@ class TelegramChannel(models.Model):
             "category": self.category,
             "country": self.country,
             "language": self.language,
+            "is_verified": self.is_verified,
+            "verified_at": self.verified_at,
         }
 
 
@@ -260,6 +268,8 @@ class Post(models.Model):
         verbose_name="Текст поста",
     )
 
+    hashtags = models.JSONField(default=list, verbose_name="Хештеги")
+
     published_at = models.DateTimeField(
         db_index=True,
         verbose_name="Время публикации поста",
@@ -304,6 +314,17 @@ class Post(models.Model):
         verbose_name="Ссылка на пост",
     )
 
+    fwd_from = models.BigIntegerField(
+        blank=True,
+        null=True,
+        verbose_name="ID канала-источника репоста",
+    )
+    mentions = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Упоминания каналов",
+    )
+
     class Meta:
         verbose_name = "Пост"
         verbose_name_plural = "Посты"
@@ -323,6 +344,8 @@ class Post(models.Model):
         Метод для API/Сериализатора.
         Возвращает объект, содержащий общую сумму и список (top-N)
         """
+        total = self.total_reactions()
+
         reactions_qs = self.reactions.values("emoji", "count").order_by(
             "-count"
         )
@@ -330,10 +353,33 @@ class Post(models.Model):
         if limit is not None:
             reactions_qs = reactions_qs[:limit]
 
+        details = []
+        for item in reactions_qs:
+            count = item["count"]
+            # Расчет процента с защитой от деления на ноль
+            percent = round((count / total * 100), 2) if total > 0 else 0.0
+            details.append(
+                {"emoji": item["emoji"], "count": count, "percent": percent}
+            )
+
         return {
-            "total": self.total_reactions(),
-            "details": list(reactions_qs),
+            "total": total,
+            "details": details,
         }
+
+    def calculate_er(self) -> float:
+        """
+        Вычисляет Engagement Rate относительно просмотров.
+        Формула: (reactions + comments + forwards) / views
+        """
+        total_interactions = (
+            self.total_reactions() + self.comments_count + self.forwards
+        )
+
+        if self.views <= 0:
+            return 0.0
+
+        return round(total_interactions / self.views, 4)
 
     def __str__(self):
         return f"Post #{self.telegram_message_id} in {self.channel}"
@@ -359,3 +405,52 @@ class PostReaction(models.Model):
         verbose_name = "Реакция на пост"
         verbose_name_plural = "Реакции на пост"
         unique_together = ("post", "emoji")
+
+
+class PostAnalysis(models.Model):
+    """
+    НОВАЯ МОДЕЛЬ: Хранит AI-разбор поста
+    в соответствии с дизайном страницы (§4)
+    Соответствует трем колонкам: «Почему зашёл», «Что улучшить», «Похожие идеи»
+    """
+
+    post = models.OneToOneField(
+        "Post",
+        on_delete=models.CASCADE,
+        related_name="post_analysis",
+        verbose_name="Пост",
+    )
+
+    why_worked = models.TextField(
+        verbose_name="Почему зашёл",
+    )
+
+    how_to_improve = models.TextField(
+        verbose_name="Что улучшить",
+    )
+
+    similar_posts = models.ManyToManyField(
+        "Post",
+        related_name="similar_to",
+        blank=True,
+        verbose_name="Похожие идеи",
+    )  # type: ignore
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Дата генерации",
+    )
+
+    model_version = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="Версия модели AI",
+    )
+
+    class Meta:
+        verbose_name = "AI анализ поста"
+        verbose_name_plural = "AI анализы постов"
+
+    def __str__(self):
+        return f"AI Analysis for Post #{self.post.telegram_message_id}"

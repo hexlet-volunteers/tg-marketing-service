@@ -24,9 +24,49 @@ class SavedCollectionTest(TestCase):
             group=self.group,
         )
 
+        self.group.refresh_from_db()
         self.assertEqual(self.group.saves_count, 1)
         self.assertEqual(self.group.saves.first(), save)
         self.assertEqual(self.user.saved_collections.first(), save)
+
+    def test_delete_save_decrements_count(self):
+        save = SavedCollection.objects.create(
+            user=self.user,
+            group=self.group,
+        )
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.saves_count, 1)
+
+        save.delete()
+
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.saves_count, 0)
+        self.assertEqual(self.group.saves.count(), 0)
+
+    def test_bulk_delete_decrements_count(self):
+        SavedCollection.objects.create(
+            user=self.user,
+            group=self.group,
+        )
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.saves_count, 1)
+
+        SavedCollection.objects.all().delete()
+
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.saves_count, 0)
+
+    def test_delete_does_not_go_below_zero(self):
+        SavedCollection.objects.bulk_create(
+            [SavedCollection(user=self.user, group=self.group)]
+        )
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.saves_count, 0)
+
+        SavedCollection.objects.all().delete()
+
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.saves_count, 0)
 
     def test_cant_save_group_twice(self):
         SavedCollection.objects.create(

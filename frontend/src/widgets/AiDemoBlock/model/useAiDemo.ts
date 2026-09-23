@@ -1,17 +1,6 @@
 import { useState } from 'react';
 import type { AiDemoBlockProps, AiDemoButton } from './types';
-
-const aiDemoFixture: AiDemoBlockProps = {
-  description: 'AI-ассистент поможет с анализом канала, подбором контента и оптимизация постов.',
-  features: [
-    { id: 1, text: 'Анализ вовлечённости аудитории' },
-    { id: 2, text: 'Рекомендации по времени публикации' },
-    { id: 3, text: 'Генерация идей для контента' },
-  ],
-  tryButton: { label: 'Попробовать AI', variant: 'primary' },
-  demoButton: { label: 'Смотреть демо', variant: 'default' },
-  demoTitle: 'AI-ассистент',
-};
+import { aiDemoFixture } from '@/shared/mocks/widgets';
 
 export const useAiDemo = (): {
   data: AiDemoBlockProps;

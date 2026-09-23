@@ -14,16 +14,12 @@ import {
   Title,
 } from '@mantine/core';
 import { IconEdit, IconLogout, IconPlus } from '@tabler/icons-react';
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { UserProfilePageProps } from '@/types/user';
+import { mockUser, mockNotifications } from '@/shared/mocks/user';
 
-const notifications = [
-  { label: 'Email-уведомления', defaultChecked: true },
-  { label: 'AI-рекомендации', defaultChecked: true },
-  { label: 'Обновления тарифов', defaultChecked: false },
-];
 
-const UserProfilePage: React.FC = () => {
+const UserProfilePage = ({ user = mockUser, notifications = mockNotifications }: UserProfilePageProps ) => {
   const navigate = useNavigate();
 
   return (
@@ -36,10 +32,10 @@ const UserProfilePage: React.FC = () => {
         <Paper withBorder p="lg" radius="md">
           <Title order={3} mb="md">Профиль</Title>
           <Group gap="md" mb="lg">
-            <BrandAvatar name="Алексей Иванов" size={58} />
+            <BrandAvatar name={user.name} size={58} />
             <div>
-              <Title order={4}>Алексей Иванов</Title>
-              <Text size="sm" c="dimmed">alexey@example.com</Text>
+              <Title order={4}>{user.name} {user.lastName}</Title>
+              <Text size="sm" c="dimmed">{user.email}</Text>
             </div>
           </Group>
           <Group gap="sm">

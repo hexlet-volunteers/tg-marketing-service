@@ -20,13 +20,7 @@ import {
 import { InsightCard } from "@/components/ui/InsightCard";
 import { IconArrowLeft, IconSparkles, IconBrain } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
-
-const reactions = [
- { emoji: "🔥", label: "Огонь", percent: 42, count: 374 },
- { emoji: "❤️", label: "Сердце", percent: 28, count: 250 },
- { emoji: "👍", label: "Лайк", percent: 20, count: 178 },
- { emoji: "🤯", label: "Восторг", percent: 10, count: 89 },
-];
+import { mockReactions } from "@/shared/mocks/posts";
 
 type SimilarPost = {
  id: number;
@@ -46,10 +40,6 @@ type PostAnalysis = {
  similar_posts: SimilarPost[];
  model_version: string | null;
 };
-
-interface PostPageProps {
- analysis?: PostAnalysis | null;
-}
 
 const MOCK_ANALYSIS_DATA: PostAnalysis = {
  status: "processing",
@@ -87,7 +77,20 @@ const MOCK_ANALYSIS_DATA: PostAnalysis = {
  ],
 };
 
+interface PostReaction {
+ emoji: "🔥" | "❤️" | "👍" | "🤯";
+ label: "Огонь" | "Сердце" | "Лайк" | "Восторг";
+ percent: number;
+ count: number;
+}
+
+export interface PostPageProps {
+ analysis?: PostAnalysis | null;
+ reactions?: PostReaction[];
+}
+
 const PostPage: React.FC<PostPageProps> = ({
+ reactions = mockReactions,
  analysis: propAnalysis = MOCK_ANALYSIS_DATA,
 }) => {
  const navigate = useNavigate();
@@ -96,10 +99,12 @@ const PostPage: React.FC<PostPageProps> = ({
 
  const handleStartAnalysis = () => {
   const baseData = propAnalysis || MOCK_ANALYSIS_DATA;
+
   setAnalysis({
    ...baseData,
    status: "processing",
   });
+
   setTimeout(() => {
    setAnalysis({
     ...baseData,

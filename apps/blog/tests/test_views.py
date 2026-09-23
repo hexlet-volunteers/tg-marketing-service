@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from typing import Any
+from unittest.mock import patch
 
+from django.http import HttpResponse
 from django.test import TestCase
 from django.urls import reverse
 
@@ -20,6 +22,8 @@ CARD_FIELDS = {
     "views_count",
     "author_name",
 }
+
+DETAIL_FIELDS = CARD_FIELDS | {"body", "cta", "related"}
 
 
 class BlogListViewTest(TestCase):
@@ -196,3 +200,162 @@ class BlogListViewTest(TestCase):
         props = self._get_inertia_props()
 
         self.assertGreaterEqual(len(props["articles"]), 3)
+
+
+class BlogArticleDetailViewTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.author = User.objects.create_user(
+            username="detail_view_author",
+            email="detail_view_author@example.com",
+            password="secret123",
+            role="partner",
+            first_name="Иван",
+            last_name="Иванов",
+        )
+
+        cls.article = BlogArticle.objects.create(
+            title="Статья для страницы",
+            slug="statya-dlya-stranicy",
+            excerpt="Анонс статьи.",
+            cover_image="https://example.com/cover.jpg",
+            body="## Заголовок\n\nТело статьи.",
+            author=cls.author,
+            category="dev",
+            tags=["python"],
+            is_published=True,
+            published_at=datetime(2026, 8, 4, 8, 0, tzinfo=timezone.utc),
+            read_time=12,
+            views_count=120,
+        )
+
+        cls.other = BlogArticle.objects.create(
+            title="Другая статья",
+            slug="drugaya-statya",
+            excerpt="Анонс другой статьи.",
+            category="dev",
+            is_published=True,
+            published_at=datetime(2026, 8, 1, 8, 0, tzinfo=timezone.utc),
+        )
+
+        cls.unpublished = BlogArticle.objects.create(
+            title="Черновик",
+            slug="chernovik-view",
+            excerpt="Ещё не опубликовано.",
+            category="dev",
+            is_published=False,
+        )
+
+    def _detail_url(self, slug: str) -> str:
+        return reverse("blog:detail", kwargs={"slug": slug})
+
+    def _get_inertia(self, slug: str) -> Any:
+        return self.client.get(
+            self._detail_url(slug),
+            HTTP_ACCEPT="application/json",
+            HTTP_X_INERTIA="true",
+        )
+
+    def _get_inertia_props(self) -> dict[str, Any]:
+        response = self._get_inertia(self.article.slug)
+        self.assertEqual(response.status_code, 200)
+        return response.json()["props"]
+
+    def test_reverse_blog_detail_url(self) -> None:
+        self.assertEqual(
+            self._detail_url(self.article.slug),
+            f"/blog/{self.article.slug}/",
+        )
+
+    def test_view_returns_blog_article_component_and_url(self) -> None:
+        response = self._get_inertia(self.article.slug)
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertIn("component", data)
+        self.assertIn("props", data)
+        self.assertIn("url", data)
+
+        self.assertEqual(data["component"], "BlogArticle")
+        self.assertEqual(data["url"], f"/blog/{self.article.slug}/")
+
+    def test_props_contain_all_detail_fields(self) -> None:
+        props = self._get_inertia_props()
+
+        self.assertTrue(DETAIL_FIELDS.issubset(props.keys()))
+
+    def test_props_map_article_fields(self) -> None:
+        props = self._get_inertia_props()
+
+        self.assertEqual(props["id"], self.article.id)
+        self.assertEqual(props["slug"], self.article.slug)
+        self.assertEqual(props["title"], self.article.title)
+        self.assertEqual(props["excerpt"], self.article.excerpt)
+        self.assertEqual(props["cover_image"], self.article.cover_image)
+        self.assertEqual(props["category"], "dev")
+        self.assertEqual(props["tags"], ["python"])
+        self.assertEqual(props["read_time"], 12)
+        self.assertEqual(props["views_count"], 120)
+        self.assertEqual(props["author_name"], "Иван Иванов")
+        self.assertEqual(props["published_at"], "2026-08-04T08:00:00Z")
+
+    def test_body_prop_is_raw_markdown(self) -> None:
+        props = self._get_inertia_props()
+
+        self.assertEqual(props["body"], self.article.body)
+
+    def test_cta_prop_is_button_descriptor(self) -> None:
+        props = self._get_inertia_props()
+
+        self.assertEqual(
+            props["cta"],
+            {"label": "Разобрать канал", "url": "/ai-cabinet"},
+        )
+
+    def test_related_excludes_current_and_unpublished(self) -> None:
+        props = self._get_inertia_props()
+        slugs = [item["slug"] for item in props["related"]]
+
+        self.assertNotIn(self.article.slug, slugs)
+        self.assertNotIn(self.unpublished.slug, slugs)
+        self.assertIn(self.other.slug, slugs)
+
+    def test_unknown_slug_returns_404(self) -> None:
+        response = self._get_inertia("net-takogo-sluga")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_unpublished_article_returns_404(self) -> None:
+        response = self._get_inertia(self.unpublished.slug)
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_views_count_not_incremented_on_inertia_request(self) -> None:
+        before = self.article.views_count
+
+        self._get_inertia(self.article.slug)
+
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.views_count, before)
+
+    def test_views_count_incremented_on_full_page_load(self) -> None:
+        before = self.article.views_count
+
+        # Полный рендер требует собранного Vite-манифеста, поэтому
+        # подменяем рендерер - проверяем решение вьюхи считать просмотр.
+        with patch(
+            "apps.blog.views.render_inertia_from_dto",
+            return_value=HttpResponse(),
+        ):
+            self.client.get(self._detail_url(self.article.slug))
+
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.views_count, before + 1)
+
+    def test_views_count_not_incremented_on_404(self) -> None:
+        before = self.unpublished.views_count
+
+        self.client.get(self._detail_url(self.unpublished.slug))
+
+        self.unpublished.refresh_from_db()
+        self.assertEqual(self.unpublished.views_count, before)

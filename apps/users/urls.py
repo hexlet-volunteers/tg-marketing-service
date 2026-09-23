@@ -7,7 +7,6 @@ from apps.users.views import (
     RestorePasswordRequestView,
     RestorePasswordView,
     UserCabinetView,
-    UserProfileView,
     UserRegister,
     UserUpdate,
 )
@@ -17,7 +16,6 @@ app_name = "users"
 urlpatterns = [
     path("logout/", LogoutView.as_view(), name="logout"),
     path("login/", LoginView.as_view(), name="login"),
-    path("me/", UserProfileView.as_view(), name="profile"),
     path("profile/", UserCabinetView.as_view(), name="user_cabinet"),
     path("create/", UserRegister.as_view(), name="user_create"),
     path(

@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, Avatar, Badge, Card, Group, Box } from '@mantine/core';
 import { IconCheck } from '@tabler/icons-react';
 import type { Channel } from '@/types/channel';
-import formatNumberShort from '@/utils/formatNumberShort';
+import { formatNumberShort } from '@/utils/formatNumberShort';
 
 interface ChannelCardProps {
   channel: Channel;

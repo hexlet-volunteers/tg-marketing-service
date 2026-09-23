@@ -1,13 +1,14 @@
 import { Avatar, Grid, Group, Paper, Stack, Text } from "@mantine/core";
+import { formatNumberShortEn } from "@/utils/formatNumberShort";
+import { initials } from "@/utils/initials";
 
 export default function CollectionChannelCard(props: {
-  initials: string;
   color: string;
   name: string;
   username: string;
-  subs: string;
-  er: string;
-  growth: string;
+  subscribers: number;
+  er: number;
+  growth30d: number;
 }) {
   return (
     <Paper withBorder shadow="xs" p="md">
@@ -18,7 +19,7 @@ export default function CollectionChannelCard(props: {
           bg={props.color}
           fw={700}
         >
-          {props.initials}
+          {initials(props.name)}
         </Avatar>
 
         <Stack gap={0}>
@@ -39,7 +40,7 @@ export default function CollectionChannelCard(props: {
           </Text>
 
           <Text fw={700} size="xl">
-            {props.subs}
+            {formatNumberShortEn(props.subscribers)}
           </Text>
         </Grid.Col>
 
@@ -49,7 +50,7 @@ export default function CollectionChannelCard(props: {
           </Text>
 
           <Text fw={700} c="tggreen">
-            {props.er}
+            {`${props.er.toFixed(1).replace(/\.0$/, '')}%`}
           </Text>
         </Grid.Col>
 
@@ -58,8 +59,11 @@ export default function CollectionChannelCard(props: {
             30д
           </Text>
 
-          <Text fw={700} c="tggreen" ta="right">
-            {props.growth}
+          <Text fw={700} c={props.growth30d ? 'tggreen' : 'tgred'} ta="right">
+            {props.growth30d > 0 
+              ? `+${props.growth30d.toLocaleString('ru-RU')}` 
+              : props.growth30d.toLocaleString('ru-RU')
+            }
           </Text>
         </Grid.Col>
       </Grid>
