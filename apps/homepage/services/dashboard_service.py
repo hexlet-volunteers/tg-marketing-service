@@ -61,7 +61,7 @@ class DashboardService:
                 avg_interactions=Avg(
                     F("posts__comments_count")
                     + F("posts__forwards")
-                    + Coalesce(F("posts__postsreaction__count"), 0)
+                    + Coalesce(F("posts__reactions__count"), 0)
                 ),
             )
         )
