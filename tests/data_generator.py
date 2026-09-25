@@ -243,6 +243,8 @@ class DataGenerator:
             if rule is None
             else rule
         )
+        if validator is None:
+            validator = self.fixtures_generators["datetime"]["validator"]
         return self._generate_data(
             cast(str, rule_val),
             data_type=data_type,
