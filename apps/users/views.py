@@ -18,6 +18,10 @@ from django.views.generic.base import View
 from inertia import InertiaResponse
 from inertia import render as inertia_render
 
+from apps.billing.services.subscription_service import (
+    get_subscription,
+    serialize_subscription,
+)
 from apps.users.forms import (
     AvatarChange,
     RestorePasswordForm,
@@ -152,7 +156,7 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
                 "role": user.role,
                 "bio": user.bio,
             },
-            "subscription": None,
+            "subscription": serialize_subscription(get_subscription(user)),
             "notifications": None,
             "usage_stats": usage_stats,
             "user_role": cast(RoleRequest, request).role,

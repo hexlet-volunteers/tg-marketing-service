@@ -85,7 +85,7 @@ class DashboardView(View):
     - ai_insights: до 5 непрочитанных из БД или сгенерированных fallback
     - engagement: процент (views / subscribers * 100)
     - growth: процентный рост подписчиков за последний период
-    - days_left: 0 для неактивной подписки, иначе 30 (пример)
+    - days_left: дней до конца текущего периода подписки (Subscription)
     - is_auto: признак автоматической/ручной коллекции
     """
 

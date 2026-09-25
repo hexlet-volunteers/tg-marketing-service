@@ -1,5 +1,6 @@
 from django.db.models import Avg, OuterRef, QuerySet, Subquery
 
+from apps.billing.services.subscription_service import get_subscription
 from apps.group_channels.models import Group
 from apps.homepage.dto.dashboard_dto import (
     ChannelDTO,
@@ -190,7 +191,4 @@ class DashboardService:
     # ------------------------
 
     def _get_subscription_days_left(self) -> int:
-        profile = getattr(self.user, "partner_profile", None)
-        if profile and profile.status == "active":
-            return 30
-        return 0
+        return get_subscription(self.user).days_left

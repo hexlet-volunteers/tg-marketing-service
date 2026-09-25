@@ -1,8 +1,11 @@
+from datetime import timedelta
 from typing import Any
 
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
+from apps.billing.models import Plan, Subscription
 from apps.homepage.models import HomePageComponent
 from apps.users.models import User
 
@@ -244,3 +247,44 @@ class IndexViewTest(TestCase):
             props["flash"], {"success": "Пользователь успешно зарегистрирован"}
         )
         self.assertTrue(User.objects.filter(username="testregister").exists())
+
+
+class DashboardSubscriptionTest(TestCase):
+    def _get_dashboard_stats(self) -> dict[str, Any]:
+        response = self.client.get(
+            reverse("homepage:dashboard"),
+            HTTP_ACCEPT="application/json",
+            HTTP_X_INERTIA="true",
+        )
+        self.assertEqual(response.status_code, 200)
+        return response.json()["props"]["stats"]
+
+    def test_days_left_zero_for_default_free_subscription(self) -> None:
+        user = User.objects.create_user(
+            username="free",
+            email="free@example.com",
+            password="secret123",
+            role="user",
+        )
+        self.client.force_login(user)
+
+        stats = self._get_dashboard_stats()
+
+        self.assertEqual(stats["days_left"], 0)
+
+    def test_days_left_comes_from_active_subscription(self) -> None:
+        user = User.objects.create_user(
+            username="pro",
+            email="pro@example.com",
+            password="secret123",
+            role="user",
+        )
+        subscription = Subscription.objects.get(user=user)
+        subscription.plan = Plan.objects.get(code=Plan.Code.PRO)
+        subscription.current_period_end = timezone.now() + timedelta(days=7)
+        subscription.save()
+        self.client.force_login(user)
+
+        stats = self._get_dashboard_stats()
+
+        self.assertEqual(stats["days_left"], 7)

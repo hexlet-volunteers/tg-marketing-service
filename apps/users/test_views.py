@@ -1,3 +1,5 @@
+from datetime import timedelta
+from decimal import Decimal
 from typing import Any
 from unittest.mock import patch
 
@@ -5,7 +7,9 @@ from django.contrib.auth import get_user
 from django.http import JsonResponse
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
+from apps.billing.models import Plan, Subscription
 from apps.users.models import User
 from apps.users.views import DEFAULT_AVATAR_URL
 
@@ -123,8 +127,57 @@ class UserCabinetViewTest(TestCase):
         )
         self.assertEqual(user["role"], "user")
         self.assertEqual(user["bio"], "Old bio")
-        self.assertIsNone(data["props"]["subscription"])
+        subscription = data["props"]["subscription"]
+        free_plan = Plan.objects.get(code=Plan.Code.FREE)
+        self.assertEqual(subscription["plan"], Plan.Code.FREE)
+        self.assertEqual(
+            subscription["period"], Subscription.BillingPeriod.MONTHLY
+        )
+        self.assertEqual(
+            Decimal(subscription["price"]), free_plan.monthly_price
+        )
+        self.assertIsNone(subscription["current_period_end"])
+        self.assertEqual(
+            subscription["limits"],
+            {
+                "channels": free_plan.channels_limit,
+                "ai_requests": free_plan.ai_requests_limit,
+            },
+        )
+        self.assertEqual(subscription["days_left"], 0)
         self.assertIsNone(data["props"]["notifications"])
+
+    @patch("apps.users.views.inertia_render", side_effect=inertia_json_response)
+    def test_get_returns_real_pro_subscription_state(
+        self, _render: Any
+    ) -> None:
+        pro_plan = Plan.objects.get(code=Plan.Code.PRO)
+        subscription = Subscription.objects.get(user=self.user)
+        subscription.plan = pro_plan
+        subscription.billing_period = Subscription.BillingPeriod.ANNUAL
+        subscription.current_period_end = timezone.now() + timedelta(days=5)
+        subscription.save()
+
+        response = self.client.get(reverse("users:user_cabinet"))
+
+        self.assertEqual(response.status_code, 200)
+
+        subscription_data = response.json()["props"]["subscription"]
+        self.assertEqual(subscription_data["plan"], Plan.Code.PRO)
+        self.assertEqual(
+            subscription_data["period"], Subscription.BillingPeriod.ANNUAL
+        )
+        self.assertEqual(
+            Decimal(subscription_data["price"]), pro_plan.annual_price
+        )
+        self.assertEqual(subscription_data["days_left"], 5)
+        self.assertEqual(
+            subscription_data["limits"],
+            {
+                "channels": pro_plan.channels_limit,
+                "ai_requests": pro_plan.ai_requests_limit,
+            },
+        )
 
     def test_post_updates_user_profile(self) -> None:
         response = self.client.post(
