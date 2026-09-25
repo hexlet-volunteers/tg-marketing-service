@@ -52,3 +52,4 @@ npm run build
 | `npm run typecheck` | Проверка типов (`tsc --noEmit`) |
 
 Остальные скрипты — в [`package.json`](package.json).
+.
