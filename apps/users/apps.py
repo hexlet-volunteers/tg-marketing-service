@@ -1,6 +1,14 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from allauth.socialaccount.signals import social_account_added
 from django.apps import AppConfig
 from django.dispatch import receiver
+from django.http import HttpRequest
+
+if TYPE_CHECKING:
+    from allauth.socialaccount.models import SocialLogin
 
 
 class UsersConfig(AppConfig):
@@ -9,7 +17,12 @@ class UsersConfig(AppConfig):
 
     def ready(self):
         @receiver(social_account_added)
-        def handle_yandex_login(sender, request, sociallogin, **kwargs):
+        def handle_yandex_login(
+            sender: type[SocialLogin],
+            request: HttpRequest,
+            sociallogin: SocialLogin,
+            **kwargs,
+        ) -> None:
             if sociallogin.account.provider == "yandex":
                 user = sociallogin.user
                 extra_data = sociallogin.account.extra_data

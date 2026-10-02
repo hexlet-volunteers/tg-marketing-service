@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db.models import QuerySet
 from django.http import HttpRequest
 from guardian.admin import GuardedModelAdmin
 
@@ -85,14 +86,14 @@ class CustomUserAdmin(GuardedModelAdmin):
     )
 
     @admin.display(boolean=True, description="Партнер")
-    def is_partner(self, obj):
+    def is_partner(self, obj: User) -> bool:
         return (
             hasattr(obj, "partner_profile")
             and obj.partner_profile.status == "active"
         )
 
     @admin.display(boolean=True, description="Модератор канала")
-    def is_channel_moderator(self, obj):
+    def is_channel_moderator(self, obj: User) -> bool:
         return obj.moderated_channels.exists()
 
 
@@ -134,28 +135,32 @@ class PartnerProfileAdmin(GuardedModelAdmin):
     )
 
     @admin.display(description="Баланс")
-    def formatted_balance(self, obj):
+    def formatted_balance(self, obj: PartnerProfile) -> str:
         return f"{obj.balance:.2f}" if obj.balance else "0.00"
 
     @admin.display(description="Реквизиты")
-    def truncated_payment_details(self, obj):
+    def truncated_payment_details(self, obj: PartnerProfile) -> str:
         return obj.payment_details[:50] + "..." if obj.payment_details else ""
 
     @admin.action(description="Активировать выбранных партнеров")
-    def activate_selected(self, request, queryset):
+    def activate_selected(
+        self, request: HttpRequest, queryset: QuerySet[PartnerProfile]
+    ) -> None:
         updated = queryset.update(status="active")
         self.message_user(
             request, f"Активировано {updated} партнерских профилей"
         )
 
     @admin.action(description="Деактивировать выбранных партнеров")
-    def deactivate_selected(self, request, queryset):
+    def deactivate_selected(
+        self, request: HttpRequest, queryset: QuerySet[PartnerProfile]
+    ) -> None:
         updated = queryset.update(status="suspended")
         self.message_user(
             request, f"Деактивировано {updated} партнерских профилей"
         )
 
-    def get_queryset(self, request: HttpRequest):
+    def get_queryset(self, request: HttpRequest) -> QuerySet[PartnerProfile]:
         return super().get_queryset(request).select_related("user")  # type: ignore[no-untyped-call]
 
 
