@@ -13,6 +13,9 @@ from apps.group_channels.forms import (
     UpdateGroupForm,
 )
 from apps.group_channels.models import Group
+from apps.group_channels.services.collections_catalog_service import (
+    CollectionsCatalogService,
+)
 from apps.parser.models import TelegramChannel
 from config.mixins import UserAuthenticationCheckMixin
 
@@ -191,4 +194,22 @@ class AddChannelsView(UserAuthenticationCheckMixin, UserPassesTestMixin, View):
             request,
             "GroupDetail",
             props={"form": {"errors": form.errors, "values": form.data}},
+        )
+
+
+class CollectionsCatalogView(View):
+    """Публичный каталог подборок."""
+
+    def get(
+        self,
+        request: HttpRequest,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
+        dto = CollectionsCatalogService().build()
+
+        return inertia_render(
+            request,
+            "Collections",
+            props=dto.model_dump(mode="json"),
         )

@@ -19,10 +19,16 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
 
+from apps.group_channels.views import CollectionsCatalogView
 from config.views import IndexView
 
 urlpatterns = [
     path("", IndexView.as_view(), name="main_index"),
+    path(
+        "collections/",
+        CollectionsCatalogView.as_view(),
+        name="collections_catalog",
+    ),
     path("dashboard/", include("apps.homepage.urls")),
     path("auth/", include("apps.users.urls")),
     path("group/", include("apps.group_channels.urls")),
