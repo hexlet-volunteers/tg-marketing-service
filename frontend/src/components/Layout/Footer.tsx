@@ -23,9 +23,9 @@ const data = [
   {
     title: 'Правовое',
     links: [
-      { label: 'Конфиденциальность', link: '#' },
-      { label: 'Соглашение', link: '#' },
-      { label: 'Публичная оферта', link: '#' },
+      { label: 'Конфиденциальность', link: '/legal?tab=privacy' },
+      { label: 'Соглашение', link: '/legal?tab=terms' },
+      { label: 'Публичная оферта', link: '/legal?tab=offer' },
     ],
   },
 ];
@@ -39,7 +39,12 @@ export function Footer() {
         c="dimmed"
         href={link.link}
         size="sm"
-        onClick={(event) => event.preventDefault()}
+        onClick={(event) => {
+          event.preventDefault();
+          if (link.link.startsWith('/')) {
+            navigate(link.link);
+          }
+        }}
       >
         {link.label}
       </Anchor>

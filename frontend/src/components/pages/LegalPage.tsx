@@ -5,12 +5,13 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import React from 'react';
 import type { LegalPageProps } from '@/types/legal';
 import mockLegalContent from '@/shared/mocks/legalContent';
+import { useSearchParams } from 'react-router-dom';
 
 const LegalPage = ({ legalContent = mockLegalContent }: LegalPageProps) => {
-  const [tab, setTab] = React.useState('privacy');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get('tab') || 'privacy';
 
   return (
     <Container>
@@ -24,9 +25,13 @@ const LegalPage = ({ legalContent = mockLegalContent }: LegalPageProps) => {
           { label: 'Оферта', value: 'offer' },
         ]}
         value={tab}
-        onChange={(v) => setTab(v as string)}
+        onChange={(v: string) => setSearchParams({ tab: v })}
         mb="lg"
-        fullWidth
+        radius={99}
+        color='tgblue.5'
+        bg='white'
+        autoContrast
+        withItemsBorders={false}
       />
       <Paper p="lg">
         {(() => {
