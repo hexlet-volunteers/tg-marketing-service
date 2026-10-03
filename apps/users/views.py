@@ -4,6 +4,7 @@ from typing import Any, cast
 from django.contrib import auth, messages
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.tokens import default_token_generator
+from django.db import transaction
 from django.http import (
     HttpRequest,
     HttpResponse,
@@ -24,6 +25,7 @@ from apps.billing.services.subscription_service import (
     get_subscription,
     serialize_subscription,
 )
+from apps.users.consents import record_consent, serialize_user_consent_history
 from apps.users.forms import (
     AvatarChange,
     RestorePasswordForm,
@@ -33,7 +35,7 @@ from apps.users.forms import (
     UserUpdateForm,
 )
 from apps.users.middleware import RoleRequest
-from apps.users.models import DataSubjectRequestLog, User
+from apps.users.models import Consent, DataSubjectRequestLog, User
 from apps.users.personal_data_export import build_personal_data_export
 from config.mixins import UserAuthenticationCheckMixin
 
@@ -85,6 +87,26 @@ class PersonalDataExportView(UserAuthenticationCheckMixin, View):
         response["Pragma"] = "no-cache"
         response["X-Content-Type-Options"] = "nosniff"
         return response
+
+
+class ConsentHistoryView(UserAuthenticationCheckMixin, View):
+    """Return consent history for the authenticated subject."""
+
+    def get(
+        self,
+        request: HttpRequest,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
+        user = cast(User, request.user)
+        content = json.dumps(
+            {"consents": serialize_user_consent_history(user)},
+            ensure_ascii=False,
+        )
+        return HttpResponse(
+            content,
+            content_type="application/json; charset=utf-8",
+        )
 
 
 class LogoutView(UserAuthenticationCheckMixin, View):
@@ -279,6 +301,7 @@ class UserRegister(View):
         "email",
         "bio",
         "avatar_image",
+        "terms",
     )
 
     def _empty_form_data(self) -> dict[str, str]:
@@ -325,11 +348,18 @@ class UserRegister(View):
     ) -> InertiaResponse | HttpResponseRedirect:
         form = UserRegForm(data=request.POST)
         if form.is_valid():
-            user = form.save(commit=False)
-            user.role = "user"
-            if not user.avatar_image:
-                user.avatar_image = DEFAULT_AVATAR_URL
-            user.save()
+            with transaction.atomic():
+                user = form.save(commit=False)
+                user.role = "user"
+                if not user.avatar_image:
+                    user.avatar_image = DEFAULT_AVATAR_URL
+                user.save()
+                record_consent(
+                    user=user,
+                    document_type=Consent.DocumentType.PERSONAL_DATA,
+                    source=Consent.Source.EMAIL_REGISTRATION,
+                    request=request,
+                )
 
             request.session["flash"] = {
                 "success": "Пользователь успешно зарегистрирован"

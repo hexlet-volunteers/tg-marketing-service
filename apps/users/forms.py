@@ -113,7 +113,10 @@ class UserRegForm(UserCreationForm):
         ),
     )
     terms = forms.BooleanField(
-        required=False,
+        required=True,
+        error_messages={
+            "required": "Consent to personal data processing is required."
+        },
         widget=forms.CheckboxInput(
             attrs={
                 "class": "form-check-input",

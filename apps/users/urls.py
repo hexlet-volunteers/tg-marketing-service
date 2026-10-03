@@ -2,6 +2,7 @@ from django.urls import path
 
 from apps.users.views import (
     AvatarChangeView,
+    ConsentHistoryView,
     LoginView,
     LogoutView,
     PersonalDataExportView,
@@ -21,6 +22,11 @@ urlpatterns = [
         "me/personal-data/export/",
         PersonalDataExportView.as_view(),
         name="personal_data_export",
+    ),
+    path(
+        "me/consents/",
+        ConsentHistoryView.as_view(),
+        name="consent_history",
     ),
     path("profile/", UserCabinetView.as_view(), name="user_cabinet"),
     path("create/", UserRegister.as_view(), name="user_create"),

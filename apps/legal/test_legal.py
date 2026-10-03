@@ -1,25 +1,11 @@
 import pytest
 from inertia.test import InertiaTestCase
 
-DOCUMENTS_FIXTURE = {
-    "privacy": {
-        "title": "Политика конфиденциальности",
-        "updated_at": "2026-07-01",
-    },
-    "agreement": {
-        "title": "Пользовательское соглашение",
-        "updated_at": "2026-07-01",
-    },
-    "offer": {
-        "title": "Публичная оферта",
-        "updated_at": "2026-07-01",
-    },
-}
+from apps.legal.documents import LEGAL_DOCUMENTS
 
 
 @pytest.mark.django_db
 def test_documents_view(client):
-    # GET-запрос
     response = client.get(
         "/legal/",
         HTTP_ACCEPT="application/json",
@@ -30,7 +16,7 @@ def test_documents_view(client):
 
     data = response.json()
     assert data["component"] == "Legal"
-    assert data["props"]["documents"] == DOCUMENTS_FIXTURE
+    assert data["props"]["documents"] == LEGAL_DOCUMENTS
 
 
 class LegalViewTestCase(InertiaTestCase):

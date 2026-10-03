@@ -10,7 +10,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.billing.models import Plan, Subscription
-from apps.users.models import User
+from apps.users.consents import get_current_document_version
+from apps.users.models import Consent, User
 from apps.users.views import DEFAULT_AVATAR_URL
 
 
@@ -31,6 +32,7 @@ class UserRegisterTest(TestCase):
             "password2": "StrongPass12345!",
             "bio": "",
             "avatar_image": "",
+            "terms": "on",
         }
         payload.update(overrides)
         return payload
@@ -41,6 +43,9 @@ class UserRegisterTest(TestCase):
         response = self.client.post(
             reverse("users:user_create"),
             data=self.valid_payload(),
+            REMOTE_ADDR="203.0.113.42",
+            HTTP_X_FORWARDED_FOR="198.51.100.99",
+            HTTP_USER_AGENT="RegistrationTest/1.0",
         )
 
         self.assertRedirects(
@@ -54,6 +59,39 @@ class UserRegisterTest(TestCase):
         self.assertEqual(user.avatar_image, DEFAULT_AVATAR_URL)
         self.assertTrue(user.username.startswith("ada_"))
         self.assertEqual(get_user(self.client).pk, user.pk)
+
+        consent = Consent.objects.get(user=user)
+        self.assertEqual(
+            consent.document_type,
+            Consent.DocumentType.PERSONAL_DATA,
+        )
+        self.assertEqual(
+            consent.version,
+            get_current_document_version(Consent.DocumentType.PERSONAL_DATA),
+        )
+        self.assertEqual(consent.source, Consent.Source.EMAIL_REGISTRATION)
+        self.assertEqual(consent.ip, "203.0.113.42")
+        self.assertEqual(consent.user_agent, "RegistrationTest/1.0")
+
+    @patch("apps.users.views.inertia_render", side_effect=inertia_json_response)
+    def test_registration_without_consent_does_not_create_user(
+        self, _render: Any
+    ) -> None:
+        payload = self.valid_payload()
+        payload.pop("terms")
+
+        response = self.client.post(
+            reverse("users:user_create"),
+            data=payload,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(email="ada@example.com").exists())
+        self.assertEqual(Consent.objects.count(), 0)
+        self.assertIn(
+            "terms",
+            response.json()["props"]["form"]["errors"],
+        )
 
     @patch("apps.users.views.inertia_render", side_effect=inertia_json_response)
     def test_registration_errors_are_returned_as_field_errors(

@@ -5,6 +5,7 @@ from typing import Any
 
 from apps.group_channels.models import Group
 from apps.parser.models import AIInsight, ChannelModerator
+from apps.users.consents import serialize_user_consent_history
 from apps.users.models import PartnerProfile, User
 
 EXPORT_FORMAT_VERSION = "1.0"
@@ -138,6 +139,15 @@ def _processing_information(
             "created_at",
             "is_read",
         ],
+        "consents": [
+            "id",
+            "document_type",
+            "version",
+            "timestamp",
+            "ip",
+            "user_agent",
+            "source",
+        ],
     }
     if has_partner_profile:
         fields["partner_profile"] = [
@@ -183,6 +193,7 @@ def build_personal_data_export(
         "owned_groups": _owned_groups(user),
         "channel_moderator_assignments": _moderator_assignments(user),
         "ai_insights": _ai_insights(user),
+        "consents": serialize_user_consent_history(user),
     }
     if partner_data is not None:
         personal_data["partner_profile"] = partner_data

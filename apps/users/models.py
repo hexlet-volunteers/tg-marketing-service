@@ -3,6 +3,7 @@ from typing import Any
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 from django.utils.crypto import get_random_string
 
 from .constants import BIO_MAXLENGTH, ROLE_MAXLENGTH
@@ -45,6 +46,75 @@ class User(AbstractUser):
     def is_channel_moderator(self) -> bool:
         """Проверка, является ли пользователь модератором какого-либо канала."""
         return self.moderated_channels.exists()
+
+
+class ConsentQuerySet(models.QuerySet["Consent"]):
+    def update(self, **kwargs: Any) -> int:
+        raise ValueError("Consent records are immutable")
+
+
+class Consent(models.Model):
+    """Append-only log of personal-data processing consents."""
+
+    class DocumentType(models.TextChoices):
+        PRIVACY_POLICY = "privacy_policy", "Privacy policy"
+        PERSONAL_DATA = "personal_data", "Personal data consent"
+        COOKIE_ANALYTICS = "cookie_analytics", "Cookie analytics"
+
+    class Source(models.TextChoices):
+        EMAIL_REGISTRATION = "email_registration", "Email registration"
+        YANDEX_OAUTH = "yandex_oauth", "Yandex OAuth"
+        COOKIE_BANNER = "cookie_banner", "Cookie banner"
+
+    user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="consents",
+        verbose_name="User",
+    )
+    document_type = models.CharField(
+        max_length=32,
+        choices=DocumentType.choices,
+        verbose_name="Document type",
+    )
+    version = models.CharField(max_length=32, verbose_name="Document version")
+    timestamp = models.DateTimeField(
+        default=timezone.now,
+        editable=False,
+        verbose_name="Accepted at",
+    )
+    ip = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        verbose_name="IP address",
+    )
+    user_agent = models.TextField(blank=True, verbose_name="User agent")
+    source = models.CharField(
+        max_length=32,
+        choices=Source.choices,
+        verbose_name="Source",
+    )
+    objects = ConsentQuerySet.as_manager()
+
+    class Meta:
+        db_table = "user_consents"
+        ordering = ["-timestamp", "-id"]
+        indexes = [
+            models.Index(fields=["user", "document_type", "version"]),
+            models.Index(fields=["timestamp"]),
+        ]
+        verbose_name = "Consent"
+        verbose_name_plural = "Consents"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if not self._state.adding:
+            raise ValueError("Consent records are immutable")
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"{self.document_type} {self.version} at {self.timestamp}"
 
 
 class PartnerProfile(models.Model):

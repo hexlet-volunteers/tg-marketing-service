@@ -64,6 +64,11 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = env_bool("DEBUG", default=False)
 
 ALLOWED_HOSTS = ["*"]
+TRUSTED_PROXY_IPS = [
+    value.strip()
+    for value in os.getenv("TRUSTED_PROXY_IPS", "").split(",")
+    if value.strip()
+]
 
 
 # Application definition
@@ -121,6 +126,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.users.middleware.YandexOAuthConsentMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "inertia.middleware.InertiaMiddleware",
     "apps.users.middleware.RoleMiddleware",
@@ -150,6 +156,7 @@ SOCIALACCOUNT_PROVIDERS = {
         },
     }
 }
+SOCIALACCOUNT_ADAPTER = "apps.users.adapters.MarketingSocialAccountAdapter"
 
 ROOT_URLCONF = "config.urls"
 

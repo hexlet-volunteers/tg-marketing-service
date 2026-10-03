@@ -3,7 +3,12 @@ from django.http import HttpRequest
 from guardian.admin import GuardedModelAdmin
 
 from apps.parser.models import ChannelModerator
-from apps.users.models import DataSubjectRequestLog, PartnerProfile, User
+from apps.users.models import (
+    Consent,
+    DataSubjectRequestLog,
+    PartnerProfile,
+    User,
+)
 
 
 class ChannelModeratorInline(admin.TabularInline):
@@ -195,5 +200,47 @@ class DataSubjectRequestLogAdmin(admin.ModelAdmin):
         self,
         request: HttpRequest,
         obj: DataSubjectRequestLog | None = None,
+    ) -> bool:
+        return False
+
+
+@admin.register(Consent)
+class ConsentAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "document_type",
+        "version",
+        "source",
+        "ip",
+        "timestamp",
+    )
+    list_filter = ("document_type", "version", "source", "timestamp")
+    search_fields = ("user__email", "user__username", "ip", "user_agent")
+    readonly_fields = (
+        "user",
+        "document_type",
+        "version",
+        "timestamp",
+        "ip",
+        "user_agent",
+        "source",
+    )
+    raw_id_fields = ("user",)
+    date_hierarchy = "timestamp"
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+
+    def has_change_permission(
+        self,
+        request: HttpRequest,
+        obj: Consent | None = None,
+    ) -> bool:
+        return False
+
+    def has_delete_permission(
+        self,
+        request: HttpRequest,
+        obj: Consent | None = None,
     ) -> bool:
         return False
