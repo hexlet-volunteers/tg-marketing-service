@@ -24,7 +24,7 @@ from apps.parser.types import (
     ParsedChannelResult,
     normalize_channel_data,
 )
-from apps.parser.utils import get_telegram_credentials
+from apps.parser.utils import get_telegram_credentials, normalize_channel_username
 from config.mixins import UserAuthenticationCheckMixin
 from config.renderers import render_inertia_from_dto
 
@@ -46,6 +46,16 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
             api_id,
             api_hash,
         )
+
+    def find_existing_channel(
+        self, channel_identifier: str
+    ) -> TelegramChannel | None:
+        """Find an existing channel by normalized username."""
+        username = normalize_channel_username(channel_identifier)
+
+        return TelegramChannel.objects.filter(
+        username__iexact=username
+    ).first()
 
     async def async_tg_parser(
         self, url: str, limit: int = 10
@@ -126,6 +136,16 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
         language = form.cleaned_data["language"]
         country = form.cleaned_data["country"]
         category = form.cleaned_data["category"]
+        
+        existing_channel = self.find_existing_channel(identifier)
+
+        if existing_channel:
+            messages.info(
+                self.request,
+                f"Канал {existing_channel.title} уже в каталоге",
+        )
+        return super().form_valid(form)
+    
         log.info(
             f"Начинаем обработку данных для канала; "
             f"- {identifier} лимит - {limit}"
