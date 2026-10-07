@@ -25,6 +25,7 @@ from apps.parser.types import (
     normalize_channel_data,
 )
 from apps.parser.utils import get_telegram_credentials, normalize_channel_username
+from apps.admin.moderation.models import ModerationRequest
 from config.mixins import UserAuthenticationCheckMixin
 from config.renderers import render_inertia_from_dto
 
@@ -136,15 +137,15 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
         language = form.cleaned_data["language"]
         country = form.cleaned_data["country"]
         category = form.cleaned_data["category"]
-        
+
         existing_channel = self.find_existing_channel(identifier)
 
         if existing_channel:
             messages.info(
                 self.request,
                 f"Канал {existing_channel.title} уже в каталоге",
-        )
-        return super().form_valid(form)
+            )
+            return super().form_valid(form)
     
         log.info(
             f"Начинаем обработку данных для канала; "
@@ -172,6 +173,16 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
             # Saving data
             channel, created = self.save_channel(channel_data)
             self.save_stats(channel, channel_data)
+
+            ModerationRequest.objects.create(
+                submitted_by=self.request.user,
+                channel_identifier=identifier,
+                channel_by=channel,
+                category=category,
+                country=country,
+                language=language,
+                status="pending",
+)
 
             # Generating user message
             message = (
