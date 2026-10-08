@@ -3,7 +3,7 @@ from typing import Any
 
 from asgiref.sync import async_to_sync
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
@@ -202,6 +202,21 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
 class ParserListView(ListView):
     model = TelegramChannel
 
+    def get_queryset(self):
+        approved_requests = ModerationRequest.objects.filter(
+            channel_by=OuterRef("pk"),
+            status="approved",
+        )
+
+        channels_with_approved_request = TelegramChannel.objects.annotate(
+            has_approved_request=Exists(approved_requests)
+        )
+
+        return channels_with_approved_request.filter(
+            Q(moderation_requests__isnull=True)
+            | Q(has_approved_request=True)
+        ).distinct()
+
     def get(
         self,
         request: HttpRequest,
@@ -258,9 +273,23 @@ class ChannelLookupView(View):
         if not q:
             return JsonResponse([], safe=False)
 
-        channels = TelegramChannel.objects.filter(
-            Q(title__icontains=q) | Q(username__icontains=q)
-        ).order_by("-participants_count")[:10]
+        approved_requests = ModerationRequest.objects.filter(
+            channel_by=OuterRef("pk"),
+            status="approved",
+        )
+
+        channels = (
+            TelegramChannel.objects.annotate(
+                has_approved_request=Exists(approved_requests)
+        )
+        .filter(
+            Q(moderation_requests__isnull=True)
+            | Q(has_approved_request=True)
+        )
+        .filter(Q(title__icontains=q) | Q(username__icontains=q))
+        .order_by("-participants_count")
+        .distinct()[:10]
+        )
 
         result = list(
             channels.values(
