@@ -141,10 +141,9 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
         existing_channel = self.find_existing_channel(identifier)
 
         if existing_channel:
-            messages.info(
-                self.request,
-                f"Канал {existing_channel.title} уже в каталоге",
-            )
+            self.request.session["flash"] = {
+                "error": f"Канал {existing_channel.title} уже в каталоге"
+            }
             return super().form_valid(form)
     
         log.info(
