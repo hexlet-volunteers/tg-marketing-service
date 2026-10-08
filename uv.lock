@@ -695,15 +695,14 @@ wheels = [
 
 [[package]]
 name = "inertia-django"
-version = "1.2.0"
+version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
-    { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c0/8c/cd86eb4ed94b5f4e7476865710665f41adc71f15cf76537964665aad2388/inertia_django-1.2.0.tar.gz", hash = "sha256:36511038caf2cbb6f54a08f17dc18fe1dd1b30c712a616672704e395b984f250", size = 20119, upload-time = "2025-03-25T04:37:09.462Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/51/ae/abfa389f0944526a813e9c3ab644de091b22c7cf8b5284f4381e066509db/inertia_django-2.0.0.tar.gz", hash = "sha256:89ab1ea1a1f45c3441010ecb3d0bca0b0256404d1b1f84e1f1abd734e21006f5", size = 62091, upload-time = "2026-08-16T19:59:18.291Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a1/bf/04d7c45249338b09034017e7c3e49c83d4aea77748b9e7b09dd73566b4c3/inertia_django-1.2.0-py3-none-any.whl", hash = "sha256:95c99b6dd9e4ba0717a6f0efba048345f306133cc24f04038f30d3e07d847806", size = 22733, upload-time = "2025-03-25T04:37:07.902Z" },
+    { url = "https://files.pythonhosted.org/packages/ab/6a/1c28b9b189b1dc5767b34165b01f65ef46aaab6a38ccc5254a0e3717ccf2/inertia_django-2.0.0-py3-none-any.whl", hash = "sha256:0d8d2200b0d273c39939015d9a2a42b69b7744e2e3b2a9a875bc9fa81df90e73", size = 73300, upload-time = "2026-08-16T19:59:17.082Z" },
 ]
 
 [[package]]
