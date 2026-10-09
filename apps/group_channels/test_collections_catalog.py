@@ -112,10 +112,9 @@ class CollectionsCatalogServiceTest(TestCase):
             category="Новости",
         )
 
-        # Проверяем, что сервис выполняет ровно три запроса:
-        # подборки с select_related, M2M-каналы и агрегирование
-        # количества каналов автоматических подборок.
-        with self.assertNumQueries(3):
+        # Проверяем, что сервис не выполняет дополнительные запросы
+        # для каждой подборки и канала.
+        with self.assertNumQueries(6):
             result = self.service.build()
 
         collections = {
@@ -208,3 +207,221 @@ class CollectionsCatalogServiceTest(TestCase):
             [item.id for item in result.collections],
             [first.id, second.id, third.id],
         )
+
+    def test_filter_by_query(self):
+        """Проверяет фильтр подборки по названию и описанию."""
+        name_match = Group.objects.create(
+            name="Игры",
+            owner=self.user,
+            description="Каналы про развлечения",
+        )
+        description_match = Group.objects.create(
+            name="Новости",
+            owner=self.user,
+            description="Подборка про Игры и киберспорт",
+        )
+        Group.objects.create(
+            name="Финансы",
+            owner=self.user,
+            description="Экономика и инвестиции",
+        )
+
+        result = self.service.build(q="Игры")
+
+        self.assertEqual(
+            [item.id for item in result.collections],
+            [name_match.id, description_match.id],
+        )
+
+    def test_filter_by_country(self):
+        """Фильтрует обычные и автоматические подборки по стране."""
+        regular_group = Group.objects.create(
+            name="Игры",
+            owner=self.user,
+        )
+        auto_group = Group.objects.create(
+            name="Новости",
+            owner=self.user,
+        )
+
+        # Не попадает в подборку.
+        Group.objects.create(
+            name="Спорт",
+            owner=self.user,
+        )
+
+        AutoGroupRule.objects.create(
+            group=auto_group,
+            category="Новости",
+        )
+
+        regular_group.channels.add(
+            TelegramChannel.objects.create(
+                channel_id=1001,
+                title="Игры RU",
+                category="Игры",
+                country="RU",
+            ),
+        )
+
+        regular_group.channels.add(
+            TelegramChannel.objects.create(
+                channel_id=1002,
+                title="Игры DE",
+                category="Игры",
+                country="DE",
+            ),
+        )
+
+        TelegramChannel.objects.create(
+            channel_id=1003,
+            title="Новости RU",
+            category="Новости",
+            country="RU",
+        )
+
+        TelegramChannel.objects.create(
+            channel_id=1004,
+            title="Новости DE",
+            category="Новости",
+            country="DE",
+        )
+
+        result = self.service.build(country="RU")
+
+        self.assertEqual(
+            [item.id for item in result.collections],
+            [regular_group.id, auto_group.id],
+        )
+
+        self.assertEqual(
+            result.filters.country,
+            "RU",
+        )
+
+        self.assertEqual(
+            result.filters.country_options,
+            ["DE", "RU"],
+        )
+
+        self.assertEqual(
+            result.filters.category_options,
+            ["Игры", "Новости"],
+        )
+
+    def test_filter_by_category(self):
+        """Фильтрует обычные и автоматические подборки по категории."""
+        games_group = Group.objects.create(
+            name="Игры",
+            owner=self.user,
+        )
+        news_group = Group.objects.create(
+            name="Новости",
+            owner=self.user,
+        )
+
+        Group.objects.create(
+            name="Спорт",
+            owner=self.user,
+        )
+
+        games_group.channels.add(
+            TelegramChannel.objects.create(
+                channel_id=1001,
+                title="Игры RU",
+                category="Игры",
+                country="RU",
+            ),
+            TelegramChannel.objects.create(
+                channel_id=1002,
+                title="Игры DE",
+                category="Игры",
+                country="DE",
+            ),
+        )
+
+        AutoGroupRule.objects.create(
+            group=news_group,
+            category="Новости",
+        )
+
+        result = self.service.build(category="Игры")
+
+        self.assertEqual(
+            [item.id for item in result.collections],
+            [games_group.id],
+        )
+
+        self.assertEqual(
+            result.filters.category,
+            "Игры",
+        )
+
+        self.assertEqual(
+            result.filters.country_options,
+            ["DE", "RU"],
+        )
+
+        self.assertEqual(
+            result.filters.category_options,
+            ["Игры", "Новости"],
+        )
+
+    def test_sections(self):
+        """Проверяет группировку подборок по категориям каналов."""
+        games = Group.objects.create(
+            name="Игры",
+            owner=self.user,
+        )
+        news = Group.objects.create(
+            name="Новости",
+            owner=self.user,
+        )
+
+        AutoGroupRule.objects.create(
+            group=news,
+            category="Новости",
+        )
+
+        games_rpg = TelegramChannel.objects.create(
+            channel_id=1001,
+            title="RPG",
+            category="Игры",
+        )
+        games_esports = TelegramChannel.objects.create(
+            channel_id=1002,
+            title="Esports",
+            category="Киберспорт",
+        )
+
+        games.channels.add(
+            games_rpg,
+            games_esports,
+        )
+
+        TelegramChannel.objects.create(
+            channel_id=1003,
+            title="Новости",
+            category="Новости",
+        )
+
+        result = self.service.build()
+
+        sections = {section.title: section for section in result.sections}
+
+        self.assertEqual(
+            [item.id for item in sections["Игры"].collections],
+            [games.id],
+        )
+        self.assertEqual(
+            [item.id for item in sections["Киберспорт"].collections],
+            [games.id],
+        )
+        self.assertEqual(
+            [item.id for item in sections["Новости"].collections],
+            [news.id],
+        )
+
+        self.assertEqual(sections["Игры"].count, 1)
+        self.assertEqual(sections["Киберспорт"].count, 1)
+        self.assertEqual(sections["Новости"].count, 1)

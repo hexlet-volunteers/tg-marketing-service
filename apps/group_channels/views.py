@@ -206,7 +206,15 @@ class CollectionsCatalogView(View):
         *args: Any,
         **kwargs: Any,
     ) -> HttpResponse:
-        dto = CollectionsCatalogService().build()
+        q = request.GET.get("q", "").strip() or None
+        country = request.GET.get("country", "").strip() or None
+        category = request.GET.get("category", "").strip() or None
+
+        dto = CollectionsCatalogService().build(
+            q=q,
+            country=country,
+            category=category,
+        )
 
         return inertia_render(
             request,
