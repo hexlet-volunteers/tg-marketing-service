@@ -6,7 +6,7 @@ import { Footer } from './Footer';
 import  Header from './Header';
 import { NavBar } from './NavBar';
 
-const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [opened, { close, toggle }] = useDisclosure(false);
   const { pathname } = useLocation();
   const showSearchBar = pathname !== '/auth';
