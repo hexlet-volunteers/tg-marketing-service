@@ -32,6 +32,13 @@ class ChannelVisibilityTest(TestCase):
             "Rejected channel",
             "rejected_channel",
         )
+
+        self.pending_channel.is_public = False
+        self.pending_channel.save(update_fields=["is_public"])
+
+        self.rejected_channel.is_public = False
+        self.rejected_channel.save(update_fields=["is_public"])
+
         self.approved_channel = self.create_channel(
             1004,
             "Approved channel",
@@ -92,4 +99,28 @@ class ChannelVisibilityTest(TestCase):
         self.assertEqual(
             visible_usernames,
             {"unmoderated_channel", "approved_channel"},
+        )
+
+
+    def test_new_channel_without_moderation_request_is_hidden(self):
+        channel = self.create_channel(
+            1005,
+            "Failed parsing channel",
+            "failed_parsing_channel",
+        )
+        channel.is_public = False
+        channel.save(update_fields=["is_public"])
+
+        from apps.parser.views import ParserListView
+
+        visible_ids = set(
+            ParserListView()
+            .get_queryset()
+            .values_list("channel_id", flat=True)
+        )
+
+        self.assertNotIn(channel.channel_id, visible_ids)
+        self.assertIn(
+            self.unmoderated_channel.channel_id,
+            visible_ids,
         )
