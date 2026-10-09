@@ -82,6 +82,11 @@ class TelegramChannel(models.Model):
     is_verified = models.BooleanField(
         default=False, db_index=True, verbose_name="Прошел верификацию"
     )
+    is_public = models.BooleanField(
+        default=True,
+        db_index=True,
+        verbose_name="Доступен в каталоге",
+)
     verified_at = models.DateTimeField(
         null=True, blank=True, verbose_name="Дата верификации"
     )

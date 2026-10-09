@@ -55,3 +55,16 @@ def get_telegram_credentials(
         )
 
     return api_id_int, api_hash, session_string
+
+def normalize_channel_username(username: str) -> str:
+    """Normalize a Telegram channel username for comparison."""
+    normalized = username.strip().lower()
+
+    if normalized.startswith("https://t.me/"):
+        normalized = normalized[len("https://t.me/") :]
+    elif normalized.startswith("http://t.me/"):
+        normalized = normalized[len("http://t.me/") :]
+    elif normalized.startswith("t.me/"):
+        normalized = normalized[len("t.me/") :]
+
+    return normalized.lstrip("@")

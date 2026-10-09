@@ -57,8 +57,14 @@ class ModerationService:
                 channel.category = category
                 channel.is_verified = is_verified
                 channel.verified_at = resolved_at if is_verified else None
+                channel.is_public = True
                 channel.save(
-                    update_fields=["category", "is_verified", "verified_at"]
+                    update_fields=[
+                        "category",
+                        "is_verified",
+                        "verified_at",
+                        "is_public",
+                    ]
                 )
 
                 moderation_request.status = "approved"
