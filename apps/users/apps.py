@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib import import_module
 from typing import TYPE_CHECKING
 
 from allauth.socialaccount.signals import social_account_added
@@ -16,6 +17,8 @@ class UsersConfig(AppConfig):
     name = "apps.users"
 
     def ready(self):
+        import_module("apps.users.signals")
+
         @receiver(social_account_added)
         def handle_yandex_login(
             sender: type[SocialLogin],

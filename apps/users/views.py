@@ -216,7 +216,7 @@ class LoginView(View):
         request: HttpRequest,
         *args: Any,
         **kwargs: Any,
-    ) -> InertiaResponse:
+    ) -> InertiaResponse | HttpResponseRedirect:
         form = UserLoginForm(request, request.POST)
 
         # валидируем данные
@@ -227,15 +227,8 @@ class LoginView(View):
             # записываем пользователя в сессию
             login(request, user)
 
-            # возвращаем компонент и props
-            return inertia_render(
-                request,
-                "Home",
-                props={
-                    "flash": {"success": "Вы залогинены"},
-                    "user": {"username": request.POST.get("username")},
-                },
-            )
+            request.session["flash"] = {"success": "Вы залогинены"}
+            return redirect("homepage:dashboard")
 
         else:
             # Ошибки валидации
@@ -678,12 +671,12 @@ class RestorePasswordView(View):
 
         try:
             uid_decoded = urlsafe_base64_decode(uid).decode()
-        except TypeError:
+        except (TypeError, ValueError, UnicodeDecodeError):
             request.session["flash"] = {"error": "Некорректный id пользователя"}
             return redirect("users:login")
         try:
             user = User.objects.get(pk=uid_decoded)
-        except User.DoesNotExist:
+        except (User.DoesNotExist, ValueError, OverflowError):
             request.session["flash"] = {"error": "Пользователь не найден"}
             return redirect("users:login")
 
@@ -727,12 +720,12 @@ class RestorePasswordView(View):
 
         try:
             uid_decoded = urlsafe_base64_decode(uid).decode()
-        except TypeError:
+        except (TypeError, ValueError, UnicodeDecodeError):
             request.session["flash"] = {"error": "Некорректный id пользователя"}
             return redirect("users:login")
         try:
             user = User.objects.get(pk=uid_decoded)
-        except User.DoesNotExist:
+        except (User.DoesNotExist, ValueError, OverflowError):
             request.session["flash"] = {"error": "Пользователь не найден"}
             return redirect("users:login")
 
@@ -752,8 +745,8 @@ class RestorePasswordView(View):
             request,
             "RestorePassword",
             props={
-                "new_password1": request.POST.get("new_password1", ""),
-                "new_password2": request.POST.get("new_password2", ""),
+                "new_password1": "",
+                "new_password2": "",
                 "uid": uid,
                 "token": token,
                 "errors": form.errors,
