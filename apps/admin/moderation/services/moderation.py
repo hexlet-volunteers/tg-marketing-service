@@ -33,11 +33,19 @@ class ModerationService:
         try:
             with transaction.atomic():
                 moderation_request = cls._get_pending(request_id)
-                channel = moderation_request.channel_by
+                channel_id = moderation_request.channel_by_id
+                channel = (
+                    TelegramChannel.objects.select_for_update()
+                    .filter(pk=channel_id)
+                    .first()
+                    if channel_id is not None
+                    else None
+                )
                 if channel is None:
                     raise ModerationError(
                         "Нельзя одобрить заявку без связанного канала"
                     )
+                moderation_request.channel_by = channel
 
                 username = channel.username
                 duplicate = cls._find_duplicate(channel, username)
@@ -109,7 +117,6 @@ class ModerationService:
     def _get_pending(request_id: int) -> ModerationRequest:
         moderation_request = (
             ModerationRequest.objects.select_for_update()
-            .select_related("channel_by")
             .filter(pk=request_id)
             .first()
         )

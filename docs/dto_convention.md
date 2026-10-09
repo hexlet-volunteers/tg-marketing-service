@@ -152,9 +152,7 @@ props = dto.model_dump(mode="json")
 return render_inertia(
     request,
     "ChannelAnalytics",
-    props={
-        "channels": TelegramChannel.objects.all()
-    },
+    props={"channels": TelegramChannel.objects.all()},
 )
 ```
 Не создавать вручную структуры данных во view.

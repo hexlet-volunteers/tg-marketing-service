@@ -93,6 +93,7 @@ class PersonalDataExportTest(TestCase):
         self.assertEqual(payload["format_version"], "1.0")
 
         data = payload["personal_data"]
+        self.assertIn("consents", data)
         self.assertEqual(
             set(data["profile"]),
             {

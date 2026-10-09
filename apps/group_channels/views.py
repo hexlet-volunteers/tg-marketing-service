@@ -41,7 +41,6 @@ class CreateGroupView(UserAuthenticationCheckMixin, View):
                     "flash": {"success": "Группа успешно создана"},
                     "group": {"name": group.name},
                 },
-                url="/profile",
             )
         return inertia_render(
             request,
