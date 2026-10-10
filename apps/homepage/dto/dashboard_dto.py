@@ -3,6 +3,11 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
+class Growth30dDTO(BaseModel):
+    abs: int
+    percent: float
+
+
 class StatsDTO(BaseModel):
     channels: int
     posts: int
@@ -15,7 +20,7 @@ class ChannelDTO(BaseModel):
     subscribers: int = Field(ge=0)
     posts: int = Field(ge=0)
     views: int = Field(ge=0)
-    engagement: float = Field(ge=0, le=100)
+    engagement: float = Field(ge=0)
     growth: float
     is_verified: bool = False
 

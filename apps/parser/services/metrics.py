@@ -1,7 +1,7 @@
 import math
 from typing import Any, Optional, Tuple
 
-from django.db.models import Count
+from django.db.models import Count, F
 
 from apps.parser.models import Post, TelegramChannel
 
@@ -53,48 +53,114 @@ def compute_normalized_citation(
     return round(math.log1p(total), 4)
 
 
+def get_citation_index(channel: TelegramChannel) -> float:
+    """
+    Интерфейс для получения индекса цитируемости канала
+    """
+    return channel.citation_index
+
+
+def _calculate_and_save_index(
+    channel: TelegramChannel, repost_count: int, mention_count: int
+) -> None:
+    """
+    Общая логика расчета и сохранения индекса.
+    """
+    new_index = compute_normalized_citation(repost_count, mention_count)
+    if channel.citation_index != new_index:
+        channel.citation_index = new_index
+        channel.save(update_fields=["citation_index"])
+
+
+def update_single_channel_citation_index(channel_id: int) -> None:
+    """
+    Точечный пересчет для одного канала.
+    """
+    try:
+        channel = TelegramChannel.objects.get(channel_id=channel_id)
+    except TelegramChannel.DoesNotExist:
+        return
+
+    # Считаем репосты
+    repost_count = (
+        Post.objects.filter(fwd_from=channel_id)
+        .exclude(channel_id=F("fwd_from"))
+        .count()
+    )
+
+    # Считаем упоминания (используем фильтр по списку)
+    mention_count = 0
+    # Ищем посты, где в поле mentions есть ID или username канала
+    mention_posts = Post.objects.filter(mentions__contains=[str(channel_id)])
+    if channel.username:
+        mention_posts |= Post.objects.filter(
+            mentions__contains=[channel.username.lstrip("@").casefold()]
+        )
+
+    for post in mention_posts.iterator():
+        author_id = post.channel_id
+        author_username = (
+            post.channel.username.lstrip("@").casefold()
+            if post.channel.username
+            else None
+        )
+
+        for mention in post.mentions:
+            m_key = (
+                mention.lstrip("@").casefold()
+                if isinstance(mention, str)
+                else str(mention)
+            )
+            if not (m_key == author_username or m_key == str(author_id)):
+                mention_count += 1
+
+    _calculate_and_save_index(channel, repost_count, mention_count)
+
+
 def update_channels_citation_indices() -> None:
-    # репосты (fwd_from)
+    """
+    Глобальный пересчет всех каналов.
+    """
+    # 1. Считаем репосты для всех сразу
     repost_stats = (
         Post.objects.filter(fwd_from__isnull=False)
+        .exclude(channel_id=F("fwd_from"))
         .values("fwd_from")
         .annotate(count=Count("id"))
     )
-    repost_map = {
-        int(item["fwd_from"]): item["count"]
-        for item in repost_stats
-        if item["fwd_from"]
-    }
+    repost_map = {item["fwd_from"]: item["count"] for item in repost_stats}
 
-    # проход по всем постам с упоминаниями
+    # 2. Считаем упоминания для всех
     mention_map: dict[Any, int] = {}
-    for post in (
+    posts = (
         Post.objects.filter(mentions__isnull=False)
         .exclude(mentions=[])
+        .select_related("channel")
         .iterator()
-    ):
-        for m in post.mentions:
-            m_key = m
-            if isinstance(m, str):
-                m_key = m.lstrip("@")
+    )
+    for post in posts:
+        author_id = post.channel_id
+        author_username = (
+            post.channel.username.lstrip("@").casefold()
+            if post.channel.username
+            else None
+        )
+        for mention in post.mentions:
+            m_key = (
+                mention.lstrip("@").casefold()
+                if isinstance(mention, str)
+                else str(mention)
+            )
+            if not (m_key == author_username or m_key == str(author_id)):
+                mention_map[m_key] = mention_map.get(m_key, 0) + 1
 
-            try:
-                m_key = int(m_key)
-            except (ValueError, TypeError):
-                pass
-
-            mention_map[m_key] = mention_map.get(m_key, 0) + 1
-
-    channels = TelegramChannel.objects.all()
-    for channel in channels:
+    # 3. Применяем ко всем каналам через общую функцию
+    for channel in TelegramChannel.objects.all():
         r_count = repost_map.get(channel.channel_id, 0)
-
-        m_count = mention_map.get(channel.channel_id, 0)
+        m_count = mention_map.get(str(channel.channel_id), 0)
         if channel.username:
-            m_count += mention_map.get(channel.username.lstrip("@"), 0)
+            m_count += mention_map.get(
+                channel.username.lstrip("@").casefold(), 0
+            )
 
-        new_index = compute_normalized_citation(r_count, m_count)
-
-        if channel.citation_index != new_index:
-            channel.citation_index = new_index
-            channel.save(update_fields=["citation_index"])
+        _calculate_and_save_index(channel, r_count, m_count)
