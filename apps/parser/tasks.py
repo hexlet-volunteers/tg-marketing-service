@@ -13,6 +13,10 @@ from telethon.sessions import StringSession
 from apps.parser.models import ChannelStats, Post, TelegramChannel
 from apps.parser.parser import tg_parser
 from apps.parser.services.analysis import PostAnalysisService
+from apps.parser.services.metrics import (
+    update_channels_citation_indices,
+    update_single_channel_citation_index,
+)
 from apps.parser.types import (
     ParsedChannelData,
     normalize_channel_data,
@@ -66,6 +70,10 @@ def parse_channel(channel_id: int) -> None:
                 await sync_to_async(save_channel_stats)(
                     channel_obj,
                     channel_data,
+                )
+                log.info(f"Updating citation index {channel_obj.channel_id}")
+                await sync_to_async(update_single_channel_citation_index)(
+                    channel_obj.channel_id
                 )
             except (DatabaseError, IntegrityError) as e:
                 log.error(
@@ -149,6 +157,8 @@ def parse_all_channels() -> None:
             f"next one in {pause:.2f} s"
         )
         time.sleep(pause)
+    update_citation_indices_task.delay()  # type: ignore[attr-defined]
+    log.info("All parsing tasks scheduled. Citation index update task queued.")
 
 
 @shared_task
@@ -164,4 +174,20 @@ def run_post_analysis_task(post_id: int):
     except Exception as e:
         log.error(
             f"Error during analysis for post {post_id}: {e}", exc_info=True
+        )
+
+
+@shared_task
+def update_citation_indices_task() -> None:
+    """
+    Задача для пересчета индексов цитируемости всех каналов.
+    Выполняется в фоне, чтобы не нагружать процесс парсинга.
+    """
+    log.info("Starting global citation index recalculation...")
+    try:
+        update_channels_citation_indices()
+        log.info("Citation index recalculation completed successfully.")
+    except Exception as e:
+        log.error(
+            f"Error during citation index recalculation: {e}", exc_info=True
         )
