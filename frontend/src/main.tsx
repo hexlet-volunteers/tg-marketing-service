@@ -5,27 +5,21 @@ import type { ComponentType } from "react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "vite/modulepreload-polyfill";
-import App from "./app/App.tsx";
 import { theme } from "./app/theme.ts";
-const pages = import.meta.glob("./pages/**/*.tsx");
+import Layout from "./components/Layout/Layout.tsx";
 
-createRoot(document.getElementById("root")!).render(
-    <StrictMode>
-        <App />
-    </StrictMode>,
-);
+const pages = import.meta.glob<ComponentType>("./pages/**/*.tsx");
 
 document.addEventListener("DOMContentLoaded", () => {
     createInertiaApp({
-        resolve: (name: string) => {
+        resolve: async (name: string) => {
             const importPage = pages[`./pages/${name}.tsx`];
             if (!importPage) {
                 throw new Error(`Page ${name} not found`);
             }
-            return importPage().then(
-                (module) => (module as { default: ComponentType }).default,
-            );
+            return await importPage()
         },
+        layout: () => Layout,
         setup({ el, App, props }) {
             createRoot(el).render(
                 <StrictMode>

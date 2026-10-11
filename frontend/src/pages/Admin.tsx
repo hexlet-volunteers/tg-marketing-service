@@ -20,7 +20,7 @@ import {
 import type { UserRequestProps } from "@/types/user";
 import { mockUserRequests } from "@/utils/addColors";
 
-export default function AdminPage({ userRequests = mockUserRequests }: UserRequestProps ) {
+export default function Admin({ userRequests = mockUserRequests }: UserRequestProps ) {
   return (
     <Container>
       <Group mb={8}>

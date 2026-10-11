@@ -19,7 +19,6 @@ import {
 } from "@mantine/core";
 import { InsightCard } from "@/components/ui/InsightCard";
 import { IconArrowLeft, IconSparkles, IconBrain } from "@tabler/icons-react";
-import { useNavigate } from "react-router-dom";
 import { mockReactions, MOCK_ANALYSIS_DATA } from "@/shared/mocks/posts";
 import type { PostPageProps, PostAnalysis } from "@/types/post";
 
@@ -38,11 +37,10 @@ import type { PostPageProps, PostAnalysis } from "@/types/post";
  *   3. Завершена (вывод карточек инсайтов "Почему зашел", "Что улучшить" и "Похожие идеи").
  */
 
-const PostPage: React.FC<PostPageProps> = ({
+const Post: React.FC<PostPageProps> = ({
  reactions = mockReactions,
  analysis: propAnalysis = MOCK_ANALYSIS_DATA,
 }) => {
- const navigate = useNavigate();
 
  const [analysis, setAnalysis] = useState<PostAnalysis | null>(null);
 
@@ -76,7 +74,7 @@ const PostPage: React.FC<PostPageProps> = ({
     color="tgblue"
     leftSection={<IconArrowLeft size={16} />}
     mb="md"
-    onClick={() => navigate(-1)}
+    onClick={() => window.history.back()}
    >
     Назад к каналу
    </Button>
@@ -222,4 +220,4 @@ const PostPage: React.FC<PostPageProps> = ({
  );
 };
 
-export default PostPage;
+export default Post;

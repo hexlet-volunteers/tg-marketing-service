@@ -1,6 +1,6 @@
 interface User {
-  name: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   email: string;
 }
 
@@ -11,7 +11,7 @@ interface UserNotification {
 
 interface UserProfilePageProps {
   user: User;
-  notifications: UserNotification[];
+  notifications: UserNotification[] | null;
 }
 
 interface UserRequest {

@@ -14,7 +14,7 @@ import React from 'react';
 import type { ComparePageProps } from '@/types/channel';
 import { mockMetrics } from '@/shared/mocks/metrics';
 
-const ComparePage: React.FC<ComparePageProps> = ({
+const Compare: React.FC<ComparePageProps> = ({
   metrics = mockMetrics, 
   channels = channelsCol.slice(0, 3)
 }) => {
@@ -111,4 +111,4 @@ const ComparePage: React.FC<ComparePageProps> = ({
   );
 };
 
-export default ComparePage;
+export default Compare;

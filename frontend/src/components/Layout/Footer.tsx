@@ -1,5 +1,5 @@
 import { Anchor, Avatar, Badge, Box, Group, SimpleGrid, Stack, Text, Title } from '@mantine/core';
-import { useNavigate } from 'react-router-dom';
+import { router } from '@inertiajs/react';
 
 const data = [
   {
@@ -31,7 +31,6 @@ const data = [
 ];
 
 export function Footer() {
-  const navigate = useNavigate();
   const groups = data.map((group) => {
     const links = group.links.map((link, index) => (
       <Anchor
@@ -79,7 +78,7 @@ export function Footer() {
         <Text size="sm" c="dimmed">
           © 2026 tgpulse · Прототип
         </Text>
-        <Badge variant="light" onClick={() => navigate('/nonexistent')} style={{ cursor: 'pointer' }}>
+        <Badge variant="light" onClick={() => router.visit('/nonexistent')} style={{ cursor: 'pointer' }}>
           Пример страницы 404 →
         </Badge>
       </Group>

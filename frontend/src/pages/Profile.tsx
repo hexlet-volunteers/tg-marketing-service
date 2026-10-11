@@ -14,13 +14,13 @@ import {
   Title,
 } from '@mantine/core';
 import { IconEdit, IconLogout, IconPlus } from '@tabler/icons-react';
-import { useNavigate } from 'react-router-dom';
+import { router } from '@inertiajs/react';
 import type { UserProfilePageProps } from '@/types/user';
 import { mockUser, mockNotifications } from '@/shared/mocks/user';
 
 
-const UserProfilePage = ({ user = mockUser, notifications = mockNotifications }: UserProfilePageProps ) => {
-  const navigate = useNavigate();
+const Profile = ({ user = mockUser, notifications }: UserProfilePageProps ) => {
+  const notificationItems = notifications ?? mockNotifications;
 
   return (
     <Container>
@@ -32,9 +32,9 @@ const UserProfilePage = ({ user = mockUser, notifications = mockNotifications }:
         <Paper withBorder p="lg" radius="md">
           <Title order={3} mb="md">Профиль</Title>
           <Group gap="md" mb="lg">
-            <BrandAvatar name={user.name} size={58} />
+            <BrandAvatar name={`${user.first_name} ${user.last_name}`} size={58} />
             <div>
-              <Title order={4}>{user.name} {user.lastName}</Title>
+              <Title order={4}>{user.first_name} {user.last_name}</Title>
               <Text size="sm" c="dimmed">{user.email}</Text>
             </div>
           </Group>
@@ -46,7 +46,7 @@ const UserProfilePage = ({ user = mockUser, notifications = mockNotifications }:
               size="sm"
               color="tgred"
               leftSection={<IconLogout size={14} />}
-              onClick={() => navigate('/auth')}
+              onClick={() => router.visit('/auth/logout/')}
             >
               Выйти
             </Button>
@@ -60,7 +60,7 @@ const UserProfilePage = ({ user = mockUser, notifications = mockNotifications }:
           <Paper p="md" radius="md" bg="tgblue.0" mb="md">
             <Text size="sm" fw={600} mb="xs">Получите больше возможностей</Text>
             <Text size="xs" c="dimmed" mb="sm">AI-инсайты, сравнение каналов, экспорт данных</Text>
-            <Button size="sm" variant="filled" color="tgblue" onClick={() => navigate('/')}>
+            <Button size="sm" variant="filled" color="tgblue" onClick={() => router.visit('/')}>
               Перейти на Pro
             </Button>
           </Paper>
@@ -84,7 +84,7 @@ const UserProfilePage = ({ user = mockUser, notifications = mockNotifications }:
 
         <SectionCard title="Уведомления">
           <Stack>
-            {notifications.map((n, i) => (
+            {notificationItems.map((n, i) => (
               <Group key={i} justify="space-between">
                 <Text size="sm">{n.label}</Text>
                 <Switch size="sm" defaultChecked={n.defaultChecked} />
@@ -97,4 +97,4 @@ const UserProfilePage = ({ user = mockUser, notifications = mockNotifications }:
   );
 };
 
-export default UserProfilePage;
+export default Profile;

@@ -1,8 +1,7 @@
 import { Button, Container, Group, Stack, Text, Title } from "@mantine/core";
-import { useNavigate } from 'react-router-dom';
+import { router } from '@inertiajs/react';
 
-export default function NotFoundPage() {
-  const navigate = useNavigate();
+export default function NotFound() {
   return (
     <Container>
     <Stack align="center" gap="xs">
@@ -24,8 +23,8 @@ export default function NotFoundPage() {
       </Text>
 
       <Group mt="md">
-        <Button radius="md" onClick={() => navigate('/')}>На главную</Button>
-        <Button variant="default" radius="md" onClick={() => navigate('/channels')}>
+        <Button radius="md" onClick={() => router.visit('/')}>На главную</Button>
+        <Button variant="default" radius="md" onClick={() => router.visit('/channels/')}>
           В каталог
         </Button>
       </Group>

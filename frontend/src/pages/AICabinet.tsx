@@ -19,7 +19,7 @@ import {
 import { InsightCard } from '@/components/ui/InsightCard';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { IconSend, IconSparkles } from '@tabler/icons-react';
-import { useNavigate } from 'react-router-dom';
+import { router } from '@inertiajs/react';
 import type { AiCabinetPageProps } from '@/types/aiCabinet';
 import { mockCompetitors, mockHeatMapData } from '@/shared/mocks/aiPageData';
 import { mockIdeas, mockInsights } from '@/utils/makeIdeasAndInsights';
@@ -27,14 +27,13 @@ import { formatNumber } from '@/utils/formatNumberShort';
 import getHeatColor from '@/utils/getHeatColor';
 import staticData from '@/shared/const/AICabinetPageStaticData';
 
-const AICabinetPage = ({
+const AICabinet = ({
   ideas = mockIdeas, 
   insights = mockInsights, 
   competitors= mockCompetitors, 
   heatMapData = mockHeatMapData,
 }: AiCabinetPageProps) => {
   const { quickQuestions, daysOfWeek, hours} = staticData
-  const navigate = useNavigate();
   const [questionText, setQuestionText] = useState('');
 
   return (
@@ -119,7 +118,7 @@ const AICabinetPage = ({
                 size="xs"
                 variant="subtle"
                 color="tgblue"
-                onClick={() => navigate('/compare')}
+                onClick={() => router.visit('/compare/')}
               >
                 Сравнить все каналы
               </Button>
@@ -228,4 +227,4 @@ const AICabinetPage = ({
   );
 };
 
-export default AICabinetPage;
+export default AICabinet;
