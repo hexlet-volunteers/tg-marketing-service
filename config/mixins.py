@@ -165,11 +165,3 @@ class AdminRequiredMixin(RoleRequiredMixin):
 
     allowed_roles = ["admin"]
     permission_denied_message = "Доступ только для администраторов"
-
-    def _test_role(self, request: HttpRequest) -> bool:
-        """Дополнительная проверка статуса администратора"""
-        return super()._test_role(request) and (
-            getattr(request, "role", None) == "admin"
-            or getattr(request.user, "is_staff", False)
-            or getattr(request.user, "is_superuser", False)
-        )

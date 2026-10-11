@@ -194,7 +194,7 @@ class IndexViewTest(TestCase):
         self.assertEqual(props["auth"]["role"], "user")
         self.assertFalse(props["is_admin"])
 
-    def test_is_admin_true_for_superuser(self) -> None:
+    def test_is_admin_false_for_superuser(self) -> None:
         user = User.objects.create_user(
             username="superuser",
             email="super@example.com",
@@ -207,7 +207,22 @@ class IndexViewTest(TestCase):
         props = self._get_inertia_props("homepage:dashboard")
 
         self.assertEqual(props["role"], "user")
-        self.assertTrue(props["is_admin"])
+        self.assertFalse(props["is_admin"])
+
+    def test_is_admin_false_for_staff(self) -> None:
+        user = User.objects.create_user(
+            username="staffuser",
+            email="staff@example.com",
+            password="secret123",
+            role="user",
+            is_staff=True,
+        )
+        self.client.force_login(user)
+
+        props = self._get_inertia_props("homepage:dashboard")
+
+        self.assertEqual(props["role"], "user")
+        self.assertFalse(props["is_admin"])
 
     def test_invalid_flash_values_normalized_to_none(self) -> None:
         for invalid_flash in ["", "plain string", {}, []]:

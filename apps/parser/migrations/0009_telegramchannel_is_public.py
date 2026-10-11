@@ -4,15 +4,16 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('parser', '0008_post_hashtags'),
+        ("parser", "0008_post_hashtags"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='telegramchannel',
-            name='is_public',
-            field=models.BooleanField(db_index=True, default=True, verbose_name='Доступен в каталоге'),
+            model_name="telegramchannel",
+            name="is_public",
+            field=models.BooleanField(
+                db_index=True, default=True, verbose_name="Доступен в каталоге"
+            ),
         ),
     ]

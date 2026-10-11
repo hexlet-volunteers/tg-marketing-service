@@ -1,7 +1,4 @@
-from unittest.mock import patch
-
 from django.contrib.auth import get_user_model
-from django.http import HttpResponse
 from django.test import TestCase
 from django.urls import reverse
 
@@ -10,7 +7,7 @@ from apps.parser.models import TelegramChannel
 
 
 class ChannelVisibilityTest(TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.user = get_user_model().objects.create_user(
             username="visibility_test_user",
             email="visibility_test_user@example.com",
@@ -49,17 +46,21 @@ class ChannelVisibilityTest(TestCase):
         self.create_moderation_request(self.rejected_channel, "rejected")
         self.create_moderation_request(self.approved_channel, "approved")
 
-    def create_channel(self, channel_id, title, username):
+    def create_channel(
+        self, channel_id: int, title: str, username: str
+    ) -> TelegramChannel:
         return TelegramChannel.objects.create(
             channel_id=channel_id,
             title=title,
             username=username,
         )
 
-    def create_moderation_request(self, channel, status):
+    def create_moderation_request(
+        self, channel: TelegramChannel, status: str
+    ) -> ModerationRequest:
         return ModerationRequest.objects.create(
             submitted_by=self.user,
-            channel_identifier=channel.username,
+            channel_identifier=channel.username or "",
             channel_by=channel,
             category="test",
             country="test",
@@ -71,9 +72,7 @@ class ChannelVisibilityTest(TestCase):
         from apps.parser.views import ParserListView
 
         visible_ids = set(
-            ParserListView()
-            .get_queryset()
-            .values_list("channel_id", flat=True)
+            ParserListView().get_queryset().values_list("channel_id", flat=True)
         )
 
         self.assertEqual(
@@ -92,15 +91,12 @@ class ChannelVisibilityTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-        visible_usernames = {
-            channel["username"] for channel in response.json()
-        }
+        visible_usernames = {channel["username"] for channel in response.json()}
 
         self.assertEqual(
             visible_usernames,
             {"unmoderated_channel", "approved_channel"},
         )
-
 
     def test_new_channel_without_moderation_request_is_hidden(self):
         channel = self.create_channel(
@@ -114,9 +110,7 @@ class ChannelVisibilityTest(TestCase):
         from apps.parser.views import ParserListView
 
         visible_ids = set(
-            ParserListView()
-            .get_queryset()
-            .values_list("channel_id", flat=True)
+            ParserListView().get_queryset().values_list("channel_id", flat=True)
         )
 
         self.assertNotIn(channel.channel_id, visible_ids)

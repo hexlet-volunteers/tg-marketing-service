@@ -2,23 +2,20 @@ import os
 import subprocess
 import sys
 import tempfile
+from unittest.mock import patch
 
 import pytest
+from django.contrib.auth import get_user_model
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.exceptions import ImproperlyConfigured
+from django.test import RequestFactory
 from django.test.utils import override_settings
 
-from apps.parser.models import TelegramChannel
 from apps.admin.moderation.models import ModerationRequest
+from apps.parser.models import TelegramChannel
 from apps.parser.tasks import parse_channel
 from apps.parser.utils import get_telegram_credentials
 from apps.parser.views import ParserView
-
-from unittest.mock import patch
-
-from django.test import RequestFactory
-from django.contrib.messages.storage.fallback import FallbackStorage
-from django.contrib.auth import get_user_model
-
 
 TELEGRAM_ENV_VARS = [
     "TELEGRAM_API_ID",
@@ -144,7 +141,6 @@ def test_parse_channel_raises_without_telegram_credentials() -> None:
         parse_channel(channel.channel_id)
 
 
-
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "channel_identifier",
@@ -176,6 +172,7 @@ def test_parser_view_does_not_parse_existing_channel(
     assert result.username == "example_channel"
     mock_parser.assert_not_called()
 
+
 @pytest.mark.django_db
 def test_parser_view_notifies_about_existing_channel() -> None:
     TelegramChannel.objects.create(
@@ -189,8 +186,8 @@ def test_parser_view_notifies_about_existing_channel() -> None:
     request = RequestFactory().post("/parser/")
     view.setup(request)
 
-    request.session = {}
-    request._messages = FallbackStorage(request)
+    setattr(request, "session", {})
+    setattr(request, "_messages", FallbackStorage(request))
 
     form = view.get_form_class()(
         data={
@@ -211,6 +208,7 @@ def test_parser_view_notifies_about_existing_channel() -> None:
 
     assert response.status_code == 302
 
+
 @pytest.mark.django_db
 def test_parser_view_creates_pending_moderation_request() -> None:
     user_model = get_user_model()
@@ -224,8 +222,8 @@ def test_parser_view_creates_pending_moderation_request() -> None:
     view = ParserView()
     request = RequestFactory().post("/parser/")
     request.user = user
-    request.session = {}
-    request._messages = FallbackStorage(request)
+    setattr(request, "session", {})
+    setattr(request, "_messages", FallbackStorage(request))
     view.setup(request)
 
     form = view.get_form_class()(
@@ -264,5 +262,7 @@ def test_parser_view_creates_pending_moderation_request() -> None:
     assert response.status_code == 302
     assert moderation_request.status == "pending"
     assert moderation_request.submitted_by == user
-    assert moderation_request.channel_by.channel_id == 987654321
+    channel = moderation_request.channel_by
+    assert channel is not None
+    assert channel.channel_id == 987654321
     assert moderation_request.channel_identifier == "@new_channel"
