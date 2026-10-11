@@ -9,13 +9,12 @@ import {
   Text,
   Title
 } from "@mantine/core";
-import { useNavigate } from "react-router-dom";
+import { router } from "@inertiajs/react";
 import SmallArticle from "@/components/ui/SmallArticle";
 import type { BlogPageProps } from '@/types/article';
 import { mockArticles } from "@/utils/addColors";
 
 export default function BlogPage ({ articles = mockArticles }: BlogPageProps) {
-  const navigate = useNavigate();
 
   return (
     <Container>
@@ -27,7 +26,7 @@ export default function BlogPage ({ articles = mockArticles }: BlogPageProps) {
         </Text>
       </Box>
 
-        <Card withBorder padding={0} onClick={() => navigate('/blog/kak-ai-pomogaet-avtoram-rasti-v-2-raza-bystree')}>
+        <Card withBorder padding={0} onClick={() => router.visit('/blog/kak-ai-pomogaet-avtoram-rasti-v-2-raza-bystree/')}>
           <Grid>
             <Grid.Col span={{ base: 12, md: 7 }}>
               <Box
@@ -63,7 +62,7 @@ export default function BlogPage ({ articles = mockArticles }: BlogPageProps) {
 
       <SimpleGrid cols={{ base: 1, md: 3 }}>
         {articles.map((article) => (
-          <SmallArticle key={article.id} {...article} onClick={() => navigate(`/blog/${article.id}`)} />
+          <SmallArticle key={article.id} {...article} onClick={() => router.visit(`/blog/${article.id}/`)} />
         ))}
       </SimpleGrid>
       </Stack>

@@ -8,7 +8,7 @@ import {
   Title,
 } from '@mantine/core';
 import React, { useMemo, useState } from 'react';
-import ChannelCard from '../ui/ChannelCard';
+import ChannelCard from '@/components/ui/ChannelCard';
 import type { ChannelsProps } from '@/types/channel';
 import channelsCol from '@/shared/mocks/channelsCollection';
 

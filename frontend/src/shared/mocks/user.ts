@@ -1,8 +1,8 @@
 import type { User, UserNotification } from "@/types/user";
 
 export const mockUser: User = {
-  name: 'Мария',
-  lastName: 'Логинова',
+  first_name: 'Мария',
+  last_name: 'Логинова',
   email: 'maria@example.com'
 }
 

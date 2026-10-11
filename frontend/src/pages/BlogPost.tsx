@@ -12,12 +12,11 @@ import {
 import {
     IconChevronLeft
 } from "@tabler/icons-react";
-import { useNavigate } from "react-router-dom";
+import { router } from "@inertiajs/react";
 
 
 
-export default function BlogPostPage() {
-    const navigate = useNavigate();
+export default function BlogPost() {
 
     return (
         <Container>
@@ -28,7 +27,7 @@ export default function BlogPostPage() {
                     underline="never"
                     size="sm"
                     style={{ cursor: 'pointer' }}
-                    onClick={() => navigate('/blog')}
+                    onClick={() => router.visit('/blog/')}
                 >
                     <Group gap={4}>
                         <IconChevronLeft size={14} />
