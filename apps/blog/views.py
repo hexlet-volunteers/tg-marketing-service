@@ -79,7 +79,7 @@ class BlogArticleDetailView(View):
     Пример Inertia payload для фронтенда (значения пока иллюстративные):
 
     {
-        "component": "BlogArticle",
+        "component": "BlogPost",
         "props": {
             "id": 1,
             "slug": "podborka-plaginov-dlya-vs-code-selectel",
@@ -147,4 +147,4 @@ class BlogArticleDetailView(View):
         if not _is_inertia_request(request):
             service.record_view(article)
 
-        return render_inertia_from_dto(request, "BlogArticle", props=dto)
+        return render_inertia_from_dto(request, "BlogPost", props=dto)

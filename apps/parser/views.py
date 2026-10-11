@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import DetailView, FormView, ListView, View
+from inertia import render as inertia_render
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
@@ -293,7 +294,7 @@ class PostAIAnalysisView(View):
 
         return render_inertia_from_dto(
             request,
-            "PostPage",
+            "Post",
             props=props,
         )
 
@@ -301,7 +302,7 @@ class PostAIAnalysisView(View):
 class PostDetailView(View):
     """
     Отображает страницу детального разбора поста.
-    Component: PostPage
+    Component: Post
     Props:
         post (PostDataDTO): Полные данные поста (text, hashtags, метрики)
         channel (dict): Сводка по каналу, включающая основные параметры.
@@ -331,6 +332,43 @@ class PostDetailView(View):
 
         return render_inertia_from_dto(
             request,
-            "PostPage",
+            "Post",
             props=props,
         )
+
+
+class ChannelCatalogView(View):
+    """Каталог каналов (Inertia: Channels).
+
+    Данные для карточек пока моковые — на стороне frontend.
+    """
+
+    def get(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> HttpResponse:
+        return inertia_render(request, "Channels")
+
+
+class CompareView(View):
+    """Сравнение каналов (Inertia: Compare).
+
+    Метрики и каналы для сравнения пока моковые — на стороне frontend.
+    """
+
+    def get(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> HttpResponse:
+        return inertia_render(request, "Compare")
+
+
+class PostPageView(View):
+    """Демо-страница разбора поста (Inertia: Post).
+
+    Контент поста моковый; реальные посты отдаются из
+    PostDetailView по адресу /parser/post/<channel_id>/<telegram_message_id>/.
+    """
+
+    def get(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> HttpResponse:
+        return inertia_render(request, "Post")

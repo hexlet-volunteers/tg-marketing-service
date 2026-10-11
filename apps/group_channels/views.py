@@ -220,3 +220,16 @@ class CollectionsCatalogView(View):
             "Collections",
             props=dto.model_dump(mode="json"),
         )
+
+
+class CollectionDetailView(View):
+    """Детальная страница подборки (Inertia: Collection).
+
+    Содержимое пока моковое — на стороне frontend, поэтому
+    существование подборки с данным pk не проверяется.
+    """
+
+    def get(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> HttpResponse:
+        return inertia_render(request, "Collection")
