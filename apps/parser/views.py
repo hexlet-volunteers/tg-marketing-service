@@ -24,7 +24,8 @@ from apps.parser.types import (
     ParsedChannelResult,
     normalize_channel_data,
 )
-from apps.parser.utils import get_telegram_credentials
+from apps.parser.utils import get_telegram_credentials, normalize_channel_username
+from apps.admin.moderation.models import ModerationRequest
 from config.mixins import UserAuthenticationCheckMixin
 from config.renderers import render_inertia_from_dto
 
@@ -46,6 +47,16 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
             api_id,
             api_hash,
         )
+
+    def find_existing_channel(
+        self, channel_identifier: str
+    ) -> TelegramChannel | None:
+        """Find an existing channel by normalized username."""
+        username = normalize_channel_username(channel_identifier)
+
+        return TelegramChannel.objects.filter(
+        username__iexact=username
+    ).first()
 
     async def async_tg_parser(
         self, url: str, limit: int = 10
@@ -79,6 +90,8 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
         )
 
         if created:
+            channel.is_public = False
+            channel.save(update_fields=["is_public"])
             log.info(f"New channel created: {channel.title}")
         else:
             log.info(f"Channel updated: {channel.title}")
@@ -126,6 +139,15 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
         language = form.cleaned_data["language"]
         country = form.cleaned_data["country"]
         category = form.cleaned_data["category"]
+
+        existing_channel = self.find_existing_channel(identifier)
+
+        if existing_channel:
+            self.request.session["flash"] = {
+                "error": f"Канал {existing_channel.title} уже в каталоге"
+            }
+            return super().form_valid(form)
+    
         log.info(
             f"Начинаем обработку данных для канала; "
             f"- {identifier} лимит - {limit}"
@@ -153,6 +175,16 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
             channel, created = self.save_channel(channel_data)
             self.save_stats(channel, channel_data)
 
+            ModerationRequest.objects.create(
+                submitted_by=self.request.user,
+                channel_identifier=identifier,
+                channel_by=channel,
+                category=category,
+                country=country,
+                language=language,
+                status="pending",
+)
+
             # Generating user message
             message = (
                 f"New channel created: {channel.title}"
@@ -170,6 +202,9 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
 
 class ParserListView(ListView):
     model = TelegramChannel
+
+    def get_queryset(self):
+        return TelegramChannel.objects.filter(is_public=True)
 
     def get(
         self,
@@ -227,9 +262,10 @@ class ChannelLookupView(View):
         if not q:
             return JsonResponse([], safe=False)
 
-        channels = TelegramChannel.objects.filter(
+
+        channels = TelegramChannel.objects.filter(is_public=True).filter(
             Q(title__icontains=q) | Q(username__icontains=q)
-        ).order_by("-participants_count")[:10]
+        )
 
         result = list(
             channels.values(
@@ -238,7 +274,7 @@ class ChannelLookupView(View):
                 "username",
                 "participants_count",
                 "category",
-            )
+            )[:10]
         )
 
         return JsonResponse(result, safe=False)

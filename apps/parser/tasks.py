@@ -141,7 +141,7 @@ def parse_all_channels() -> None:
         # start task for parsing
         parse_channel.delay(channel.channel_id)  # type: ignore[attr-defined]
         # add pause between parsing, 15s + random value
-        pause = 15 + random.uniform(0, 5)
+        pause = 15 + random.uniform(0, 5)  # noqa: S311  # pacing jitter
         log.info(
             f"Started task for channel {channel.channel_id}, "
             f"next one in {pause:.2f} s"

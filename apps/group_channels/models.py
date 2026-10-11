@@ -88,11 +88,18 @@ class Group(models.Model):
         super().save(*args, **kwargs)
 
     @property
+    def is_auto(self) -> bool:
+        """
+        Возвращает True, если у группы есть правило автоподборки.
+        """
+        return hasattr(self, "auto_rule")
+
+    @property
     def channel_count(self) -> int:
         if hasattr(self, "annotated_channel_count"):
             return self.annotated_channel_count
 
-        if hasattr(self, "auto_rule"):
+        if self.is_auto:
             return self.channels.model.objects.filter(
                 category=self.auto_rule.category
             ).count()

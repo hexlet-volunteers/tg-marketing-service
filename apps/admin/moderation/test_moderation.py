@@ -187,6 +187,7 @@ class ModerationRequestTests(TestCase):
         self.assertIsNotNone(result.resolved_at)
         self.assertTrue(self.channel.is_verified)
         self.assertEqual(self.channel.category, "business")
+        self.assertTrue(self.channel.is_public)
 
     def test_approve_marks_request_as_duplicate_by_username(self) -> None:
         duplicate_channel = TelegramChannel.objects.create(

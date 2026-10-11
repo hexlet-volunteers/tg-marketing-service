@@ -21,13 +21,13 @@ pip install django-guardian
 ```python
 INSTALLED_APPS = [
     # ...
-    'guardian',
+    "guardian",
     # ...
 ]
 
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',   # основной бэкенд аутентификации
-    'guardian.backends.ObjectPermissionBackend',   # object-level permissions
+    "django.contrib.auth.backends.ModelBackend",  # основной бэкенд аутентификации
+    "guardian.backends.ObjectPermissionBackend",  # object-level permissions
 ]
 
 # Опционально: возвращать 403 при отказе в доступе
@@ -39,10 +39,10 @@ Middleware для ролей и (при необходимости) object-level
 ```python
 MIDDLEWARE = [
     # ...
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
     # ...
-    'apps.users.middleware.RoleMiddleware',              # прокидывает роль в request
+    "apps.users.middleware.RoleMiddleware",  # прокидывает роль в request
     # 'guardian.middleware.ObjectPermissionMiddleware',  # включить для object-level прав
 ]
 ```

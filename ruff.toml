@@ -3,10 +3,14 @@ line-length = 80
 [lint.per-file-ignores]
   # init modules can contain the local imports, logic, unused imports
 "__init__.py" = ["F401"]
+  # tests intentionally use asserts (S101) and throwaway credentials (S106),
+  # while subprocess in tests is called with fixed, trusted argv (S404, S603)
+"**/test_*.py" = ["S101", "S106", "S404", "S603"]
+"**/tests.py" = ["S101", "S106"]
 
 [lint]
 preview = true
-select = ["E", "F", "I"]
+select = ["E", "F", "I", "S"]
 exclude = [
   "**/migrations/*",
   "settings.py",

@@ -10,7 +10,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.billing.models import Plan, Subscription
-from apps.users.models import User
+from apps.users.consents import get_current_document_version
+from apps.users.models import Consent, NotificationSettings, User
 from apps.users.views import DEFAULT_AVATAR_URL
 
 
@@ -31,6 +32,7 @@ class UserRegisterTest(TestCase):
             "password2": "StrongPass12345!",
             "bio": "",
             "avatar_image": "",
+            "terms": "on",
         }
         payload.update(overrides)
         return payload
@@ -41,6 +43,9 @@ class UserRegisterTest(TestCase):
         response = self.client.post(
             reverse("users:user_create"),
             data=self.valid_payload(),
+            REMOTE_ADDR="203.0.113.42",
+            HTTP_X_FORWARDED_FOR="198.51.100.99",
+            HTTP_USER_AGENT="RegistrationTest/1.0",
         )
 
         self.assertRedirects(
@@ -54,6 +59,39 @@ class UserRegisterTest(TestCase):
         self.assertEqual(user.avatar_image, DEFAULT_AVATAR_URL)
         self.assertTrue(user.username.startswith("ada_"))
         self.assertEqual(get_user(self.client).pk, user.pk)
+
+        consent = Consent.objects.get(user=user)
+        self.assertEqual(
+            consent.document_type,
+            Consent.DocumentType.PERSONAL_DATA,
+        )
+        self.assertEqual(
+            consent.version,
+            get_current_document_version(Consent.DocumentType.PERSONAL_DATA),
+        )
+        self.assertEqual(consent.source, Consent.Source.EMAIL_REGISTRATION)
+        self.assertEqual(consent.ip, "203.0.113.42")
+        self.assertEqual(consent.user_agent, "RegistrationTest/1.0")
+
+    @patch("apps.users.views.inertia_render", side_effect=inertia_json_response)
+    def test_registration_without_consent_does_not_create_user(
+        self, _render: Any
+    ) -> None:
+        payload = self.valid_payload()
+        payload.pop("terms")
+
+        response = self.client.post(
+            reverse("users:user_create"),
+            data=payload,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(email="ada@example.com").exists())
+        self.assertEqual(Consent.objects.count(), 0)
+        self.assertIn(
+            "terms",
+            response.json()["props"]["form"]["errors"],
+        )
 
     @patch("apps.users.views.inertia_render", side_effect=inertia_json_response)
     def test_registration_errors_are_returned_as_field_errors(
@@ -145,7 +183,15 @@ class UserCabinetViewTest(TestCase):
             },
         )
         self.assertEqual(subscription["days_left"], 0)
-        self.assertIsNone(data["props"]["notifications"])
+        self.assertEqual(
+            data["props"]["notifications"],
+            {
+                "weekly_reports": True,
+                "trend_notifications": True,
+                "limit_exceeded": False,
+                "new_features": True,
+            },
+        )
 
     @patch("apps.users.views.inertia_render", side_effect=inertia_json_response)
     def test_get_returns_real_pro_subscription_state(
@@ -230,6 +276,97 @@ class UserCabinetViewTest(TestCase):
 
         self.user.refresh_from_db()
         self.assertEqual(self.user.email, "ivan@example.com")
+
+    @patch("apps.users.views.inertia_render", side_effect=inertia_json_response)
+    def test_get_returns_saved_notification_settings(
+        self,
+        _render: Any,
+    ) -> None:
+        settings = NotificationSettings.objects.create(user=self.user)
+        settings.weekly_reports = False
+        settings.trend_notifications = True
+        settings.new_features = False
+        settings.save()
+
+        response = self.client.get(reverse("users:user_cabinet"))
+
+        notifications = response.json()["props"]["notifications"]
+        self.assertEqual(
+            notifications,
+            {
+                "weekly_reports": False,
+                "trend_notifications": True,
+                "limit_exceeded": False,
+                "new_features": False,
+            },
+        )
+
+    def test_post_notifications_saves_settings_and_sets_success_flash(
+        self,
+    ) -> None:
+        settings = NotificationSettings.objects.create(user=self.user)
+
+        response = self.client.post(
+            reverse("users:user_cabinet"),
+            data={
+                "action": "notifications",
+                "weekly_reports": "false",
+                "trend_notifications": "true",
+                "new_features": "false",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("users:user_cabinet"),
+            fetch_redirect_response=False,
+        )
+
+        settings.refresh_from_db()
+        self.assertFalse(settings.weekly_reports)
+        self.assertTrue(settings.trend_notifications)
+        self.assertFalse(settings.new_features)
+
+        self.assertEqual(
+            self.client.session.get("flash"),
+            {"success": "Настройки уведомлений сохранены"},
+        )
+
+    @patch(
+        "apps.users.views.NotificationSettingsForm.save",
+        side_effect=Exception("Database error"),
+    )
+    def test_post_notifications_sets_error_flash_when_save_fails(
+        self,
+        _save: Any,
+    ) -> None:
+        settings = NotificationSettings.objects.create(user=self.user)
+
+        response = self.client.post(
+            reverse("users:user_cabinet"),
+            data={
+                "action": "notifications",
+                "weekly_reports": "false",
+                "trend_notifications": "true",
+                "new_features": "false",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("users:user_cabinet"),
+            fetch_redirect_response=False,
+        )
+
+        self.assertEqual(
+            self.client.session.get("flash"),
+            {"error": "Не удалось сохранить настройки уведомлений."},
+        )
+
+        settings.refresh_from_db()
+        self.assertTrue(settings.weekly_reports)
+        self.assertTrue(settings.trend_notifications)
+        self.assertTrue(settings.new_features)
 
 
 class UserUpdateSecurityTest(TestCase):

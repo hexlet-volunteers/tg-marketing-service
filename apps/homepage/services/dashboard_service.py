@@ -1,4 +1,18 @@
-from django.db.models import Avg, OuterRef, QuerySet, Subquery
+from datetime import timedelta
+from typing import Any
+
+from django.db.models import (
+    Avg,
+    Count,
+    F,
+    IntegerField,
+    OuterRef,
+    QuerySet,
+    Subquery,
+    Sum,
+)
+from django.db.models.functions import Coalesce
+from django.utils import timezone
 
 from apps.billing.services.subscription_service import get_subscription
 from apps.group_channels.models import Group
@@ -9,7 +23,14 @@ from apps.homepage.dto.dashboard_dto import (
     InsightDTO,
     StatsDTO,
 )
-from apps.parser.models import AIInsight, ChannelStats, TelegramChannel
+from apps.parser.models import (
+    AIInsight,
+    ChannelStats,
+    Post,
+    PostReaction,
+    TelegramChannel,
+)
+from apps.parser.services.metrics import engagement_rate, growth_30d
 from apps.users.models import User
 
 
@@ -38,8 +59,40 @@ class DashboardService:
     # ------------------------
     # QuerySet
     # ------------------------
-
     def _get_channels_queryset(self) -> QuerySet[TelegramChannel]:
+        """
+        Иерархия OuterRef:
+        1. reactions_sum_subquery ссылается на Post
+        2. avg_interactions_subquery ссылается на TelegramChannel
+        """
+
+        # подзапрос суммы реакций конкретного поста
+        reactions_sum_subquery = (
+            PostReaction.objects.filter(post=OuterRef("pk"))
+            .values("post")
+            .annotate(total=Sum("count"))
+            .values("total")
+        )
+
+        # подзапрос среднего взаимодействия по всем постам конкретного канала
+        avg_interactions_subquery = (
+            Post.objects.filter(channel=OuterRef("pk"))
+            .annotate(
+                tr_count=Coalesce(
+                    Subquery(
+                        reactions_sum_subquery, output_field=IntegerField()
+                    ),
+                    0,
+                )
+            )
+            .values("channel")
+            .annotate(
+                avg_int=Avg(F("comments_count") + F("forwards") + F("tr_count"))
+            )
+            .values("avg_int")
+        )
+
+        # Подзапрос для получения последнего значения роста
         latest_stats = ChannelStats.objects.filter(
             channel=OuterRef("pk")
         ).order_by("-parsed_at")
@@ -48,7 +101,12 @@ class DashboardService:
             TelegramChannel.objects.filter(moderators__user=self.user)
             .distinct()
             .annotate(
-                latest_growth=Subquery(latest_stats.values("daily_growth")[:1])
+                latest_growth=Subquery(latest_stats.values("daily_growth")[:1]),
+                posts_count=Count("posts", distinct=True),
+                avg_views=Avg("posts__views"),
+                avg_interactions=Subquery(
+                    avg_interactions_subquery, output_field=IntegerField()
+                ),
             )
         )
 
@@ -59,7 +117,9 @@ class DashboardService:
     def _build_stats(self, qs: QuerySet[TelegramChannel]) -> StatsDTO:
         channels_count = qs.count()
 
-        posts_count = sum(len(c.last_messages or []) for c in qs)
+        posts_count = (
+            qs.aggregate(total_posts=Count("posts"))["total_posts"] or 0
+        )
 
         ai_count = AIInsight.objects.filter(user=self.user).count()
 
@@ -77,31 +137,40 @@ class DashboardService:
     def _build_channels(
         self, qs: QuerySet[TelegramChannel]
     ) -> list[ChannelDTO]:
+        """
+        Формирует список каналов с использованием чистых функций метрик.
+        """
         result = []
+        thirty_days_ago = timezone.now() - timedelta(days=30)
 
         for c in qs[:5]:
-            subscribers = c.participants_count or 0
-            views = c.average_views or 0
+            channel: Any = c
+            subscribers = channel.participants_count or 0
+            views = channel.average_views or 0
+            interactions = channel.avg_interactions or 0
+            er = engagement_rate(interactions, views)
 
-            # ✔ корректный engagement
-            engagement = (views / subscribers) * 100 if subscribers > 0 else 0
-
-            # ✔ рост
-            growth = getattr(c, "latest_growth", 0) or 0
-
-            growth_percent = (
-                (growth / max(1, subscribers - growth)) * 100 if growth else 0
+            # Данные для Growth 30d
+            past_stat = (
+                channel.channelstats_set.filter(parsed_at__lte=thirty_days_ago)
+                .order_by("-parsed_at")
+                .first()
             )
+
+            current_count = channel.participants_count
+            past_count = past_stat.participants_count if past_stat else None
+
+            _, growth_pct = growth_30d(current_count, past_count)
 
             result.append(
                 ChannelDTO(
-                    name=c.title,
+                    name=channel.title,
                     subscribers=subscribers,
-                    posts=len(c.last_messages or []),
+                    posts=channel.posts_count,
                     views=views,
-                    engagement=round(engagement, 2),
-                    growth=round(growth_percent, 2),
-                    is_verified=c.is_verified,
+                    engagement=round(er * 100, 2),
+                    growth=round(growth_pct, 2),
+                    is_verified=channel.is_verified,
                 )
             )
 

@@ -77,7 +77,7 @@ async def tg_parser(
             return build_parsed_channel_result(data)
 
         except FloodWaitError as e:
-            wait_time = e.seconds + uniform(1.0, 2.0)
+            wait_time = e.seconds + uniform(1.0, 2.0)  # noqa: S311  # jitter
             log.error(f"FloodWaitError: waiting {wait_time:.1f}s")
             await asyncio.sleep(wait_time)
             raise

@@ -4,8 +4,8 @@ from apps.parser.models import TelegramChannel
 from apps.users.models import User
 
 
-class ModerationRequestQuerySet(models.QuerySet):
-    def pending_queue(self):
+class ModerationRequestQuerySet(models.QuerySet["ModerationRequest"]):
+    def pending_queue(self) -> models.QuerySet["ModerationRequest"]:
         return (
             self.filter(status="pending")
             .select_related("submitted_by", "channel_by")

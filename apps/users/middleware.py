@@ -5,6 +5,8 @@ from typing import cast
 from django.contrib.auth import get_user_model
 from django.http import HttpRequest, HttpResponse
 
+from apps.users.consents import request_has_consent, stash_yandex_oauth_consent
+
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
@@ -40,3 +42,18 @@ class RoleMiddleware:
         response = self.get_response(request)
 
         return response
+
+
+class YandexOAuthConsentMiddleware:
+    def __init__(
+        self,
+        get_response: Callable[[HttpRequest], HttpResponse],
+    ) -> None:
+        self.get_response = get_response
+
+    def __call__(self, request: HttpRequest) -> HttpResponse:
+        if request.path.endswith(
+            "/accounts/yandex/login/"
+        ) and request_has_consent(request):
+            stash_yandex_oauth_consent(request)
+        return self.get_response(request)

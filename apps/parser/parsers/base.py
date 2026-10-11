@@ -27,6 +27,7 @@ class BaseParser:
                 "title": channel_entity.title,
                 "username": channel_entity.username or "-",
                 "creation_date": channel_entity.date,
+                "is_public": False,
             },
         )
         return channel

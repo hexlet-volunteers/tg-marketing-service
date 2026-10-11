@@ -1,0 +1,74 @@
+name: Security
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  pip-audit:
+    name: Python dependency audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Export locked dependencies
+        run: >-
+          uv export --locked --no-emit-project
+          --format requirements-txt -o requirements-audit.txt
+
+      - name: Run pip-audit
+        run: uvx pip-audit==2.10.1 --requirement requirements-audit.txt
+
+  npm-audit:
+    name: Frontend dependency audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Install dependencies (verify lockfile)
+        run: npm ci --ignore-scripts
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+
+  gitleaks:
+    name: Secret scanning
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Official gitleaks CLI image. Runs on every PR (including fork PRs)
+      # without a license key, unlike gitleaks/gitleaks-action which
+      # requires GITLEAKS_LICENSE for organization repos and cannot see
+      # secrets on pull_request runs coming from forks.
+      - name: Run gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo:ro" \
+            ghcr.io/gitleaks/gitleaks:v8.30.1 detect \
+            --source=/repo --no-banner --redact --verbose

@@ -11,7 +11,7 @@ from django.contrib.auth.forms import (
 from django.contrib.auth.password_validation import validate_password
 from django.utils.crypto import get_random_string
 
-from apps.users.models import User
+from apps.users.models import NotificationSettings, User
 
 
 class UserLoginForm(AuthenticationForm):
@@ -113,7 +113,10 @@ class UserRegForm(UserCreationForm):
         ),
     )
     terms = forms.BooleanField(
-        required=False,
+        required=True,
+        error_messages={
+            "required": "Consent to personal data processing is required."
+        },
         widget=forms.CheckboxInput(
             attrs={
                 "class": "form-check-input",
@@ -247,6 +250,18 @@ class UserUpdateForm(forms.ModelForm):
             user.save()
             self.save_m2m()
         return user
+
+
+class NotificationSettingsForm(forms.ModelForm):
+    """Форма изменения настроек уведомлений пользователя."""
+
+    class Meta:
+        model = NotificationSettings
+        fields = (
+            "weekly_reports",
+            "trend_notifications",
+            "new_features",
+        )
 
 
 class AvatarChange(UserChangeForm):

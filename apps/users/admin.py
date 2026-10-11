@@ -4,7 +4,14 @@ from django.http import HttpRequest
 from guardian.admin import GuardedModelAdmin
 
 from apps.parser.models import ChannelModerator
-from apps.users.models import DataSubjectRequestLog, PartnerProfile, User
+from apps.users.models import (
+    Consent,
+    ConsentWithdrawal,
+    DataSubjectRequestLog,
+    NotificationSettings,
+    PartnerProfile,
+    User,
+)
 
 
 class ChannelModeratorInline(admin.TabularInline):
@@ -164,6 +171,31 @@ class PartnerProfileAdmin(GuardedModelAdmin):
         return super().get_queryset(request).select_related("user")  # type: ignore[no-untyped-call]
 
 
+@admin.register(NotificationSettings)
+class NotificationSettingsAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "weekly_reports",
+        "trend_notifications",
+        "new_features",
+    )
+    list_filter = (
+        "weekly_reports",
+        "trend_notifications",
+        "new_features",
+    )
+    search_fields = (
+        "user__username",
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+    )
+    raw_id_fields = ("user",)
+
+    def get_queryset(self, request: HttpRequest):
+        return super().get_queryset(request).select_related("user")
+
+
 @admin.register(DataSubjectRequestLog)
 class DataSubjectRequestLogAdmin(admin.ModelAdmin):
     list_display = (
@@ -173,6 +205,8 @@ class DataSubjectRequestLogAdmin(admin.ModelAdmin):
         "status",
         "requested_at",
         "completed_at",
+        "due_at",
+        "responsible",
     )
     list_filter = ("request_type", "http_method", "status")
     search_fields = ("subject_id_snapshot", "subject__email")
@@ -184,6 +218,14 @@ class DataSubjectRequestLogAdmin(admin.ModelAdmin):
         "status",
         "requested_at",
         "completed_at",
+        "due_at",
+        "original_due_at",
+        "result",
+        "responsible",
+        "extension_reason",
+        "extended_at",
+        "extension_notified_at",
+        "extension_notification_reference",
     )
 
     def has_add_permission(self, request: HttpRequest) -> bool:
@@ -200,5 +242,66 @@ class DataSubjectRequestLogAdmin(admin.ModelAdmin):
         self,
         request: HttpRequest,
         obj: DataSubjectRequestLog | None = None,
+    ) -> bool:
+        return False
+
+
+@admin.register(Consent)
+class ConsentAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "document_type",
+        "version",
+        "source",
+        "ip",
+        "timestamp",
+    )
+    list_filter = ("document_type", "version", "source", "timestamp")
+    search_fields = ("user__email", "user__username", "ip", "user_agent")
+    readonly_fields = (
+        "user",
+        "document_type",
+        "version",
+        "timestamp",
+        "ip",
+        "user_agent",
+        "source",
+    )
+    raw_id_fields = ("user",)
+    date_hierarchy = "timestamp"
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+
+    def has_change_permission(
+        self,
+        request: HttpRequest,
+        obj: Consent | None = None,
+    ) -> bool:
+        return False
+
+    def has_delete_permission(
+        self,
+        request: HttpRequest,
+        obj: Consent | None = None,
+    ) -> bool:
+        return False
+
+
+@admin.register(ConsentWithdrawal)
+class ConsentWithdrawalAdmin(admin.ModelAdmin):
+    list_display = ("consent", "request_log", "withdrawn_at")
+    readonly_fields = ("consent", "request_log", "withdrawn_at")
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+
+    def has_change_permission(
+        self, request: HttpRequest, obj: ConsentWithdrawal | None = None
+    ) -> bool:
+        return False
+
+    def has_delete_permission(
+        self, request: HttpRequest, obj: ConsentWithdrawal | None = None
     ) -> bool:
         return False

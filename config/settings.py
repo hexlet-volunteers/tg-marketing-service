@@ -48,6 +48,10 @@ CELERY_TIMEZONE = "Europe/Moscow"  # project timezone
 
 # Celery dict with schedule
 CELERY_BEAT_SCHEDULE = {
+    "process-subject-requests-hourly": {
+        "task": "apps.users.tasks.process_subject_requests",
+        "schedule": crontab(minute="0"),
+    },
     "parse-all-channels-every-day-12-30": {
         "task": "apps.parser.tasks.parse_all_channels",  # path to task
         "schedule": crontab(hour="11", minute="40"),
@@ -64,6 +68,11 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = env_bool("DEBUG", default=False)
 
 ALLOWED_HOSTS = ["*"]
+TRUSTED_PROXY_IPS = [
+    value.strip()
+    for value in os.getenv("TRUSTED_PROXY_IPS", "").split(",")
+    if value.strip()
+]
 
 
 # Application definition
@@ -121,6 +130,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.users.middleware.YandexOAuthConsentMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "inertia.middleware.InertiaMiddleware",
     "apps.users.middleware.RoleMiddleware",
@@ -150,6 +160,7 @@ SOCIALACCOUNT_PROVIDERS = {
         },
     }
 }
+SOCIALACCOUNT_ADAPTER = "apps.users.adapters.MarketingSocialAccountAdapter"
 
 ROOT_URLCONF = "config.urls"
 

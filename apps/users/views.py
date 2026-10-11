@@ -4,10 +4,12 @@ from typing import Any, cast
 from django.contrib import auth, messages
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.tokens import default_token_generator
+from django.db import transaction
 from django.http import (
     HttpRequest,
     HttpResponse,
     HttpResponseRedirect,
+    JsonResponse,
 )
 from django.shortcuts import redirect
 from django.templatetags.static import static
@@ -24,8 +26,17 @@ from apps.billing.services.subscription_service import (
     get_subscription,
     serialize_subscription,
 )
+from apps.users.account_deletion import request_account_deletion
+from apps.users.consents import record_consent, serialize_user_consent_history
+from apps.users.data_subject_requests import (
+    complete_subject_request,
+    create_subject_request,
+    fail_subject_request,
+    serialize_subject_request,
+)
 from apps.users.forms import (
     AvatarChange,
+    NotificationSettingsForm,
     RestorePasswordForm,
     RestorePasswordRequestForm,
     UserLoginForm,
@@ -33,7 +44,12 @@ from apps.users.forms import (
     UserUpdateForm,
 )
 from apps.users.middleware import RoleRequest
-from apps.users.models import DataSubjectRequestLog, User
+from apps.users.models import (
+    Consent,
+    DataSubjectRequestLog,
+    NotificationSettings,
+    User,
+)
 from apps.users.personal_data_export import build_personal_data_export
 from config.mixins import UserAuthenticationCheckMixin
 
@@ -43,6 +59,8 @@ DEFAULT_AVATAR_URL = static("users/default-avatar.svg")
 
 class PersonalDataExportView(UserAuthenticationCheckMixin, View):
     """Download personal data belonging to the authenticated subject."""
+
+    request_type = DataSubjectRequestLog.RequestType.EXPORT
 
     def get(
         self,
@@ -62,18 +80,26 @@ class PersonalDataExportView(UserAuthenticationCheckMixin, View):
 
     def _export(self, request: HttpRequest) -> HttpResponse:
         user = cast(User, request.user)
-        exported_at = timezone.now()
-        payload = build_personal_data_export(user, exported_at)
-        content = json.dumps(payload, ensure_ascii=False, indent=2)
-
-        DataSubjectRequestLog.objects.create(
-            subject=user,
-            subject_id_snapshot=user.pk,
-            request_type=DataSubjectRequestLog.RequestType.EXPORT,
-            http_method=cast(str, request.method),
-            status=DataSubjectRequestLog.Status.COMPLETED,
-            completed_at=exported_at,
+        request_log = create_subject_request(
+            user, self.request_type, cast(str, request.method)
         )
+        exported_at = timezone.now()
+        try:
+            with transaction.atomic():
+                locked = User.objects.select_for_update().get(pk=user.pk)
+                if not locked.is_active or locked.anonymized_at is not None:
+                    raise ValueError("Account processing has stopped")
+                payload = build_personal_data_export(locked, exported_at)
+                content = json.dumps(payload, ensure_ascii=False, indent=2)
+                complete_subject_request(
+                    request_log, {"format_version": payload["format_version"]}
+                )
+        except Exception:
+            fail_subject_request(request_log)
+            return JsonResponse(
+                {"request_id": request_log.pk, "error": "export_failed"},
+                status=503,
+            )
 
         filename = f"personal-data-{user.pk}-{exported_at:%Y-%m-%d}.json"
         response = HttpResponse(
@@ -85,6 +111,73 @@ class PersonalDataExportView(UserAuthenticationCheckMixin, View):
         response["Pragma"] = "no-cache"
         response["X-Content-Type-Options"] = "nosniff"
         return response
+
+
+class PersonalDataAccessView(PersonalDataExportView):
+    request_type = DataSubjectRequestLog.RequestType.ACCESS
+
+
+class AccountDeletionView(UserAuthenticationCheckMixin, View):
+    withdraw_consent = False
+
+    def post(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> HttpResponse:
+        try:
+            request_log = request_account_deletion(
+                cast(User, request.user),
+                cast(str, request.method),
+                withdraw_consent=self.withdraw_consent,
+            )
+        except ValueError as error:
+            return JsonResponse({"error": str(error)}, status=409)
+        auth.logout(request)
+        response = JsonResponse(
+            serialize_subject_request(request_log),
+            status=200
+            if request_log.status == DataSubjectRequestLog.Status.COMPLETED
+            else 503,
+        )
+        response["Cache-Control"] = "no-store"
+        return response
+
+
+class ConsentWithdrawalView(AccountDeletionView):
+    withdraw_consent = True
+
+
+class DataSubjectRequestHistoryView(UserAuthenticationCheckMixin, View):
+    def get(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> HttpResponse:
+        logs = DataSubjectRequestLog.objects.filter(
+            subject=cast(User, request.user)
+        )
+        response = JsonResponse(
+            {"requests": [serialize_subject_request(log) for log in logs]}
+        )
+        response["Cache-Control"] = "no-store"
+        return response
+
+
+class ConsentHistoryView(UserAuthenticationCheckMixin, View):
+    """Return consent history for the authenticated subject."""
+
+    def get(
+        self,
+        request: HttpRequest,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
+        user = cast(User, request.user)
+        content = json.dumps(
+            {"consents": serialize_user_consent_history(user)},
+            ensure_ascii=False,
+        )
+        return HttpResponse(
+            content,
+            content_type="application/json; charset=utf-8",
+        )
 
 
 class LogoutView(UserAuthenticationCheckMixin, View):
@@ -194,6 +287,10 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
             "total_time": f"{total_hours:.0f} часов",
         }
 
+        notification_settings, _ = NotificationSettings.objects.get_or_create(
+            user=user
+        )
+
         return {
             "user": {
                 "id": user.id,
@@ -206,7 +303,14 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
                 "bio": user.bio,
             },
             "subscription": serialize_subscription(get_subscription(user)),
-            "notifications": None,
+            "notifications": {
+                "weekly_reports": notification_settings.weekly_reports,
+                "trend_notifications": (
+                    notification_settings.trend_notifications
+                ),
+                "limit_exceeded": False,
+                "new_features": notification_settings.new_features,
+            },
             "usage_stats": usage_stats,
             "user_role": cast(RoleRequest, request).role,
         }
@@ -231,15 +335,33 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
         action = request.POST.get("action")
 
         if action == "notifications":
-            # Уведомления сейчас заглушки
-            messages.add_message(
-                request, messages.SUCCESS, "Настройки уведомлений сохранены"
+            notification_settings, _ = (
+                NotificationSettings.objects.get_or_create(user=user)
             )
-        else:
-            form = UserUpdateForm(data=request.POST, instance=user)
-            if form.is_valid():
+            notification_form = NotificationSettingsForm(
+                data=request.POST,
+                instance=notification_settings,
+            )
+
+            if notification_form.is_valid():
                 try:
-                    form.save()
+                    notification_form.save()
+                    request.session["flash"] = {
+                        "success": "Настройки уведомлений сохранены"
+                    }
+                except Exception:
+                    request.session["flash"] = {
+                        "error": "Не удалось сохранить настройки уведомлений."
+                    }
+            else:
+                request.session["flash"] = {
+                    "error": "Не удалось сохранить настройки уведомлений."
+                }
+        else:
+            profile_form = UserUpdateForm(data=request.POST, instance=user)
+            if profile_form.is_valid():
+                try:
+                    profile_form.save()
                     update_session_auth_hash(request, user)
                     messages.add_message(
                         request, messages.SUCCESS, "Профиль успешно изменен"
@@ -253,7 +375,7 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
                     return redirect(reverse("users:user_cabinet"))
             else:
                 props = self._build_base_props(request, user)
-                props["errors"] = form.errors.get_json_data()
+                props["errors"] = profile_form.errors.get_json_data()
                 props["values"] = {
                     "first_name": request.POST.get("first_name", ""),
                     "last_name": request.POST.get("last_name", ""),
@@ -279,6 +401,7 @@ class UserRegister(View):
         "email",
         "bio",
         "avatar_image",
+        "terms",
     )
 
     def _empty_form_data(self) -> dict[str, str]:
@@ -325,11 +448,18 @@ class UserRegister(View):
     ) -> InertiaResponse | HttpResponseRedirect:
         form = UserRegForm(data=request.POST)
         if form.is_valid():
-            user = form.save(commit=False)
-            user.role = "user"
-            if not user.avatar_image:
-                user.avatar_image = DEFAULT_AVATAR_URL
-            user.save()
+            with transaction.atomic():
+                user = form.save(commit=False)
+                user.role = "user"
+                if not user.avatar_image:
+                    user.avatar_image = DEFAULT_AVATAR_URL
+                user.save()
+                record_consent(
+                    user=user,
+                    document_type=Consent.DocumentType.PERSONAL_DATA,
+                    source=Consent.Source.EMAIL_REGISTRATION,
+                    request=request,
+                )
 
             request.session["flash"] = {
                 "success": "Пользователь успешно зарегистрирован"
