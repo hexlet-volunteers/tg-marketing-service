@@ -10,7 +10,7 @@ from apps.parser.models import TelegramChannel
 
 
 class ChannelVisibilityTest(TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.user = get_user_model().objects.create_user(
             username="visibility_test_user",
             email="visibility_test_user@example.com",
@@ -49,14 +49,19 @@ class ChannelVisibilityTest(TestCase):
         self.create_moderation_request(self.rejected_channel, "rejected")
         self.create_moderation_request(self.approved_channel, "approved")
 
-    def create_channel(self, channel_id, title, username):
+    def create_channel(
+        self, channel_id: int, title: str, username: str
+    ) -> TelegramChannel:
         return TelegramChannel.objects.create(
             channel_id=channel_id,
             title=title,
             username=username,
         )
 
-    def create_moderation_request(self, channel, status):
+    def create_moderation_request(
+        self, channel: TelegramChannel, status: str
+    ) -> ModerationRequest:
+        assert channel.username is not None
         return ModerationRequest.objects.create(
             submitted_by=self.user,
             channel_identifier=channel.username,
@@ -67,7 +72,7 @@ class ChannelVisibilityTest(TestCase):
             status=status,
         )
 
-    def test_catalogue_shows_only_public_channels(self):
+    def test_catalogue_shows_only_public_channels(self) -> None:
         from apps.parser.views import ParserListView
 
         visible_ids = set(
@@ -84,7 +89,7 @@ class ChannelVisibilityTest(TestCase):
             },
         )
 
-    def test_search_shows_only_public_channels(self):
+    def test_search_shows_only_public_channels(self) -> None:
         response = self.client.get(
             reverse("parser:channel_lookup"),
             {"q": "channel"},
@@ -102,7 +107,7 @@ class ChannelVisibilityTest(TestCase):
         )
 
 
-    def test_new_channel_without_moderation_request_is_hidden(self):
+    def test_new_channel_without_moderation_request_is_hidden(self) -> None:
         channel = self.create_channel(
             1005,
             "Failed parsing channel",

@@ -1,9 +1,9 @@
 import logging
-from typing import Any
+from typing import Any, cast
 
 from asgiref.sync import async_to_sync
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
@@ -29,6 +29,7 @@ from apps.parser.types import (
 )
 from apps.parser.utils import get_telegram_credentials, normalize_channel_username
 from apps.admin.moderation.models import ModerationRequest
+from apps.users.models import User
 from config.mixins import UserAuthenticationCheckMixin
 from config.renderers import render_inertia_from_dto
 
@@ -179,7 +180,7 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
             self.save_stats(channel, channel_data)
 
             ModerationRequest.objects.create(
-                submitted_by=self.request.user,
+                submitted_by=cast(User, self.request.user),
                 channel_identifier=identifier,
                 channel_by=channel,
                 category=category,
@@ -206,7 +207,7 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
 class ParserListView(ListView):
     model = TelegramChannel
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[TelegramChannel]:
         return TelegramChannel.objects.filter(is_public=True)
 
     def get(
