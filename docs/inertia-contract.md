@@ -10,7 +10,6 @@
 Связанные документы:
 
 - [`inertia-shared-props.md`](./inertia-shared-props.md) — контракт общих props;
-- [`page_naming_convention.md`](./page_naming_convention.md) — соглашение об именовании страниц;
 - [`moderation_contract.md`](./moderation_contract.md) — детальный контракт `/admin/moderation/`;
 - [`collections_catalog_contract.md`](./collections_catalog_contract.md) — детальный контракт `/collections/`;
 - [`registration_contract.md`](./registration_contract.md) — детальный контракт регистрации.
@@ -45,8 +44,7 @@ views. Контракт — [`inertia-shared-props.md`](./inertia-shared-props.m
 
 ## Именование
 
-Действующие имена компонентов — по
-[`page_naming_convention.md`](./page_naming_convention.md): файл
+Действующие имена компонентов — файл
 `frontend/src/pages/<Name>.tsx` с `export default function <Name>`.
 
 Резолвер (`frontend/src/main.tsx:11-21`) построен на `import.meta.glob` и
