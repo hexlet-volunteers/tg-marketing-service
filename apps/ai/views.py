@@ -2,7 +2,9 @@ from typing import Any
 
 from django.http import HttpRequest, HttpResponse
 from django.views.generic.base import View
-from inertia import render as inertia_render
+
+from apps.ai.dto.ai_cabinet_dto import AICabinetDTO
+from config.renderers import render_inertia_from_dto
 
 
 class AICabinetView(View):
@@ -14,4 +16,9 @@ class AICabinetView(View):
     def get(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
-        return inertia_render(request, "AICabinet")
+        return render_inertia_from_dto(
+            request,
+            "AICabinet",
+            props=AICabinetDTO(),
+            exclude_unset=True,
+        )

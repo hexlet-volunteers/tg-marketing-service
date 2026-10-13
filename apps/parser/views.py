@@ -14,7 +14,9 @@ from inertia import render as inertia_render
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
+from apps.parser.dto.channel_catalog_dto import ChannelsCatalogDTO
 from apps.parser.dto.channel_dto import ChannelDTO, ChannelListDTO
+from apps.parser.dto.compare_dto import CompareDTO
 from apps.parser.dto.post_analysis_dto import PostDataDTO, PostPagePropsDTO
 from apps.parser.forms import ChannelParseForm
 from apps.parser.models import ChannelStats, Post, TelegramChannel
@@ -346,7 +348,12 @@ class ChannelCatalogView(View):
     def get(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
-        return inertia_render(request, "Channels")
+        return render_inertia_from_dto(
+            request,
+            "Channels",
+            props=ChannelsCatalogDTO(),
+            exclude_unset=True,
+        )
 
 
 class CompareView(View):
@@ -358,7 +365,12 @@ class CompareView(View):
     def get(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
-        return inertia_render(request, "Compare")
+        return render_inertia_from_dto(
+            request,
+            "Compare",
+            props=CompareDTO(),
+            exclude_unset=True,
+        )
 
 
 class PostPageView(View):
