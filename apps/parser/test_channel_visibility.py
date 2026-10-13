@@ -1,7 +1,4 @@
-from unittest.mock import patch
-
 from django.contrib.auth import get_user_model
-from django.http import HttpResponse
 from django.test import TestCase
 from django.urls import reverse
 
@@ -76,9 +73,7 @@ class ChannelVisibilityTest(TestCase):
         from apps.parser.views import ParserListView
 
         visible_ids = set(
-            ParserListView()
-            .get_queryset()
-            .values_list("channel_id", flat=True)
+            ParserListView().get_queryset().values_list("channel_id", flat=True)
         )
 
         self.assertEqual(
@@ -97,15 +92,12 @@ class ChannelVisibilityTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-        visible_usernames = {
-            channel["username"] for channel in response.json()
-        }
+        visible_usernames = {channel["username"] for channel in response.json()}
 
         self.assertEqual(
             visible_usernames,
             {"unmoderated_channel", "approved_channel"},
         )
-
 
     def test_new_channel_without_moderation_request_is_hidden(self) -> None:
         channel = self.create_channel(
@@ -119,9 +111,7 @@ class ChannelVisibilityTest(TestCase):
         from apps.parser.views import ParserListView
 
         visible_ids = set(
-            ParserListView()
-            .get_queryset()
-            .values_list("channel_id", flat=True)
+            ParserListView().get_queryset().values_list("channel_id", flat=True)
         )
 
         self.assertNotIn(channel.channel_id, visible_ids)

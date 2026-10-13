@@ -14,6 +14,7 @@ from inertia import render as inertia_render
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
+from apps.admin.moderation.models import ModerationRequest
 from apps.parser.dto.channel_catalog_dto import ChannelsCatalogDTO
 from apps.parser.dto.channel_dto import ChannelDTO, ChannelListDTO
 from apps.parser.dto.compare_dto import CompareDTO
@@ -27,8 +28,10 @@ from apps.parser.types import (
     ParsedChannelResult,
     normalize_channel_data,
 )
-from apps.parser.utils import get_telegram_credentials, normalize_channel_username
-from apps.admin.moderation.models import ModerationRequest
+from apps.parser.utils import (
+    get_telegram_credentials,
+    normalize_channel_username,
+)
 from apps.users.models import User
 from config.mixins import UserAuthenticationCheckMixin
 from config.renderers import render_inertia_from_dto
@@ -58,9 +61,7 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
         """Find an existing channel by normalized username."""
         username = normalize_channel_username(channel_identifier)
 
-        return TelegramChannel.objects.filter(
-        username__iexact=username
-    ).first()
+        return TelegramChannel.objects.filter(username__iexact=username).first()
 
     async def async_tg_parser(
         self, url: str, limit: int = 10
@@ -151,7 +152,7 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
                 "error": f"Канал {existing_channel.title} уже в каталоге"
             }
             return super().form_valid(form)
-    
+
         log.info(
             f"Начинаем обработку данных для канала; "
             f"- {identifier} лимит - {limit}"
@@ -187,7 +188,7 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
                 country=country,
                 language=language,
                 status="pending",
-)
+            )
 
             # Generating user message
             message = (
@@ -265,7 +266,6 @@ class ChannelLookupView(View):
 
         if not q:
             return JsonResponse([], safe=False)
-
 
         channels = TelegramChannel.objects.filter(is_public=True).filter(
             Q(title__icontains=q) | Q(username__icontains=q)
