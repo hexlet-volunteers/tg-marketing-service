@@ -153,7 +153,7 @@ class UserCabinetViewTest(TestCase):
         data = response.json()
         user = data["props"]["user"]
 
-        self.assertEqual(data["component"], "UserProfilePage")
+        self.assertEqual(data["component"], "Profile")
         self.assertEqual(user["id"], self.user.id)
         self.assertEqual(user["first_name"], "Ivan")
         self.assertEqual(user["last_name"], "Ivanov")
@@ -271,7 +271,7 @@ class UserCabinetViewTest(TestCase):
 
         data = response.json()
 
-        self.assertEqual(data["component"], "UserProfilePage")
+        self.assertEqual(data["component"], "Profile")
         self.assertIn("email", data["props"]["errors"])
 
         self.user.refresh_from_db()

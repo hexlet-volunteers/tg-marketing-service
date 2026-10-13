@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.views.generic.base import View
 from inertia import render as inertia_render
 
+from apps.group_channels.dto.collection_detail_dto import CollectionDetailDTO
 from apps.group_channels.forms import (
     AddChannelForm,
     CreateGroupForm,
@@ -18,6 +19,7 @@ from apps.group_channels.services.collections_catalog_service import (
 )
 from apps.parser.models import TelegramChannel
 from config.mixins import UserAuthenticationCheckMixin
+from config.renderers import render_inertia_from_dto
 
 # константа для дефолтной аватарки
 DEFAULT_AVATAR_GROUP = f"{settings.STATIC_URL}default_avatar_group.jpg"
@@ -219,4 +221,22 @@ class CollectionsCatalogView(View):
             request,
             "Collections",
             props=dto.model_dump(mode="json"),
+        )
+
+
+class CollectionDetailView(View):
+    """Детальная страница подборки (Inertia: Collection).
+
+    Содержимое пока моковое — на стороне frontend, поэтому
+    существование подборки с данным pk не проверяется.
+    """
+
+    def get(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> HttpResponse:
+        return render_inertia_from_dto(
+            request,
+            "Collection",
+            props=CollectionDetailDTO(),
+            exclude_unset=True,
         )

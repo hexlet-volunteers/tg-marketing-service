@@ -276,7 +276,7 @@ class BlogArticleDetailViewTest(TestCase):
         self.assertIn("props", data)
         self.assertIn("url", data)
 
-        self.assertEqual(data["component"], "BlogArticle")
+        self.assertEqual(data["component"], "BlogPost")
         self.assertEqual(data["url"], f"/blog/{self.article.slug}/")
 
     def test_props_contain_all_detail_fields(self) -> None:
