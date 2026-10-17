@@ -20,6 +20,7 @@ class ChannelDTO(BaseModel):
     category: Optional[str]
     country: Optional[str]
     language: Optional[str]
+    citation_index: float = Field(default=0.0)
     is_verified: bool = False
     verified_at: Optional[datetime] = None
 

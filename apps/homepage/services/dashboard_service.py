@@ -138,7 +138,7 @@ class DashboardService:
         self, qs: QuerySet[TelegramChannel]
     ) -> list[ChannelDTO]:
         """
-        Формирует список каналов с использованием чистых функций метрик.
+        Формирует список каналов с использованием чистых функций метрик
         """
         result = []
         thirty_days_ago = timezone.now() - timedelta(days=30)
@@ -149,6 +149,8 @@ class DashboardService:
             views = channel.average_views or 0
             interactions = channel.avg_interactions or 0
             er = engagement_rate(interactions, views)
+
+            citation_index = getattr(channel, "citation_index", 0.0)
 
             # Данные для Growth 30d
             past_stat = (
@@ -170,6 +172,7 @@ class DashboardService:
                     views=views,
                     engagement=round(er * 100, 2),
                     growth=round(growth_pct, 2),
+                    citation_index=citation_index,
                     is_verified=channel.is_verified,
                 )
             )

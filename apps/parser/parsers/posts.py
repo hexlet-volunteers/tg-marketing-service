@@ -56,7 +56,9 @@ class PostsParser:
             if message.text:
                 # Паттерны упоминаний каналов (поддержка точек и подчеркиваний)
                 found_mentions = re.findall(r"@([\w\.]+)", message.text)
-                mentions = list(set(found_mentions))
+                mentions = list(
+                    set(m.lstrip("@").casefold() for m in found_mentions)
+                )
 
             # 1. Создание или получение поста
             post, created = await Post.objects.aget_or_create(
