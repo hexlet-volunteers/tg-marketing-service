@@ -16,7 +16,10 @@ from django.templatetags.static import static
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
-from django.utils.http import urlsafe_base64_decode
+from django.utils.http import (
+    url_has_allowed_host_and_scheme,
+    urlsafe_base64_decode,
+)
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic.base import View
 from inertia import InertiaResponse
@@ -202,18 +205,43 @@ class LogoutView(UserAuthenticationCheckMixin, View):
     name="post",
 )
 class LoginView(View):
+    """Email/password login at /auth/login/.
+
+    GET and invalid POST render the Inertia component Auth with:
+        form: {data: {email: str, password: ""}, errors: {field: [str]}}
+        next: str (validated return URL, or "")
+    GET has empty data/errors. Invalid POST preserves only the email.
+    Required/format errors use email/password; invalid credentials use email.
+
+    A valid POST creates a session, sets session["flash"]["success"], and
+    returns HTTP 302 to a safe next URL (POST takes precedence over GET),
+    falling back to homepage:dashboard. The destination GET supplies the
+    actual shared auth/role/flash props; no username payload is fabricated.
+    next allows only the current host and requires HTTPS on secure requests.
+    """
+
+    def _get_next_url(self, request: HttpRequest) -> str:
+        next_url = request.POST.get("next", request.GET.get("next", "")).strip()
+        if url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return next_url
+        return ""
+
     def get(
         self,
         request: HttpRequest,
         *args: Any,
         **kwargs: Any,
     ) -> InertiaResponse:
-        # возвращаем форму
         return inertia_render(
             request,
             "Auth",
             props={
-                "form": {"data": {"email": "", "password": ""}, "errors": {}}
+                "form": {"data": {"email": "", "password": ""}, "errors": {}},
+                "next": self._get_next_url(request),
             },
         )
 
@@ -225,19 +253,16 @@ class LoginView(View):
     ) -> InertiaResponse | HttpResponseRedirect:
         form = UserLoginForm(request, request.POST)
 
-        # валидируем данные
         if form.is_valid():
-            # сохраняем полученные данные в объект
             user = form.get_user()
-
-            # записываем пользователя в сессию
             login(request, user)
 
             request.session["flash"] = {"success": "Вы залогинены"}
-            return redirect("homepage:dashboard")
+            return HttpResponseRedirect(
+                self._get_next_url(request) or reverse("homepage:dashboard")
+            )
 
         else:
-            # Ошибки валидации
             return inertia_render(
                 request,
                 "Auth",
@@ -248,7 +273,8 @@ class LoginView(View):
                             "password": "",
                         },
                         "errors": form.errors,
-                    }
+                    },
+                    "next": self._get_next_url(request),
                 },
             )
 
