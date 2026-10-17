@@ -32,7 +32,9 @@ class CreateGroupView(UserAuthenticationCheckMixin, View):
             group = form.save(commit=False)
             group.owner = request.user
             if not group.image_url or not group.image_url.strip():
-                group.image_url = DEFAULT_AVATAR_GROUP
+                group.image_url = request.build_absolute_uri(
+                    DEFAULT_AVATAR_GROUP
+                )
             group.save()
             return inertia_render(
                 request,

@@ -1,11 +1,11 @@
 from typing import Any
 
-from django.core.validators import URLValidator
 from django.db import models
 from django.utils.text import slugify
 from unidecode import unidecode
 
 from apps.users.models import User
+from apps.users.validators import MAX_IMAGE_URL_LENGTH, validate_http_url
 
 
 class Group(models.Model):
@@ -57,7 +57,8 @@ class Group(models.Model):
         related_name="groups",
     )
     image_url = models.TextField(
-        validators=[URLValidator()],
+        max_length=MAX_IMAGE_URL_LENGTH,
+        validators=[validate_http_url],
         blank=True,
         verbose_name="обложка группы",
     )
