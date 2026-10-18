@@ -95,15 +95,16 @@ const pages = import.meta.glob("./pages/**/*.tsx");
 ## Состояние интеграции
 
 Обозначения столбца `pages/<Name>.tsx`: `✅` — файл уже есть (#194);
-`🆕` — файла нет. Обозначения столбца `props`: `✅` — реальные, `🔸` —
-мок/пустые.
+`🆕` — файла нет. Обозначения столбца `props`: `✅` — реальные и совпадают с
+FE, `🔸` — мок/пустые, `⚠️` — backend и frontend используют **разные наборы
+props** (целевая структура — FE, см. раздел экрана).
 
 | Экран | `component` | URL | Django view | `pages/<Name>.tsx` | props |
 |-------|-------------|-----|-------------|--------------------|-------|
 | Landing | `Landing` | `/` | `IndexView` | ✅ `Landing.tsx` | ✅ |
 | Channels | `Channels` | `/channels/` | `ChannelCatalogView` | ✅ `Channels.tsx` | 🔸 |
-| Dashboard | `Dashboard` | `/dashboard/` | `DashboardView` | ✅ `Dashboard.tsx` | ✅ |
-| Post | `Post` | `/post/`, `/parser/post/…` | `PostPageView`, `PostDetailView`, `PostAIAnalysisView` | ✅ `Post.tsx` | ✅/🔸 |
+| Dashboard | `Dashboard` | `/dashboard/` | `DashboardView` | ✅ `Dashboard.tsx` | ⚠️ BE≠FE |
+| Post | `Post` | `/post/`, `/parser/post/…` | `PostPageView`, `PostDetailView`, `PostAIAnalysisView` | ✅ `Post.tsx` | ⚠️ BE≠FE |
 | Compare | `Compare` | `/compare/` | `CompareView` | ✅ `Compare.tsx` | 🔸 |
 | AICabinet | `AICabinet` | `/ai-cabinet/` | `AICabinetView` | ✅ `AICabinet.tsx` | 🔸 |
 | Collections | `Collections` | `/collections/` | `CollectionsCatalogView` | ✅ `Collections.tsx` | ✅ |
@@ -113,7 +114,7 @@ const pages = import.meta.glob("./pages/**/*.tsx");
 | BlogPost | `BlogPost` | `/blog/<slug>/` | `BlogArticleDetailView` | ✅ `BlogPost.tsx` | ✅ |
 | Legal | `Legal` | `/legal/` | `LegalView` | ✅ `Legal.tsx` | ✅ |
 | NotFound | `NotFound` | `/<path>/` | `NotFoundView` | ✅ `NotFound.tsx` | 🔸 |
-| Admin | `Admin` | `/admin/moderation/` | `ModerationRequestListView` | ✅ `Admin.tsx` | ✅ |
+| Admin | `Admin` | `/admin/moderation/` | `ModerationRequestListView` | ✅ `Admin.tsx` | ⚠️ BE≠FE |
 
 Вспомогательные страницы, не входящие в 14 экранов, но используемые модалками
 и групповыми формами:
@@ -222,7 +223,57 @@ const pages = import.meta.glob("./pages/**/*.tsx");
 ## Dashboard — `/dashboard/`
 
 Защищённый экран: неавторизованные редиректятся на `/`.
-Props описаны DTO `apps/homepage/dto/dashboard_dto.py` (`DashboardDTO`).
+
+⚠️ **Расхождение BE/FE.** Backend отправляет набор `stats`/`channels`/
+`ai_insights`/… (`DashboardDTO`), а страница `pages/Dashboard.tsx`
+(`DashBoardProps = ChannelData & PostProps`) потребляет `kpis`, `growthData`,
+`posts` и всё остальное игнорирует; при отсутствии props страница рендерит
+моки (`frontend/src/shared/mocks/channelKpis.ts`,
+`frontend/src/shared/mocks/posts.ts`). **Целевая структура — FE** (ниже).
+
+### Целевые props (FE)
+
+Типы — `frontend/src/types/channel.ts` (`Kpi`, `GrowthSubscribersData`,
+`ChannelData`), `frontend/src/types/post.ts` (`Post`, `PostProps`).
+
+```json
+{
+  "component": "Dashboard",
+  "props": {
+    "kpis": [
+      { "label": "Посты", "value": 2347, "delta": 120, "percentDelta": 5.4, "positive": true }
+    ],
+    "growthData": [
+      { "date": "2026-09-01", "подписчики": 45200 }
+    ],
+    "posts": [
+      { "title": "Заголовок поста", "views": 15200, "reactions": 120, "forwards": 340, "er": 3.4 }
+    ]
+  },
+  "url": "/dashboard/"
+}
+```
+
+| prop | тип | обяз. | примечание |
+|------|-----|-------|------------|
+| `kpis[]` | `Kpi[]` | да | 4 карточки; дефолт на FE — `mockKpis` |
+| `kpis[].label` | `str` | да | подпись KPI |
+| `kpis[].value` | `int` | да | |
+| `kpis[].delta` | `int` | нет | абсолютный прирост; BE пока не отдаёт |
+| `kpis[].percentDelta` | `int` | нет | % прироста; BE пока не отдаёт |
+| `kpis[].positive` | `bool` | да | направление дельты |
+| `growthData[]` | `GrowthSubscribersData[]` | да | временной ряд `{date, подписчики}`; BE пока не отдаёт |
+| `posts[]` | `Post[]` | да | топ постов; BE пока не отдаёт список постов |
+| `posts[].title` | `str` | да | |
+| `posts[].views` | `int` | да | |
+| `posts[].reactions` | `int` | да | сумма реакций |
+| `posts[].forwards` | `int` | да | |
+| `posts[].er` | `float` | да | engagement rate |
+
+### Текущий backend
+
+Props описаны DTO `apps/homepage/dto/dashboard_dto.py` (`DashboardDTO`),
+сериализуются через `model_dump(mode="json")` в `apps/homepage/views.py`.
 
 ```json
 {
@@ -267,6 +318,17 @@ Props описаны DTO `apps/homepage/dto/dashboard_dto.py` (`DashboardDTO`).
 | `collections[].is_auto` | `bool` | да | признак автоколлекции |
 | `quick_actions` | `list[str]` | да | |
 
+### Маппинг BE → целевую структуру
+
+| Целевой prop (FE) | Источник (BE) | Статус |
+|-------------------|---------------|--------|
+| `kpis[].label`, `kpis[].value` | `stats.channels` / `stats.posts` / `stats.ai_suggestions` / `stats.days_left` | переименование, 4 KPI |
+| `kpis[].delta`, `kpis[].percentDelta` | — | **BE не отдаёт**; доопределить в `StatsDTO` либо необязательные `null` |
+| `kpis[].positive` | — | вычисляется из знака дельты (BE или FE) |
+| `growthData[]` | — | **BE не отдаёт временной ряд** (`channels[].growth` — только итоговый %); новый массив в DTO либо оставить мок |
+| `posts[]` | — | **BE не отдаёт список постов**; новый массив в DTO либо оставить мок |
+| — | `channels`, `ai_insights`, `collections`, `quick_actions` | передаётся BE, **FE не потребляет** (часть данных дублируется: `stats` ↔ `channels`) |
+
 ## Post — детальный разбор поста
 
 Компонент `Post` отдают три маршрута:
@@ -276,6 +338,64 @@ Props описаны DTO `apps/homepage/dto/dashboard_dto.py` (`DashboardDTO`).
 | `/parser/post/<channel_id>/<telegram_message_id>/` | `PostDetailView` | `post` + `channel` |
 | `/parser/ai/channels/<channel_id>/posts/<post_id>/analysis` | `PostAIAnalysisView` | только `post` (`channel` = `null`) |
 | `/post/` | `PostPageView` | **мок**, `props: {}` |
+
+⚠️ **Расхождение BE/FE.** Backend отправляет `post`/`channel` (DTO
+`apps/parser/dto/post_analysis_dto.py`, `PostPagePropsDTO`), а страница
+`pages/Post.tsx` (`PostPageProps` из
+`frontend/src/types/post.ts`) потребляет только `analysis` и `reactions`;
+сам `post`/`channel` FE **не использует** (текст и метрики поста
+захардкожены в JSX). При отсутствии props — моки
+(`frontend/src/shared/mocks/posts.ts`). **Целевая структура — FE** (ниже).
+
+### Целевые props (FE)
+
+Типы — `frontend/src/types/post.ts` (`PostAnalysis`, `PostReaction`,
+`PostPageProps`).
+
+```json
+{
+  "component": "Post",
+  "props": {
+    "analysis": {
+      "status": "completed",
+      "why_worked": ["Причина успеха"],
+      "how_to_improve": ["Как улучшить"],
+      "similar_posts": [
+        {
+          "id": 2,
+          "telegram_message_id": 100499,
+          "text": "Текст похожего поста",
+          "published_at": "2026-08-30T10:00:00+00:00",
+          "views": 9800,
+          "forwards": 210,
+          "comments_count": 12,
+          "permalink": "https://t.me/example/100499"
+        }
+      ],
+      "model_version": "claude-3-5"
+    },
+    "reactions": [
+      { "emoji": "🔥", "label": "Огонь", "percent": 40, "count": 48 }
+    ]
+  },
+  "url": "/parser/post/2/100500/"
+}
+```
+
+| prop | тип | обяз. | примечание |
+|------|-----|-------|------------|
+| `analysis` | `PostAnalysis \| null` | нет | top-level; статус `processing`/`completed`; FE стартует с `null` («Анализ не проведен») |
+| `analysis.why_worked` | `list[str]` | да | |
+| `analysis.how_to_improve` | `list[str]` | да | |
+| `analysis.similar_posts[]` | `list[SimilarPost]` | да | |
+| `analysis.model_version` | `str \| null` | да | |
+| `reactions` | `list[PostReaction]` | нет | плоский список, FE-форма |
+| `reactions[].emoji` | `str` | да | `🔥 ❤️ 👍 🤯` |
+| `reactions[].label` | `str` | да | `Огонь/Сердце/Лайк/Восторг` |
+| `reactions[].percent` | `float` | да | доля реакции |
+| `reactions[].count` | `int` | да | абсолютное число |
+
+### Текущий backend
 
 Props — DTO `apps/parser/dto/post_analysis_dto.py` (`PostPagePropsDTO`).
 
@@ -335,6 +455,17 @@ Props — DTO `apps/parser/dto/post_analysis_dto.py` (`PostPagePropsDTO`).
 - `csrfToken` — общий prop (см. [«Общие props»](#общие-props)), в props экрана
   `Post` не дублируется. `PostDetailView` пока передаёт его через
   `PostPagePropsDTO` — известное расхождение, см. ниже.
+
+### Маппинг BE → целевую структуру
+
+| Целевой prop (FE) | Источник (BE) | Статус |
+|-------------------|---------------|--------|
+| `analysis` | `post.post_analysis` | поднять с top-level `post` на top-level props |
+| `analysis.similar_posts[]` | `post.post_analysis.similar_posts` | формы совпадают (`{id, telegram_message_id, text, published_at, views, forwards, comments_count, permalink}`) |
+| `reactions[]` | `post.reactions.details` | **формы различаются**: BE `{total, details: {emoji: count}}` vs FE `[{emoji, label, percent, count}]`; `label` — таблица соответствий на FE/BE |
+| — | `post` (без `post_analysis`) | передаётся BE, **FE не потребляет** (контент поста захардкожен) |
+| — | `channel` | передаётся BE, **FE не потребляет** |
+| — | `csrfToken` в `PostPagePropsDTO` | дубль общего middleware, убрать (см. [«Известные расхождения»](#известные-расхождения)) |
 
 ## Compare — `/compare/`
 
@@ -637,8 +768,53 @@ Catch-all регистрируется только для URL с заверша
 ## Admin — `/admin/moderation/`
 
 Модерация заявок. Только для администраторов (`AdminRequiredMixin`).
+
+⚠️ **Расхождение BE/FE.** Backend отправляет `pendingRequests`/`pendingCount`/
+`pagination` (DTO `apps/admin/moderation/dto/moderation_dto.py`,
+`ModerationDTO`), а страница `pages/Admin.tsx` (`UserRequestProps` из
+`frontend/src/types/user.ts`) потребляет только `userRequests`; счётчик
+вкладки (`4`) и прочие вкладки захардкожены, `pendingCount`/`pagination` FE
+**не использует**. При отсутствии props — мок
+(`frontend/src/utils/addColors.ts`). **Целевая структура — FE** (ниже).
+
+### Целевые props (FE)
+
+Типы — `frontend/src/types/user.ts` (`UserRequest`, `UserRequestWithColors`,
+`UserRequestProps`).
+
+```json
+{
+  "component": "Admin",
+  "props": {
+    "userRequests": [
+      {
+        "title": "Example channel",
+        "username": "user",
+        "author": "user",
+        "time": "13.08.2026",
+        "category": "technology",
+        "color": "purple"
+      }
+    ]
+  },
+  "url": "/admin/moderation/?page=1"
+}
+```
+
+| prop | тип | обяз. | примечание |
+|------|-----|-------|------------|
+| `userRequests[]` | `UserRequestWithColors[]` | да | строки таблицы модерации |
+| `userRequests[].title` | `str` | да | название канала |
+| `userRequests[].username` | `str` | да | username заявителя |
+| `userRequests[].author` | `str` | да | автор запроса |
+| `userRequests[].time` | `str` | да | время подачи, строка |
+| `userRequests[].category` | `str` | да | |
+| `userRequests[].color` | `str` | да | цвет аватара; **вычисляется на клиенте** (`addColorsToUsersRequests`), из BE не приходит |
+
+### Текущий backend
+
 Детальный контракт — [`moderation_contract.md`](./moderation_contract.md).
-Props — `ModerationDTO` (`apps/admin/moderation/dto/moderation_dto.py`).
+Props — `ModerationDTO`.
 
 ```json
 {
@@ -677,6 +853,18 @@ Props — `ModerationDTO` (`apps/admin/moderation/dto/moderation_dto.py`).
 - `GET` поддерживает query-параметр `page` (по умолчанию 1, размер 10);
 - `pendingCount` — общее число `pending`-заявок, не размер страницы;
 - `submitted_by` и `channel` могут быть `null`.
+
+### Маппинг BE → целевую структуру
+
+| Целевой prop (FE) | Источник (BE) | Статус |
+|-------------------|---------------|--------|
+| `userRequests[].title` | `pendingRequests[].channel.title` | `channel` может быть `null` — нужен фолбэк (`channel_identifier`) |
+| `userRequests[].username` | `pendingRequests[].submitted_by.username` | `submitted_by` может быть `null` |
+| `userRequests[].author` | `pendingRequests[].submitted_by.username` | FE не различает author/username — уточнить |
+| `userRequests[].time` | `pendingRequests[].created_at` | переформатирование даты в строку |
+| `userRequests[].category` | `pendingRequests[].category` | совпадает |
+| `userRequests[].color` | — | **вычисляется на клиенте** (`addColorsToUsersRequests`), в контракт BE не входит |
+| — | `pendingCount`, `pagination` | передаётся BE, **FE не потребляет** (бейдж вкладки хардкод `4`); для пагинации FE-тип придётся расширить |
 
 ## ChannelAnalytics — `/parser/list`
 
@@ -752,7 +940,9 @@ Props — `ModerationDTO` (`apps/admin/moderation/dto/moderation_dto.py`).
 
 # Модалки
 
-Формат ошибок валидации единый для всех форм:
+## Формат ошибок валидации
+
+Форма элемента ошибок едина для всех форм:
 
 ```json
 {
@@ -763,7 +953,24 @@ Props — `ModerationDTO` (`apps/admin/moderation/dto/moderation_dto.py`).
 }
 ```
 
-Пароли после невалидного POST в `form.data` всегда пустые.
+Backend получает её через `form.errors.get_json_data()` (Django-формы);
+сырой `form.errors` (списки строк) в Inertia-props не передаётся.
+
+⚠️ **Placement разный** — контракт фиксирует его как есть, нормализация
+планируется вместе с переводом view на DTO (#197):
+
+| Форма | Где лежат ошибки | Структура `form` |
+|-------|------------------|------------------|
+| Логин, Регистрация | `form.errors` | `{data, errors}` |
+| Profile (`UserCabinetView`) | top-level `errors` (+ `values`) | `form` — плоские данные |
+| `UpdateUserProfile` | top-level `errors` | `form` — плоские данные |
+| `RestorePasswordRequest` | top-level `errors` (рядом с `email`) | нет `form` |
+| `RestorePassword` | top-level `errors` (+ `new_password1/2`, `uid`, `token`) | нет `form`; пароли эхом в top-level props |
+| Группы (create/update) | top-level `errors` | `form` — плоские данные |
+| Добавление каналов | `form.errors` (+ `form.values`) | `{errors, values}` |
+
+Пароли после невалидного POST в `form.data` всегда пустые
+(исключение — `RestorePassword`: пароли в top-level props, см. таблицу).
 
 ## Логин
 
@@ -907,7 +1114,11 @@ Props каждого экрана описываются Pydantic-DTO, а не �
 | `apps/group_channels/views.py` `GroupDetailView` docstring | старый набор ключей `get_data()` | текущий набор |
 | `apps/parser/views.py` `PostDetailView` | дублирует общий prop `csrfToken` в `PostPagePropsDTO` | брать из общего middleware (`inertia-shared-props.md`) |
 | `apps/users/views.py` `UserCabinetView` | props `user_role` и `user.role` повторяют общий `role` | брать `role` из общего middleware |
+| `DashboardView` / `DashboardDTO` vs `pages/Dashboard.tsx` | BE: `stats`/`channels`/`ai_insights`/…; FE: `kpis`/`growthData`/`posts` (мок-дефолты) | целевая — FE; расширить DTO (`delta`, временной ряд, список постов) либо оставить мок осознанно — см. [Dashboard](#dashboard--dashboard) |
+| `PostPagePropsDTO` vs `pages/Post.tsx` | BE: `post`/`channel`; FE: `analysis`/`reactions`; формы `reactions` различаются (`{total, details}` vs список) | целевая — FE; поднять `post_analysis` в top-level `analysis` — см. [Post](#post--детальный-разбор-поста) |
+| `ModerationDTO` vs `pages/Admin.tsx` | BE: `pendingRequests`/`pendingCount`/`pagination`; FE: `userRequests`; `color` — только на клиенте | целевая — FE; сопоставить поля, `color` считать на FE — см. [Admin](#admin--adminmoderation) |
 | `main` | старые `component` (`Home`, `UserProfilePage`, `AdminModeration`, `PostPage`, `BlogArticle`) | канонические имена #198 |
+| placement `errors` у форм | top-level `errors` (Profile, UpdateUserProfile, RestorePassword×2, группы create/update) vs `form.errors` (логин, регистрация, добавление каналов) | единая форма элемента `[{message, code}]` уже обеспечена `get_json_data()`; нормализация placement — при переводе view на DTO (#197), см. [«Формат ошибок валидации»](#формат-ошибок-валидации) |
 
 ## Чек-лист
 
@@ -921,9 +1132,16 @@ Props каждого экрана описываются Pydantic-DTO, а не �
 4. Заменить мок-пропсы (`Channels`, `Compare`, `AICabinet`, `Collection`,
    `NotFound`) на реальные по планируемым формам — либо оставить мок
    согласованно.
-5. Перевести словарные view на DTO из `dto_convention.md` (#197).
+5. Перевести словарные view на DTO из `dto_convention.md` (#197) и заодно
+   нормализовать placement `errors` (top-level vs `form.errors` — см.
+   [«Формат ошибок валидации»](#формат-ошибок-валидации)).
 6. Обновить docstring-и из таблицы расхождений.
-7. Обновлять контракт при каждом изменении формы props, маршрута или
+7. Выровнять `Dashboard`, `Post`, `Admin` по целевой FE-структуре (см. таблицы
+   маппинга в разделах экранов): адаптировать DTO/view на backend **либо**
+   добавить адаптеры в страницах frontend; до этого мок-дефолты в
+   `pages/Dashboard.tsx`, `pages/Post.tsx`, `pages/Admin.tsx` скрывают
+   расхождение.
+8. Обновлять контракт при каждом изменении формы props, маршрута или
    имени компонента.
 
 ## Согласование
