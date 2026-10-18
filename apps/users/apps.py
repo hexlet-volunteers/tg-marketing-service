@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from importlib import import_module
+from typing import TYPE_CHECKING, Any
 
 from allauth.socialaccount.signals import social_account_added
 from django.apps import AppConfig
@@ -15,13 +16,15 @@ class UsersConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "apps.users"
 
-    def ready(self):
+    def ready(self) -> None:
+        import_module("apps.users.signals")
+
         @receiver(social_account_added)
         def handle_yandex_login(
             sender: type[SocialLogin],
             request: HttpRequest,
             sociallogin: SocialLogin,
-            **kwargs,
+            **kwargs: Any,
         ) -> None:
             if sociallogin.account.provider == "yandex":
                 user = sociallogin.user

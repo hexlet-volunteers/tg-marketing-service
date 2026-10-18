@@ -56,6 +56,7 @@ def get_telegram_credentials(
 
     return api_id_int, api_hash, session_string
 
+
 def normalize_channel_username(username: str) -> str:
     """Normalize a Telegram channel username for comparison."""
     normalized = username.strip().lower()

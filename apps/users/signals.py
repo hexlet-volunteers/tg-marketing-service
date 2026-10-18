@@ -26,7 +26,7 @@ def assign_role_partner(
     try:
         if created:
             user = instance
-            if user.role != "user":
+            if not user.role:
                 user.role = "user"
                 user.save(update_fields=["role"])
 

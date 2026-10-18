@@ -86,7 +86,7 @@ class TelegramChannel(models.Model):
         default=True,
         db_index=True,
         verbose_name="Доступен в каталоге",
-)
+    )
     verified_at = models.DateTimeField(
         null=True, blank=True, verbose_name="Дата верификации"
     )

@@ -19,6 +19,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
 
+from apps.admin.moderation.views import AdminChannelsView
 from apps.group_channels.views import CollectionsCatalogView
 from config.views import IndexView
 
@@ -40,6 +41,11 @@ urlpatterns = [
         include("apps.admin.moderation.urls"),
     ),
     path("legal/", include("apps.legal.urls")),
+    path(
+        "admin/channels/",
+        AdminChannelsView.as_view(),
+        name="admin_channels",
+    ),
     path("admin/", admin.site.urls),
     path(
         "robots.txt",

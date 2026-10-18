@@ -83,7 +83,11 @@ class SharedInertiaPropsMiddleware:
         # Flash не должен теряться на промежуточных редиректах:
         # если ответ — redirect, возвращаем flash в сессию,
         # чтобы следующий запрос мог его извлечь.
-        if flash is not None and 300 <= response.status_code < 400:
+        if (
+            flash is not None
+            and 300 <= response.status_code < 400
+            and "flash" not in request.session
+        ):
             request.session["flash"] = flash
 
         return response

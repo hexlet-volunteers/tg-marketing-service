@@ -1,9 +1,9 @@
 import logging
-from typing import Any
+from typing import Any, cast
 
 from asgiref.sync import async_to_sync
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
@@ -13,6 +13,7 @@ from django.views.generic import DetailView, FormView, ListView, View
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
+from apps.admin.moderation.models import ModerationRequest
 from apps.parser.dto.channel_dto import ChannelDTO, ChannelListDTO
 from apps.parser.dto.post_analysis_dto import PostDataDTO, PostPagePropsDTO
 from apps.parser.forms import ChannelParseForm
@@ -24,8 +25,11 @@ from apps.parser.types import (
     ParsedChannelResult,
     normalize_channel_data,
 )
-from apps.parser.utils import get_telegram_credentials, normalize_channel_username
-from apps.admin.moderation.models import ModerationRequest
+from apps.parser.utils import (
+    get_telegram_credentials,
+    normalize_channel_username,
+)
+from apps.users.models import User
 from config.mixins import UserAuthenticationCheckMixin
 from config.renderers import render_inertia_from_dto
 
@@ -54,9 +58,7 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
         """Find an existing channel by normalized username."""
         username = normalize_channel_username(channel_identifier)
 
-        return TelegramChannel.objects.filter(
-        username__iexact=username
-    ).first()
+        return TelegramChannel.objects.filter(username__iexact=username).first()
 
     async def async_tg_parser(
         self, url: str, limit: int = 10
@@ -147,7 +149,7 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
                 "error": f"Канал {existing_channel.title} уже в каталоге"
             }
             return super().form_valid(form)
-    
+
         log.info(
             f"Начинаем обработку данных для канала; "
             f"- {identifier} лимит - {limit}"
@@ -176,14 +178,14 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
             self.save_stats(channel, channel_data)
 
             ModerationRequest.objects.create(
-                submitted_by=self.request.user,
+                submitted_by=cast(User, self.request.user),
                 channel_identifier=identifier,
                 channel_by=channel,
                 category=category,
                 country=country,
                 language=language,
                 status="pending",
-)
+            )
 
             # Generating user message
             message = (
@@ -203,7 +205,7 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
 class ParserListView(ListView):
     model = TelegramChannel
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[TelegramChannel]:
         return TelegramChannel.objects.filter(is_public=True)
 
     def get(
@@ -261,7 +263,6 @@ class ChannelLookupView(View):
 
         if not q:
             return JsonResponse([], safe=False)
-
 
         channels = TelegramChannel.objects.filter(is_public=True).filter(
             Q(title__icontains=q) | Q(username__icontains=q)
