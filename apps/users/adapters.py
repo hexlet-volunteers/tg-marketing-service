@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.db import transaction
@@ -11,6 +11,7 @@ from apps.users.consents import (
     pop_yandex_oauth_consent,
     record_consent,
 )
+from apps.users.models import User
 
 
 class MarketingSocialAccountAdapter(DefaultSocialAccountAdapter):
@@ -29,9 +30,11 @@ class MarketingSocialAccountAdapter(DefaultSocialAccountAdapter):
         request: HttpRequest,
         sociallogin: Any,
         form: Any = None,
-    ):
+    ) -> User:
         with transaction.atomic():
-            user = super().save_user(request, sociallogin, form=form)
+            user = cast(
+                User, super().save_user(request, sociallogin, form=form)
+            )
             if self._is_yandex_signup(sociallogin):
                 pending_consent = pop_yandex_oauth_consent(request)
                 if pending_consent is not None:

@@ -3,6 +3,7 @@ from typing import Any
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models, transaction
+from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
@@ -31,6 +32,11 @@ class User(AbstractUser):
         permissions = [
             ("can_add_channel", "Может добавлять каналы"),
             ("can_apply_partnership", "Может подавать заявку на партнерство"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                Lower("email"), name="users_email_ci_unique"
+            ),
         ]
 
     def __str__(self) -> str:
