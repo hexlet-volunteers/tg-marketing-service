@@ -1,7 +1,12 @@
+from datetime import datetime
+
 from django.db.models import QuerySet
 
 from apps.admin.moderation.models import ModerationRequest
-from apps.admin.moderation.types import ModerationRequestData
+from apps.admin.moderation.types import (
+    ModerationRequestData,
+    UserRequestData,
+)
 
 
 class ModerationQueue:
@@ -49,3 +54,30 @@ class ModerationQueue:
         }
 
         return queue
+
+    def get_user_request_data(
+        self,
+        moderation_request: ModerationRequest,
+    ) -> UserRequestData:
+        """Маппинг заявки в FE-структуру строки таблицы модерации."""
+        username = (
+            moderation_request.submitted_by.username
+            if moderation_request.submitted_by
+            else ""
+        )
+        title = (
+            moderation_request.channel_by.title
+            if moderation_request.channel_by
+            and moderation_request.channel_by.title
+            else moderation_request.channel_identifier
+        )
+
+        return {
+            "title": title,
+            "username": username,
+            "author": username,
+            "time": datetime.fromisoformat(
+                moderation_request.created_at.isoformat()
+            ).strftime("%d.%m.%Y"),
+            "category": moderation_request.category,
+        }

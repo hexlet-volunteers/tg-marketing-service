@@ -5,6 +5,7 @@ from django.shortcuts import redirect
 from django.views.generic.base import View
 from inertia import render as inertia_render
 
+from apps.homepage.mock_data import MOCK_TARIFFS
 from apps.homepage.models import HomePageComponent
 
 
@@ -62,7 +63,10 @@ class IndexView(View):
                 }
             )
 
-        page_props = {"components": components_data}
+        page_props = {
+            "components": components_data,
+            "tariffs": MOCK_TARIFFS,
+        }
 
         # коментируем до изменеий в UserRegister
         # page_props = {

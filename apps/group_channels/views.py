@@ -7,16 +7,22 @@ from django.shortcuts import get_object_or_404
 from django.views.generic.base import View
 from inertia import render as inertia_render
 
-from apps.group_channels.dto.collection_detail_dto import CollectionDetailDTO
+from apps.group_channels.dto.collection_detail_dto import (
+    CollectionChannelDTO,
+    CollectionDetailDTO,
+)
 from apps.group_channels.forms import (
     AddChannelForm,
     CreateGroupForm,
     UpdateGroupForm,
 )
-from apps.group_channels.models import Group
-from apps.group_channels.services.collections_catalog_service import (
-    CollectionsCatalogService,
+from apps.group_channels.mock_data import (
+    MOCK_COLLECTION_DESCRIPTION,
+    MOCK_COLLECTION_TITLE,
+    build_mock_catalog,
+    build_mock_collection_channels,
 )
+from apps.group_channels.models import Group
 from apps.parser.models import TelegramChannel
 from config.mixins import UserAuthenticationCheckMixin
 from config.renderers import render_inertia_from_dto
@@ -199,7 +205,13 @@ class AddChannelsView(UserAuthenticationCheckMixin, UserPassesTestMixin, View):
 
 
 class CollectionsCatalogView(View):
-    """Публичный каталог подборок."""
+    """Публичный каталог подборок.
+
+    Пока отдаются моки из реестра apps/group_channels/mock_data.py
+    (`build_mock_catalog`) с применением фильтров q/country/category.
+    Реальная выборка из БД (CollectionsCatalogService) сохранена ниже
+    и используется при подключении данных БД.
+    """
 
     def get(
         self,
@@ -211,32 +223,41 @@ class CollectionsCatalogView(View):
         country = request.GET.get("country", "").strip() or None
         category = request.GET.get("category", "").strip() or None
 
-        dto = CollectionsCatalogService().build(
-            q=q,
-            country=country,
-            category=category,
-        )
+        # Реальная логика БД (пока не используется):
+        # dto = CollectionsCatalogService().build(
+        #     q=q,
+        #     country=country,
+        #     category=category,
+        # )
 
-        return inertia_render(
-            request,
-            "Collections",
-            props=dto.model_dump(mode="json"),
-        )
+        dto = build_mock_catalog(q=q, country=country, category=category)
+
+        return render_inertia_from_dto(request, "Collections", props=dto)
 
 
 class CollectionDetailView(View):
     """Детальная страница подборки (Inertia: Collection).
 
-    Содержимое пока моковое — на стороне frontend, поэтому
-    существование подборки с данным pk не проверяется.
+    Пока отдаются моки из реестра apps/group_channels/mock_data.py,
+    поэтому существование подборки с данным pk не проверяется.
     """
 
     def get(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
+        channels = [
+            CollectionChannelDTO(**data)
+            for data in build_mock_collection_channels()
+        ]
+        dto = CollectionDetailDTO(
+            title=MOCK_COLLECTION_TITLE,
+            description=MOCK_COLLECTION_DESCRIPTION,
+            channel_count=len(channels),
+            channels=channels,
+        )
+
         return render_inertia_from_dto(
             request,
             "Collection",
-            props=CollectionDetailDTO(),
-            exclude_unset=True,
+            props=dto,
         )

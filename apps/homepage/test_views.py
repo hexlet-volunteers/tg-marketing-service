@@ -6,6 +6,13 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.billing.models import Plan, Subscription
+from apps.homepage.mock_data import (
+    MOCK_CHANNEL,
+    MOCK_GROWTH_DATA,
+    MOCK_KPIS,
+    MOCK_POSTS,
+    MOCK_TARIFFS,
+)
 from apps.homepage.models import HomePageComponent
 from apps.users.models import User
 
@@ -53,6 +60,17 @@ class IndexViewTest(TestCase):
             first_component["content"], self.component.content["content"]
         )
         self.assertEqual(first_component["order"], self.component.order)
+
+    def test_index_view_serves_tariffs(self):
+        response = self.client.get(
+            reverse("main_index"),
+            HTTP_ACCEPT="application/json",
+            HTTP_X_INERTIA="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        props = response.json()["props"]
+        self.assertEqual(props["tariffs"], MOCK_TARIFFS)
 
     def _get_inertia_props(
         self,
@@ -288,3 +306,50 @@ class DashboardSubscriptionTest(TestCase):
         stats = self._get_dashboard_stats()
 
         self.assertEqual(stats["days_left"], 7)
+
+
+class DashboardPagePropsTest(TestCase):
+    def _login(self, username: str = "dashuser") -> None:
+        user = User.objects.create_user(
+            username=username,
+            email=f"{username}@example.com",
+            password="secret123",
+            role="user",
+        )
+        self.client.force_login(user)
+
+    def _get_props(self) -> dict[str, Any]:
+        response = self.client.get(
+            reverse("homepage:dashboard"),
+            HTTP_ACCEPT="application/json",
+            HTTP_X_INERTIA="true",
+        )
+        self.assertEqual(response.status_code, 200)
+        return response.json()["props"]
+
+    def test_dashboard_serves_fe_shaped_props(self) -> None:
+        self._login()
+        props = self._get_props()
+
+        self.assertEqual(props["channel"], MOCK_CHANNEL)
+        self.assertEqual(props["kpis"], MOCK_KPIS)
+        self.assertEqual(props["growthData"], MOCK_GROWTH_DATA)
+        self.assertEqual(props["posts"], MOCK_POSTS)
+
+    def test_dashboard_keeps_real_dto_props(self) -> None:
+        self._login()
+        props = self._get_props()
+
+        self.assertIn("stats", props)
+        self.assertIn("ai_insights", props)
+        self.assertGreaterEqual(len(props["ai_insights"]), 1)
+        self.assertIn("quick_actions", props)
+
+    def test_dashboard_requires_auth(self) -> None:
+        response = self.client.get(
+            reverse("homepage:dashboard"),
+            HTTP_ACCEPT="application/json",
+            HTTP_X_INERTIA="true",
+        )
+
+        self.assertEqual(response.status_code, 302)

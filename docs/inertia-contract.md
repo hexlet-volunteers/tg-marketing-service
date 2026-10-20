@@ -96,19 +96,21 @@ const pages = import.meta.glob("./pages/**/*.tsx");
 
 Обозначения столбца `pages/<Name>.tsx`: `✅` — файл уже есть (#194);
 `🆕` — файла нет. Обозначения столбца `props`: `✅` — реальные и совпадают с
-FE, `🔸` — мок/пустые, `⚠️` — backend и frontend используют **разные наборы
+FE, `✅ мок BE` — контракт совпадает с FE, но данные моковые и отдаются
+бэкендом из реестров `apps/*/mock_data.py`, `🔸` — мок/пустые,
+`⚠️` — backend и frontend используют **разные наборы
 props** (целевая структура — FE, см. раздел экрана).
 
 | Экран | `component` | URL | Django view | `pages/<Name>.tsx` | props |
 |-------|-------------|-----|-------------|--------------------|-------|
 | Landing | `Landing` | `/` | `IndexView` | ✅ `Landing.tsx` | ✅ |
-| Channels | `Channels` | `/channels/` | `ChannelCatalogView` | ✅ `Channels.tsx` | 🔸 |
+| Channels | `Channels` | `/channels/` | `ChannelCatalogView` | ✅ `Channels.tsx` | ✅ мок BE |
 | Dashboard | `Dashboard` | `/dashboard/` | `DashboardView` | ✅ `Dashboard.tsx` | ⚠️ BE≠FE |
 | Post | `Post` | `/post/`, `/parser/post/…` | `PostPageView`, `PostDetailView`, `PostAIAnalysisView` | ✅ `Post.tsx` | ⚠️ BE≠FE |
-| Compare | `Compare` | `/compare/` | `CompareView` | ✅ `Compare.tsx` | 🔸 |
-| AICabinet | `AICabinet` | `/ai-cabinet/` | `AICabinetView` | ✅ `AICabinet.tsx` | 🔸 |
+| Compare | `Compare` | `/compare/` | `CompareView` | ✅ `Compare.tsx` | ✅ мок BE |
+| AICabinet | `AICabinet` | `/ai-cabinet/` | `AICabinetView` | ✅ `AICabinet.tsx` | ✅ мок BE |
 | Collections | `Collections` | `/collections/` | `CollectionsCatalogView` | ✅ `Collections.tsx` | ✅ |
-| Collection | `Collection` | `/collections/<pk>/` | `CollectionDetailView` | ✅ `Collection.tsx` | 🔸 |
+| Collection | `Collection` | `/collections/<pk>/` | `CollectionDetailView` | ✅ `Collection.tsx` | ✅ мок BE |
 | Profile | `Profile` | `/auth/profile/` | `UserCabinetView` | ✅ `Profile.tsx` | ✅ |
 | Blog | `Blog` | `/blog/` | `BlogListView` | ✅ `Blog.tsx` | ✅ |
 | BlogPost | `BlogPost` | `/blog/<slug>/` | `BlogArticleDetailView` | ✅ `BlogPost.tsx` | ✅ |
@@ -163,6 +165,18 @@ props** (целевая структура — FE, см. раздел экран
         },
         "url": "/"
       }
+    ],
+    "tariffs": [
+      {
+        "id": 1,
+        "name": "Free",
+        "description": "Для тех, кто начинает изучать Telegram-аналитику",
+        "price": "0 ₽",
+        "period": "навсегда",
+        "monthlyPrice": 0,
+        "features": [{ "id": 1, "text": "Базовая статистика" }],
+        "button": { "label": "Начать бесплатно", "variant": "default" }
+      }
     ]
   },
   "url": "/"
@@ -179,19 +193,20 @@ props** (целевая структура — FE, см. раздел экран
 | `components[].props.*` | `Any` | нет | распаковка `content` |
 | `components[].props.type` | `str` | да | `component_type` (дубль `component`) |
 | `components[].url` | `str` | да | `request.path` (слот блока, не Inertia-компонент) |
+| `tariffs` | `list[Tariff]` | да | `MOCK_TARIFFS` (`apps/homepage/mock_data.py`); рендерит `TariffsBlock` |
+
+`TariffsBlock` (тип `Tariff` — `frontend/src/widgets/TariffsBlock/model/types.ts`)
+получает тарифы через проп. Прочие блоки лендинга (шаги, FAQ, AI-демо)
+отдаются через `components[]` (БД пока пуста).
 
 Успешный логин (`LoginView.post`) также рендерит `Landing` с
 `flash.success` и `user: {username}` — см. [модалку «Логин»](#логин).
 
 ## Channels — `/channels/`
 
-Каталог каналов. Данные карточек пока **моковые** — на стороне frontend.
-
-```json
-{ "component": "Channels", "props": {}, "url": "/channels/" }
-```
-
-Планируемая форма (FE, `types/channel.ts`):
+Каталог каналов. Мок-данные карточек отдаются бэкендом из реестра
+`apps/parser/mock_data.py` (`MOCK_CHANNELS`); до подключения БД фронтенд
+не рендерит своих моков.
 
 ```json
 {
@@ -201,15 +216,15 @@ props** (целевая структура — FE, см. раздел экран
       {
         "id": 1,
         "name": "Tech News RU",
-        "username": "technews",
+        "username": "@technewsru",
         "type": "channel",
-        "subscribers": 45200,
-        "category": "technology",
+        "subscribers": 125000,
+        "category": "Технологии",
         "verified": true,
-        "country": "ru",
-        "imageUrl": "https://...",
-        "er": 3.2,
-        "growth30d": 12.3
+        "country": "Россия",
+        "imageUrl": "",
+        "er": 8.3,
+        "growth30d": 3.2
       }
     ]
   },
@@ -224,22 +239,32 @@ props** (целевая структура — FE, см. раздел экран
 
 Защищённый экран: неавторизованные редиректятся на `/`.
 
-⚠️ **Расхождение BE/FE.** Backend отправляет набор `stats`/`channels`/
-`ai_insights`/… (`DashboardDTO`), а страница `pages/Dashboard.tsx`
-(`DashBoardProps = ChannelData & PostProps`) потребляет `kpis`, `growthData`,
-`posts` и всё остальное игнорирует; при отсутствии props страница рендерит
-моки (`frontend/src/shared/mocks/channelKpis.ts`,
-`frontend/src/shared/mocks/posts.ts`). **Целевая структура — FE** (ниже).
+Props страницы отдаются бэкендом в двух частях:
+
+1. реальный `DashboardDTO` (`stats`/`channels`/`ai_insights`/`collections`/
+   `quick_actions`) — из `DashboardService`;
+2. FE-структура страницы из мок-реестра
+   `apps/homepage/mock_data.py` — `channel`/`kpis`/`growthData`/`posts`
+   (перенесены сюда из бывших `frontend/src/shared/mocks/`:
+   `channelKpis`, `channelsCollection`, `posts`). До подключения БД фронтенд
+   не рендерит своих моков.
 
 ### Целевые props (FE)
 
-Типы — `frontend/src/types/channel.ts` (`Kpi`, `GrowthSubscribersData`,
-`ChannelData`), `frontend/src/types/post.ts` (`Post`, `PostProps`).
+Типы — `frontend/src/types/dashboard.ts` (`DashboardPageProps`),
+`frontend/src/types/channel.ts` (`Channel`, `Kpi`,
+`GrowthSubscribersData`), `frontend/src/types/post.ts` (`Post`).
 
 ```json
 {
   "component": "Dashboard",
   "props": {
+    "channel": {
+      "id": 1, "name": "Tech News RU", "username": "@technewsru",
+      "type": "channel", "subscribers": 125000, "category": "Технологии",
+      "verified": true, "country": "Россия", "imageUrl": "", "er": 8.3,
+      "growth30d": 3.2
+    },
     "kpis": [
       { "label": "Посты", "value": 2347, "delta": 120, "percentDelta": 5.4, "positive": true }
     ],
@@ -248,32 +273,39 @@ props** (целевая структура — FE, см. раздел экран
     ],
     "posts": [
       { "title": "Заголовок поста", "views": 15200, "reactions": 120, "forwards": 340, "er": 3.4 }
+    ],
+    "ai_insights": [
+      { "text": "Тренд: посты о новых ИИ инструментах набирают +45% просмотров", "type": "trend", "id": 1 }
     ]
   },
   "url": "/dashboard/"
 }
 ```
 
-| prop | тип | обяз. | примечание |
-|------|-----|-------|------------|
-| `kpis[]` | `Kpi[]` | да | 4 карточки; дефолт на FE — `mockKpis` |
+| prop | тип | обяз. | источник |
+|------|-----|-------|----------|
+| `channel` | `Channel` | да | `MOCK_CHANNEL` (`apps/homepage/mock_data.py`) |
+| `kpis[]` | `Kpi[]` | да | `MOCK_KPIS` (`apps/homepage/mock_data.py`) |
 | `kpis[].label` | `str` | да | подпись KPI |
 | `kpis[].value` | `int` | да | |
-| `kpis[].delta` | `int` | нет | абсолютный прирост; BE пока не отдаёт |
-| `kpis[].percentDelta` | `int` | нет | % прироста; BE пока не отдаёт |
+| `kpis[].delta` | `int` | нет | абсолютный прирост |
+| `kpis[].percentDelta` | `int` | нет | % прироста |
 | `kpis[].positive` | `bool` | да | направление дельты |
-| `growthData[]` | `GrowthSubscribersData[]` | да | временной ряд `{date, подписчики}`; BE пока не отдаёт |
-| `posts[]` | `Post[]` | да | топ постов; BE пока не отдаёт список постов |
+| `growthData[]` | `GrowthSubscribersData[]` | да | `MOCK_GROWTH_DATA`; временной ряд `{date, подписчики}` |
+| `posts[]` | `Post[]` | да | `MOCK_POSTS`; топ постов |
 | `posts[].title` | `str` | да | |
 | `posts[].views` | `int` | да | |
 | `posts[].reactions` | `int` | да | сумма реакций |
 | `posts[].forwards` | `int` | да | |
 | `posts[].er` | `float` | да | engagement rate |
+| `ai_insights[]` | `Insight[]` | да | до 5 непрочитанных из БД или сгенерированных fallback (`DashboardService`) |
 
 ### Текущий backend
 
-Props описаны DTO `apps/homepage/dto/dashboard_dto.py` (`DashboardDTO`),
-сериализуются через `model_dump(mode="json")` в `apps/homepage/views.py`.
+Помимо FE-структуры выше отдаётся реальный `DashboardDTO`
+(`apps/homepage/dto/dashboard_dto.py`), сериализуется через
+`model_dump(mode="json")` в `apps/homepage/views.py`. Эта часть FE пока
+**не потребляется** и сохранена для будущего подключения БД.
 
 ```json
 {
@@ -322,12 +354,11 @@ Props описаны DTO `apps/homepage/dto/dashboard_dto.py` (`DashboardDTO`),
 
 | Целевой prop (FE) | Источник (BE) | Статус |
 |-------------------|---------------|--------|
-| `kpis[].label`, `kpis[].value` | `stats.channels` / `stats.posts` / `stats.ai_suggestions` / `stats.days_left` | переименование, 4 KPI |
-| `kpis[].delta`, `kpis[].percentDelta` | — | **BE не отдаёт**; доопределить в `StatsDTO` либо необязательные `null` |
-| `kpis[].positive` | — | вычисляется из знака дельты (BE или FE) |
-| `growthData[]` | — | **BE не отдаёт временной ряд** (`channels[].growth` — только итоговый %); новый массив в DTO либо оставить мок |
-| `posts[]` | — | **BE не отдаёт список постов**; новый массив в DTO либо оставить мок |
-| — | `channels`, `ai_insights`, `collections`, `quick_actions` | передаётся BE, **FE не потребляет** (часть данных дублируется: `stats` ↔ `channels`) |
+| `channel` | `MOCK_CHANNEL` | перенесён с FE-мока `channelsCollection[0]` |
+| `kpis[]`, `growthData[]`, `posts[]` | `MOCK_KPIS`, `MOCK_GROWTH_DATA`, `MOCK_POSTS` | перенесены с FE-моков в реестр |
+| `ai_insights[]` | `AIInsight` / fallback `DashboardService` | FE рендерит карточки из этих данных |
+| — | `stats`, `channels`, `collections`, `quick_actions` | передаётся BE, **FE не потребляет** (сохранено для БД) |
+
 
 ## Post — детальный разбор поста
 
@@ -337,15 +368,16 @@ Props описаны DTO `apps/homepage/dto/dashboard_dto.py` (`DashboardDTO`),
 |-----|------|-------|
 | `/parser/post/<channel_id>/<telegram_message_id>/` | `PostDetailView` | `post` + `channel` |
 | `/parser/ai/channels/<channel_id>/posts/<post_id>/analysis` | `PostAIAnalysisView` | только `post` (`channel` = `null`) |
-| `/post/` | `PostPageView` | **мок**, `props: {}` |
+| `/post/` | `PostPageView` | **мок** `analysis` + `reactions` из `apps/parser/mock_data.py` |
 
 ⚠️ **Расхождение BE/FE.** Backend отправляет `post`/`channel` (DTO
 `apps/parser/dto/post_analysis_dto.py`, `PostPagePropsDTO`), а страница
 `pages/Post.tsx` (`PostPageProps` из
 `frontend/src/types/post.ts`) потребляет только `analysis` и `reactions`;
 сам `post`/`channel` FE **не использует** (текст и метрики поста
-захардкожены в JSX). При отсутствии props — моки
-(`frontend/src/shared/mocks/posts.ts`). **Целевая структура — FE** (ниже).
+захардкожены в JSX). Мок-демо `/post/` отдаёт `analysis`/`reactions`
+с бэкенда; на реальных маршрутах FE при отсутствии этих props показывает
+пустые списки. **Целевая структура — FE** (ниже).
 
 ### Целевые props (FE)
 
@@ -469,19 +501,22 @@ Props — DTO `apps/parser/dto/post_analysis_dto.py` (`PostPagePropsDTO`).
 
 ## Compare — `/compare/`
 
-Сравнение каналов. **Мок** (данные на frontend).
-
-```json
-{ "component": "Compare", "props": {}, "url": "/compare/" }
-```
-
-Планируемая форма (FE, `types/channel.ts`):
+Сравнение каналов. Мок-данные отдаются бэкендом из реестра
+`apps/parser/mock_data.py` (`MOCK_COMPARE_METRICS`, первые 3 канала из
+`MOCK_CHANNELS`); форматирование значений метрик и вычисление
+`avgReach`/`reachPerSub` остаются на фронтенде.
 
 ```json
 {
   "component": "Compare",
   "props": {
-    "metrics": [{ "key": "subscribers", "label": "Подписчики" }],
+    "metrics": [
+      { "key": "subscribers", "label": "Подписчики" },
+      { "key": "er", "label": "ER" },
+      { "key": "growth30d", "label": "Прирост 30д" },
+      { "key": "avgReach", "label": "Средний охват" },
+      { "key": "reachPerSub", "label": "Охват/подписчик" }
+    ],
     "channels": []
   },
   "url": "/compare/"
@@ -490,22 +525,27 @@ Props — DTO `apps/parser/dto/post_analysis_dto.py` (`PostPagePropsDTO`).
 
 ## AICabinet — `/ai-cabinet/`
 
-AI-кабинет автора. **Мок** (`AICabinetView` рендерит без props).
-
-```json
-{ "component": "AICabinet", "props": {}, "url": "/ai-cabinet/" }
-```
-
-Планируемая форма (FE, `types/aiCabinet.ts`):
+AI-кабинет автора. Мок-данные отдаются бэкендом из реестра
+`apps/ai/mock_data.py`; иконки/цвета инсайтов FE выводит по полю `type`
+(`frontend/src/utils/makeIdeasAndInsights.ts`).
 
 ```json
 {
   "component": "AICabinet",
   "props": {
-    "ideas": [],
-    "insights": [],
-    "competitors": [],
-    "heatMapData": {}
+    "ideas": [
+      {
+        "title": "Обзор новых функций Telegram",
+        "reason": "Актуальная тема, растущий интерес",
+        "scope": 48222,
+        "date": "чт 19:30"
+      }
+    ],
+    "insights": [
+      { "type": "recommendation", "text": "Публикуйте посты в среду в 19:00 — пик активности" }
+    ],
+    "competitors": [{ "name": "@techreview", "er": 9.2, "delta": 1.1 }],
+    "heatMapData": { "Ср": { "19": 10 } }
   },
   "url": "/ai-cabinet/"
 }
@@ -517,6 +557,12 @@ AI-кабинет автора. **Мок** (`AICabinetView` рендерит б�
 [`collections_catalog_contract.md`](./collections_catalog_contract.md).
 Props описаны DTO `apps/group_channels/dto/collections_dto.py`
 (`CollectionsCatalogDTO`).
+
+До подключения БД данные отдаются из мок-реестра
+`apps/group_channels/mock_data.py` (`build_mock_catalog`) с применением
+фильтров `q`/`country`/`category` на стороне бэкенда; реальная выборка из
+`Group` сохранена в `CollectionsCatalogService` и используется при
+подключении БД.
 
 ```json
 {
@@ -569,23 +615,33 @@ Props описаны DTO `apps/group_channels/dto/collections_dto.py`
 `is_editorial:bool`, `curator:str|null`, `channel_count:int`,
 `cover:str`, `gradient_key:str` (формируется как `collection-<id>`).
 
+Фронтенд (`pages/Collections.tsx`) потребляет `collections` и маппит
+поля под карточку: `name→title`, `curator→author`, `channel_count→channels`,
+`is_editorial→editorial`; цвет/градант карточки выводится по индексу
+из локальной палитры (не зависит от `gradient_key`).
+
 ## Collection — `/collections/<pk>/`
 
-Детальная страница подборки. Содержимое **мок** (`CollectionDetailView`
-рендерит без props, существование подборки не проверяется).
-
-```json
-{ "component": "Collection", "props": {}, "url": "/collections/1/" }
-```
-
-Планируемая форма (FE, `types/channel.ts`):
+Детальная страница подборки. Мок-данные отдаются бэкендом из реестра
+`apps/group_channels/mock_data.py` (существование подборки с данным pk
+не проверяется).
 
 ```json
 {
   "component": "Collection",
   "props": {
+    "title": "Топ IT-каналов",
+    "description": "Технологии, разработка и цифровые продукты",
+    "channel_count": 3,
     "channels": [
-      { "name": "Tech News RU", "username": "technews", "subscribers": 45200, "er": 3.2, "growth30d": 12.3, "color": "blue" }
+      {
+        "name": "Product Radar",
+        "username": "@product_radar",
+        "subscribers": 142000,
+        "er": 26.9,
+        "growth30d": 2480,
+        "color": "var(--mantine-color-tgblue-5)"
+      }
     ]
   },
   "url": "/collections/1/"
@@ -620,7 +676,12 @@ Props описаны DTO `apps/group_channels/dto/collections_dto.py`
       "channels_used": 0,
       "ai_requests_used": 0
     },
-    "notifications": null,
+    "notifications": {
+      "weekly_reports": true,
+      "trend_notifications": true,
+      "limit_exceeded": false,
+      "new_features": true
+    },
     "usage_stats": {
       "registration_date": "01.01.2026",
       "last_visit": "10.10.2026",
@@ -636,7 +697,7 @@ Props описаны DTO `apps/group_channels/dto/collections_dto.py`
 |------|-----|-------|----------|
 | `user` | `User` | да | поля модели `User` |
 | `subscription` | `SubscriptionStateDTO` | да | `serialize_subscription(get_subscription(user))` |
-| `notifications` | `null` | да | пока всегда `null` |
+| `notifications` | `UserNotificationSettings` | да | `NotificationSettings` (`get_or_create` для юзера) |
 | `usage_stats` | `UsageStats` | да | вычисляется из `date_joined` / `last_login` |
 | `user_role` | `str` | да | `request.role` |
 
@@ -653,6 +714,12 @@ Props описаны DTO `apps/group_channels/dto/collections_dto.py`
   после перезагрузки;
 - `POST` невалидный — повторный рендер `Profile` c `errors` и `values`
   (`first_name`, `last_name`, `email`, `bio`, `avatar_image`);
+- настройки уведомлений: `POST` c `action=notifications`
+  (`weekly_reports`, `trend_notifications`, `new_features` строками
+  `'true'`/`'false'`) → `NotificationSettingsForm` → redirect; тело
+  **form-data**, не JSON (Inertia: `forceFormData: true`); `limit_exceeded`
+  — служебный, всегда `false`, в форме не участвует, переключатель
+  заблокирован;
 - `user_role` в props и `user.role` повторяют общий prop `role` — известное
   расхождение, см. [«Известные расхождения»](#известные-расхождения).
 
@@ -735,21 +802,45 @@ Props описаны DTO `apps/group_channels/dto/collections_dto.py`
 
 ## Legal — `/legal/`
 
-Публичная страница правовых документов. Отдаёт только метаданные.
+Публичная страница правовых документов. Отдаёт метаданные и текст
+документов (`apps/legal/documents.py`, `LEGAL_DOCUMENTS`).
 
 ```json
 {
   "component": "Legal",
   "props": {
     "documents": {
-      "privacy": { "title": "Политика конфиденциальности", "updated_at": "2026-07-01" },
-      "agreement": { "title": "Пользовательское соглашение", "updated_at": "2026-07-01" },
-      "offer": { "title": "Публичная оферта", "updated_at": "2026-07-01" }
+      "privacy": {
+        "title": "Политика конфиденциальности",
+        "updated_at": "2026-07-01",
+        "text": "Мы собираем и обрабатываем персональные данные…"
+      },
+      "agreement": {
+        "title": "Пользовательское соглашение",
+        "updated_at": "2026-07-01",
+        "text": "Используя сервис TG Pulse, вы соглашаетесь…"
+      },
+      "offer": {
+        "title": "Публичная оферта",
+        "updated_at": "2026-07-01",
+        "text": "Настоящая оферта адресована…"
+      }
     }
   },
   "url": "/legal/"
 }
 ```
+
+| prop | тип | обяз. | примечание |
+|------|-----|-------|------------|
+| `documents` | `Record<slug, {title, updated_at, text}>` | да | `slug` — ключ вкладки на FE (`privacy`/`agreement`/`offer`) |
+| `documents[].title` | `str` | да | заголовок документа |
+| `documents[].text` | `str` | да | тело документа |
+| `documents[].updated_at` | `str` | да | дата обновления (FE пока не рендерит) |
+
+Тип на FE — `frontend/src/types/legal.ts` (`LegalPageProps`).
+Вкладка «Соглашение» использует ключ `agreement` (ранее мок использовал
+`terms`).
 
 ## NotFound — `/<path>/`
 
@@ -775,13 +866,11 @@ Catch-all регистрируется только для URL с заверша
 
 Модерация заявок. Только для администраторов (`AdminRequiredMixin`).
 
-⚠️ **Расхождение BE/FE.** Backend отправляет `pendingRequests`/`pendingCount`/
-`pagination` (DTO `apps/admin/moderation/dto/moderation_dto.py`,
-`ModerationDTO`), а страница `pages/Admin.tsx` (`UserRequestProps` из
-`frontend/src/types/user.ts`) потребляет только `userRequests`; счётчик
-вкладки (`4`) и прочие вкладки захардкожены, `pendingCount`/`pagination` FE
-**не использует**. При отсутствии props — мок
-(`frontend/src/utils/addColors.ts`). **Целевая структура — FE** (ниже).
+Backend отдаёт как реальные данные очереди (`pendingRequests`/
+`pendingCount`/`pagination`), так и FE-структуру строк таблицы
+`userRequests` (`ModerationListService` маппит очередь). Страница
+`pages/Admin.tsx` потребляет `userRequests` (цвет аватара дорисовывается на
+клиенте — `addColorsToUsersRequests`) и `pendingCount` (бейдж вкладки).
 
 ### Целевые props (FE)
 
@@ -798,10 +887,10 @@ Catch-all регистрируется только для URL с заверша
         "username": "user",
         "author": "user",
         "time": "13.08.2026",
-        "category": "technology",
-        "color": "purple"
+        "category": "technology"
       }
-    ]
+    ],
+    "pendingCount": 15
   },
   "url": "/admin/moderation/?page=1"
 }
@@ -809,12 +898,13 @@ Catch-all регистрируется только для URL с заверша
 
 | prop | тип | обяз. | примечание |
 |------|-----|-------|------------|
-| `userRequests[]` | `UserRequestWithColors[]` | да | строки таблицы модерации |
-| `userRequests[].title` | `str` | да | название канала |
-| `userRequests[].username` | `str` | да | username заявителя |
-| `userRequests[].author` | `str` | да | автор запроса |
-| `userRequests[].time` | `str` | да | время подачи, строка |
+| `userRequests[]` | `UserRequest[]` | да | строки таблицы модерации (без `color`) |
+| `userRequests[].title` | `str` | да | название канала или `channel_identifier` |
+| `userRequests[].username` | `str` | да | username заявителя (`""` при отсутствии) |
+| `userRequests[].author` | `str` | да | совпадает с `username` |
+| `userRequests[].time` | `str` | да | дата подачи `%d.%m.%Y` |
 | `userRequests[].category` | `str` | да | |
+| `pendingCount` | `int` | да | общее число `pending`-заявок; используется бейджем вкладки |
 | `userRequests[].color` | `str` | да | цвет аватара; **вычисляется на клиенте** (`addColorsToUsersRequests`), из BE не приходит |
 
 ### Текущий backend
@@ -848,7 +938,16 @@ Props — `ModerationDTO`.
       "pages": 2,
       "hasNext": true,
       "hasPrevious": false
-    }
+    },
+    "userRequests": [
+      {
+        "title": "Example channel",
+        "username": "user",
+        "author": "user",
+        "time": "13.08.2026",
+        "category": "technology"
+      }
+    ]
   },
   "url": "/admin/moderation/?page=1"
 }
@@ -862,15 +961,19 @@ Props — `ModerationDTO`.
 
 ### Маппинг BE → целевую структуру
 
+Маппинг выполняется на бэкенде в
+`ModerationQueue.get_user_request_data` (`apps/admin/moderation/services/queue.py`).
+
 | Целевой prop (FE) | Источник (BE) | Статус |
 |-------------------|---------------|--------|
-| `userRequests[].title` | `pendingRequests[].channel.title` | `channel` может быть `null` — нужен фолбэк (`channel_identifier`) |
-| `userRequests[].username` | `pendingRequests[].submitted_by.username` | `submitted_by` может быть `null` |
-| `userRequests[].author` | `pendingRequests[].submitted_by.username` | FE не различает author/username — уточнить |
-| `userRequests[].time` | `pendingRequests[].created_at` | переформатирование даты в строку |
+| `userRequests[].title` | `pendingRequests[].channel.title`, фолбэк `channel_identifier` | реализовано на BE |
+| `userRequests[].username` | `pendingRequests[].submitted_by.username`, фолбэк `""` | реализовано на BE |
+| `userRequests[].author` | `pendingRequests[].submitted_by.username` | совпадает с `username` |
+| `userRequests[].time` | `pendingRequests[].created_at` | формат `%d.%m.%Y` |
 | `userRequests[].category` | `pendingRequests[].category` | совпадает |
-| `userRequests[].color` | — | **вычисляется на клиенте** (`addColorsToUsersRequests`), в контракт BE не входит |
-| — | `pendingCount`, `pagination` | передаётся BE, **FE не потребляет** (бейдж вкладки хардкод `4`); для пагинации FE-тип придётся расширить |
+| `userRequests[].color` | — | **вычисляется на клиенте** (`addColorsToUsersRequests`) |
+| `pendingCount` | `pendingCount` | FE использует для бейджа вкладки |
+| — | `pendingRequests`, `pagination` | передаётся BE, **FE не потребляет** (для пагинации FE-тип придётся расширить) |
 
 ## ChannelAnalytics — `/parser/list`
 
@@ -1097,7 +1200,9 @@ Props каждого экрана описываются Pydantic-DTO, а не �
 Экраны на DTO: `Dashboard` (`DashboardDTO`), `Collections`
 (`CollectionsCatalogDTO`), `ChannelAnalytics` (`ChannelListDTO`), `Post`
 (`PostPagePropsDTO`), `Blog` (`BlogListDTO`), `BlogPost`
-(`ArticleDetailDTO`), `Admin` (`ModerationDTO`).
+(`ArticleDetailDTO`), `Admin` (`ModerationDTO`), `Channels`
+(`ChannelsCatalogDTO`), `Compare` (`CompareDTO`), `AICabinet`
+(`AICabinetDTO`), `Collection` (`CollectionDetailDTO`).
 
 Ещё собирают props словарями (кандидаты на перевод на DTO в рамках #197):
 `apps/users/views.py` (`LoginView`, `UserRegister`, `UserCabinetView`,
@@ -1120,9 +1225,9 @@ Props каждого экрана описываются Pydantic-DTO, а не �
 | `apps/group_channels/views.py` `GroupDetailView` docstring | старый набор ключей `get_data()` | текущий набор |
 | `apps/parser/views.py` `PostDetailView` | дублирует общий prop `csrfToken` в `PostPagePropsDTO` | брать из общего middleware (`inertia-shared-props.md`) |
 | `apps/users/views.py` `UserCabinetView` | props `user_role` и `user.role` повторяют общий `role` | брать `role` из общего middleware |
-| `DashboardView` / `DashboardDTO` vs `pages/Dashboard.tsx` | BE: `stats`/`channels`/`ai_insights`/…; FE: `kpis`/`growthData`/`posts` (мок-дефолты) | целевая — FE; расширить DTO (`delta`, временной ряд, список постов) либо оставить мок осознанно — см. [Dashboard](#dashboard--dashboard) |
+| `DashboardView` / `DashboardDTO` vs `pages/Dashboard.tsx` | BE отдаёт реальный `DashboardDTO` **и** FE-структуру `channel`/`kpis`/`growthData`/`posts` из `apps/homepage/mock_data.py`; FE потребляет вторую, первая сохранена для БД | FE-структура перенесена на BE — см. [Dashboard](#dashboard--dashboard) |
 | `PostPagePropsDTO` vs `pages/Post.tsx` | BE: `post`/`channel`; FE: `analysis`/`reactions`; формы `reactions` различаются (`{total, details}` vs список) | целевая — FE; поднять `post_analysis` в top-level `analysis` — см. [Post](#post--детальный-разбор-поста) |
-| `ModerationDTO` vs `pages/Admin.tsx` | BE: `pendingRequests`/`pendingCount`/`pagination`; FE: `userRequests`; `color` — только на клиенте | целевая — FE; сопоставить поля, `color` считать на FE — см. [Admin](#admin--adminmoderation) |
+| `ModerationDTO` vs `pages/Admin.tsx` | BE отдаёт `pendingRequests`/`pendingCount`/`pagination` и готовую FE-структуру `userRequests`; `color` — только на клиенте | маппинг выполняется на BE (`ModerationQueue.get_user_request_data`) — см. [Admin](#admin--adminmoderation) |
 | `main` | старые `component` (`Home`, `UserProfilePage`, `AdminModeration`, `PostPage`, `BlogArticle`) | канонические имена #198 |
 | placement `errors` у форм | top-level `errors` (Profile, UpdateUserProfile, RestorePassword×2, группы create/update) vs `form.errors` (логин, регистрация, добавление каналов) | единая форма элемента `[{message, code}]` уже обеспечена `get_json_data()`; нормализация placement — при переводе view на DTO (#197), см. [«Формат ошибок валидации»](#формат-ошибок-валидации) |
 
@@ -1135,18 +1240,21 @@ Props каждого экрана описываются Pydantic-DTO, а не �
    `RestorePasswordRequest.tsx`, `RestorePassword.tsx`.
 3. Убрать дублирование общих props: `csrfToken` из `PostPagePropsDTO` /
    `PostDetailView`, `role` из `UserCabinetView` (`user_role`, `user.role`).
-4. Заменить мок-пропсы (`Channels`, `Compare`, `AICabinet`, `Collection`,
-   `NotFound`) на реальные по планируемым формам — либо оставить мок
-   согласованно.
+4. `Channels`, `Compare`, `AICabinet`, `Collection`, `Collections` (каталог),
+   `Dashboard`, `Admin`, `Legal`, `Landing` (тарифы) переведены на
+   мок-данные/адаптеры бэкенда (`apps/*/mock_data.py`,
+   `ModerationQueue.get_user_request_data`, `LEGAL_DOCUMENTS`);
+   при подключении БД view переключаются с моков на реальные данные.
+   Остаётся согласовать `NotFound`.
 5. Перевести словарные view на DTO из `dto_convention.md` (#197) и заодно
    нормализовать placement `errors` (top-level vs `form.errors` — см.
    [«Формат ошибок валидации»](#формат-ошибок-валидации)).
 6. Обновить docstring-и из таблицы расхождений.
-7. Выровнять `Dashboard`, `Post`, `Admin` по целевой FE-структуре (см. таблицы
-   маппинга в разделах экранов): адаптировать DTO/view на backend **либо**
-   добавить адаптеры в страницах frontend; до этого мок-дефолты в
-   `pages/Dashboard.tsx`, `pages/Post.tsx`, `pages/Admin.tsx` скрывают
-   расхождение.
+7. Выровнять `Post` по целевой FE-структуре (см. таблицу маппинга в разделе
+   экрана): адаптировать DTO/view на backend **либо** добавить адаптер в
+   странице frontend; до этого мок-дефолт в `pages/Post.tsx` скрывает
+   расхождение. `Dashboard`/`Admin` уже выровнены (FE-структура отдаётся
+   бэкендом).
 8. Обновлять контракт при каждом изменении формы props, маршрута или
    имени компонента.
 

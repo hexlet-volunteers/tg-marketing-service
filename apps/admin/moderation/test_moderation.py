@@ -306,6 +306,51 @@ class ModerationRequestTests(TestCase):
         self.assertTrue(props["pagination"]["hasPrevious"])
         self.assertFalse(props["pagination"]["hasNext"])
 
+    def test_moderation_view_serves_fe_shaped_user_requests(self) -> None:
+        admin = self.create_admin()
+        self.client.force_login(admin)
+        request_with_channel = self.create_request(channel_by=self.channel)
+        request_without_channel = self.create_request(
+            channel_identifier="@new_channel"
+        )
+
+        response = self.client.get(
+            reverse("admin_moderation:list"),
+            HTTP_ACCEPT="application/json",
+            HTTP_X_INERTIA="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        props = response.json()["props"]
+        self.assertEqual(props["pendingCount"], 2)
+        self.assertEqual(len(props["userRequests"]), 2)
+
+        first, second = props["userRequests"]
+        self.assertEqual(first["title"], self.channel.title)
+        self.assertEqual(first["username"], self.user.username)
+        self.assertEqual(first["author"], self.user.username)
+        self.assertEqual(first["category"], "technology")
+        self.assertEqual(
+            first["time"],
+            request_with_channel.created_at.strftime("%d.%m.%Y"),
+        )
+        self.assertNotIn("color", first)
+
+        self.assertEqual(
+            second["title"], request_without_channel.channel_identifier
+        )
+
+    def test_user_request_data_falls_back_when_channel_missing(self) -> None:
+        moderation_request = self.create_request(
+            channel_identifier="@orphan"
+        )
+
+        data = ModerationQueue().get_user_request_data(moderation_request)
+
+        self.assertEqual(data["title"], "@orphan")
+        self.assertEqual(data["username"], self.user.username)
+        self.assertEqual(data["author"], self.user.username)
+
     def test_moderation_view_normalizes_invalid_page(self) -> None:
         admin = self.create_admin()
         self.client.force_login(admin)

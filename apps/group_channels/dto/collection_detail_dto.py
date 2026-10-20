@@ -17,7 +17,10 @@ class CollectionChannelDTO(BaseModel):
 class CollectionDetailDTO(BaseModel):
     """Props страницы 'Collection' (/collections/<pk>/).
 
-    Пока пустая заглушка: содержимое подборки рендерится на фронтенде.
+    Пока отдаются моки из реестра apps/group_channels/mock_data.py.
     """
 
+    title: str = ""
+    description: str = ""
+    channel_count: int = Field(default=0, ge=0)
     channels: List[CollectionChannelDTO] = Field(default_factory=list)

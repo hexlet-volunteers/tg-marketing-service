@@ -15,11 +15,20 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 
 from apps.admin.moderation.models import ModerationRequest
-from apps.parser.dto.channel_catalog_dto import ChannelsCatalogDTO
+from apps.parser.dto.channel_catalog_dto import (
+    ChannelCardDTO,
+    ChannelsCatalogDTO,
+)
 from apps.parser.dto.channel_dto import ChannelDTO, ChannelListDTO
-from apps.parser.dto.compare_dto import CompareDTO
+from apps.parser.dto.compare_dto import CompareDTO, CompareMetricDTO
 from apps.parser.dto.post_analysis_dto import PostDataDTO, PostPagePropsDTO
 from apps.parser.forms import ChannelParseForm
+from apps.parser.mock_data import (
+    MOCK_CHANNELS,
+    MOCK_COMPARE_METRICS,
+    MOCK_POST_ANALYSIS,
+    MOCK_POST_REACTIONS,
+)
 from apps.parser.models import ChannelStats, Post, TelegramChannel
 from apps.parser.parser import tg_parser
 from apps.parser.serializers import PostSerializer
@@ -343,45 +352,64 @@ class PostDetailView(View):
 class ChannelCatalogView(View):
     """Каталог каналов (Inertia: Channels).
 
-    Данные для карточек пока моковые — на стороне frontend.
+    Пока отдаются моки из реестра apps/parser/mock_data.py;
+    данные БД подключатся позже (см. docs/inertia-contract.md).
     """
 
     def get(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
+        dto = ChannelsCatalogDTO(
+            channels=[ChannelCardDTO(**data) for data in MOCK_CHANNELS],
+        )
+
         return render_inertia_from_dto(
             request,
             "Channels",
-            props=ChannelsCatalogDTO(),
-            exclude_unset=True,
+            props=dto,
         )
 
 
 class CompareView(View):
     """Сравнение каналов (Inertia: Compare).
 
-    Метрики и каналы для сравнения пока моковые — на стороне frontend.
+    Пока отдаются моки из реестра apps/parser/mock_data.py;
+    данные БД подключатся позже (см. docs/inertia-contract.md).
     """
 
     def get(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
+        dto = CompareDTO(
+            metrics=[
+                CompareMetricDTO(**data) for data in MOCK_COMPARE_METRICS
+            ],
+            channels=[ChannelCardDTO(**data) for data in MOCK_CHANNELS[:3]],
+        )
+
         return render_inertia_from_dto(
             request,
             "Compare",
-            props=CompareDTO(),
-            exclude_unset=True,
+            props=dto,
         )
 
 
 class PostPageView(View):
     """Демо-страница разбора поста (Inertia: Post).
 
-    Контент поста моковый; реальные посты отдаются из
-    PostDetailView по адресу /parser/post/<channel_id>/<telegram_message_id>/.
+    Мок analysis/reactions отдаётся из реестра apps/parser/mock_data.py;
+    реальные посты отдаются из PostDetailView по адресу
+    /parser/post/<channel_id>/<telegram_message_id>/.
     """
 
     def get(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
-        return inertia_render(request, "Post")
+        return inertia_render(
+            request,
+            "Post",
+            props={
+                "analysis": MOCK_POST_ANALYSIS,
+                "reactions": MOCK_POST_REACTIONS,
+            },
+        )

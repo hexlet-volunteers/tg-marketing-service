@@ -26,7 +26,7 @@ class ChannelCardDTO(BaseModel):
 class ChannelsCatalogDTO(BaseModel):
     """Props страницы 'Channels' (/channels/).
 
-    Пока пустая заглушка: фронтенд рендерит мок-данные сам.
+    Пока отдаются моки из реестра apps/parser/mock_data.py.
     """
 
     channels: List[ChannelCardDTO] = Field(default_factory=list)
