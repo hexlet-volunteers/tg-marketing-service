@@ -1,6 +1,13 @@
 import { Anchor, Avatar, Badge, Box, Group, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { useNavigate } from 'react-router-dom';
 
+/**
+ * Данные для секций футера.
+ *
+ * Содержит три группы ссылок: «Продукт», «Компания» и «Правовое».
+ * Для группы «Правовое» указаны маршруты на страницу {@link LegalPage}
+ * с соответствующим query-параметром `tab`.
+ */
 const data = [
   {
     title: 'Продукт',
@@ -23,13 +30,23 @@ const data = [
   {
     title: 'Правовое',
     links: [
-      { label: 'Конфиденциальность', link: '#' },
-      { label: 'Соглашение', link: '#' },
-      { label: 'Публичная оферта', link: '#' },
+      { label: 'Конфиденциальность', link: '/legal?tab=privacy' },
+      { label: 'Соглашение', link: '/legal?tab=terms' },
+      { label: 'Публичная оферта', link: '/legal?tab=offer' },
     ],
   },
 ];
 
+/**
+ * Футер сайта.
+ * 
+ * Отображает логотип с описанием сервиса, три группы навигационных ссылок
+ * и нижнюю строку с копирайтом и бейджем-ссылкой на пример страницы 404.
+ * 
+ * Обработчик клика по ссылкам вызывает preventDefault.
+ * Затем идет переход через navigate только для внутренних маршрутов (начинающихся с /).
+ * Это предотвращает переход по ссылкам-заглушкам (#).
+ */
 export function Footer() {
   const navigate = useNavigate();
   const groups = data.map((group) => {
@@ -39,7 +56,12 @@ export function Footer() {
         c="dimmed"
         href={link.link}
         size="sm"
-        onClick={(event) => event.preventDefault()}
+        onClick={(event) => {
+          event.preventDefault();
+          if (link.link.startsWith('/')) {
+            navigate(link.link);
+          }
+        }}
       >
         {link.label}
       </Anchor>

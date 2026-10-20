@@ -199,8 +199,8 @@ props** (целевая структура — FE, см. раздел экран
 получает тарифы через проп. Прочие блоки лендинга (шаги, FAQ, AI-демо)
 отдаются через `components[]` (БД пока пуста).
 
-Успешный логин (`LoginView.post`) также рендерит `Landing` с
-`flash.success` и `user: {username}` — см. [модалку «Логин»](#логин).
+Успешный логин (`LoginView.post`) редиректит на `/dashboard/` с общим
+`flash.success` — см. [модалку «Логин»](#логин).
 
 ## Channels — `/channels/`
 
@@ -1088,7 +1088,7 @@ Backend получает её через `form.errors.get_json_data()` (Django-�
 
 | Сценарий | Ответ |
 |----------|-------|
-| валидный | рендер `Landing`, общий `flash.success` + `user: {username}` |
+| валидный | редирект на `/dashboard/`, общий `flash.success` |
 | невалидный | рендер `Auth`, props `{"form": {"data": {email, password:""}, "errors"}}` |
 
 ## Регистрация

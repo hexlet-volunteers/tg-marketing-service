@@ -15,17 +15,13 @@ from apps.users.models import NotificationSettings, User
 
 
 class UserLoginForm(AuthenticationForm):
-    class Meta:
-        model = User
-        fields = ["username", "password"]
-
-    username = forms.CharField(
-        label="Имя пользователя",
-        widget=forms.TextInput(
+    email = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(
             attrs={
                 "autofocus": True,
                 "class": "form-control",
-                "placeholder": "Имя пользователя",
+                "placeholder": "Email",
             }
         ),
     )
@@ -39,6 +35,22 @@ class UserLoginForm(AuthenticationForm):
             }
         ),
     )
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.fields.pop("username")
+
+    def clean(self) -> dict[str, Any]:
+        email = self.cleaned_data.get("email")
+        password = self.cleaned_data.get("password")
+        if email and password:
+            try:
+                user = User.objects.get(email__iexact=email)
+            except (User.DoesNotExist, User.MultipleObjectsReturned):
+                User().set_password(password)
+                raise self.get_invalid_login_error() from None
+            self.cleaned_data["username"] = user.username
+        return super().clean() or {}
 
 
 class UserRegForm(UserCreationForm):
@@ -227,6 +239,18 @@ class UserUpdateForm(forms.ModelForm):
             attrs={"class": "form-control", "autocomplete": "new-password"}
         ),
     )
+
+    def clean_email(self) -> str:
+        email = self.cleaned_data["email"].strip().lower()
+        if (
+            User.objects.filter(email__iexact=email)
+            .exclude(pk=self.instance.pk)
+            .exists()
+        ):
+            raise forms.ValidationError(
+                "Пользователь с таким email уже существует."
+            )
+        return email
 
     def clean(self) -> dict[str, Any]:
         cleaned_data: dict[str, Any] = super().clean() or {}
