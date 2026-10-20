@@ -231,4 +231,3 @@ def build_mock_catalog(
             category_options=category_options,
         ),
     )
-

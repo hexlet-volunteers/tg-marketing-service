@@ -341,9 +341,7 @@ class ModerationRequestTests(TestCase):
         )
 
     def test_user_request_data_falls_back_when_channel_missing(self) -> None:
-        moderation_request = self.create_request(
-            channel_identifier="@orphan"
-        )
+        moderation_request = self.create_request(channel_identifier="@orphan")
 
         data = ModerationQueue().get_user_request_data(moderation_request)
 

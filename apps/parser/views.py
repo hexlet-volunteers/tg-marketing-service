@@ -381,9 +381,7 @@ class CompareView(View):
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
         dto = CompareDTO(
-            metrics=[
-                CompareMetricDTO(**data) for data in MOCK_COMPARE_METRICS
-            ],
+            metrics=[CompareMetricDTO(**data) for data in MOCK_COMPARE_METRICS],
             channels=[ChannelCardDTO(**data) for data in MOCK_CHANNELS[:3]],
         )
 
