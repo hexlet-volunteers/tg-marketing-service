@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from apps.admin.moderation.types import ModerationRequestData
+from apps.admin.moderation.types import ModerationRequestData, UserRequestData
 
 
 class PaginationDTO(BaseModel):
@@ -15,3 +15,4 @@ class ModerationDTO(BaseModel):
     pendingRequests: list[ModerationRequestData]
     pendingCount: int
     pagination: PaginationDTO
+    userRequests: list[UserRequestData]

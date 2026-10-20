@@ -41,10 +41,12 @@ class CallToActionDTO(BaseModel):
 
 class ArticleDetailDTO(BaseModel):
     """
-    Props для Inertia-страницы 'BlogArticle' (/blog/<slug>/).
+    Props для Inertia-страницы 'BlogPost' (/blog/<slug>/).
 
-    Отдаётся только для опубликованной статьи (is_published=True);
-    для отсутствующей или неопубликованной вью отвечает 404.
+    Сейчас вьюха всегда отдаёт моковый payload (реестр
+    apps.blog.mock_data, страница рендерится всегда, статус 200);
+    DB-логика оставлена в вьюхе/сервисе для prod-переключения
+    позже (там отсутствующая или неопубликованная статья — 404).
 
     - id, slug, title, excerpt, cover_image, category, tags, read_time,
       published_at, views_count, author_name: как в ArticleCardDTO;

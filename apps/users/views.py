@@ -257,7 +257,7 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
     """
     Account page view.
 
-    component: UserProfilePage
+    component: Profile
     props: user, subscription, notifications, usage_stats, user_role
     url: /auth/profile/
     """
@@ -316,7 +316,7 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
     ) -> InertiaResponse:
         user = cast(User, request.user)
         props = self._build_base_props(request, user)
-        return inertia_render(request, "UserProfilePage", props=props)
+        return inertia_render(request, "Profile", props=props)
 
     def post(
         self,
@@ -376,7 +376,7 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
                     "bio": request.POST.get("bio", ""),
                     "avatar_image": request.POST.get("avatar_image", ""),
                 }
-                return inertia_render(request, "UserProfilePage", props=props)
+                return inertia_render(request, "Profile", props=props)
 
         return redirect(reverse("users:user_cabinet"))
 
