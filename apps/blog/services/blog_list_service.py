@@ -2,7 +2,8 @@ from typing import Optional
 
 from django.db.models import QuerySet
 
-from apps.blog.dto.blog_dto import BlogListDTO
+from apps.blog.dto.blog_dto import ArticleCardDTO, BlogListDTO
+from apps.blog.mock_data import MOCK_ARTICLES, as_card, get_featured_mock
 from apps.blog.models import BlogArticle
 from apps.blog.services.mappers import to_article_card
 
@@ -11,10 +12,11 @@ class BlogListService:
     """
     Собирает данные для страницы списка блога (Inertia 'Blog', /blog/).
 
-    Возвращает:
-    - featured: последняя опубликованная статья с is_featured=True;
-    - articles: все остальные опубликованные статьи (без featured),
-      отсортированные по published_at desc.
+    - build_mock(): моковые данные из реестра apps.blog.mock_data —
+      используется вьюхой сейчас;
+    - build(): данные из БД (оставлены для prod-переключения позже):
+      featured — последняя опубликованная is_featured=True,
+      articles — остальные опубликованные по published_at desc.
     """
 
     def build(self) -> BlogListDTO:
@@ -24,6 +26,28 @@ class BlogListService:
         return BlogListDTO(
             featured=to_article_card(featured) if featured else None,
             articles=[to_article_card(article) for article in articles_qs],
+        )
+
+    def build_mock(self) -> BlogListDTO:
+        """Моковый payload списка статей из реестра."""
+        featured = get_featured_mock()
+        featured_slug = featured["slug"]
+
+        articles = sorted(
+            (
+                article
+                for article in MOCK_ARTICLES
+                if article["slug"] != featured_slug
+            ),
+            key=lambda article: article["published_at"] or "",
+            reverse=True,
+        )
+
+        return BlogListDTO(
+            featured=ArticleCardDTO(**as_card(featured)),
+            articles=[
+                ArticleCardDTO(**as_card(article)) for article in articles
+            ],
         )
 
     # ------------------------

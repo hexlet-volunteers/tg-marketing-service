@@ -19,56 +19,25 @@ class BlogListView(View):
     """
     Inertia view для публичного списка блога (/blog/).
 
-    Пример Inertia payload для фронтенда (значения пока иллюстративные):
+    Сейчас всегда отдаются моковые данные (реестр
+    apps.blog.mock_data). Логика с БД ниже оставлена
+    для prod-переключения позже:
+    - featured: последняя опубликованная статья с is_featured=True
+      (может отсутствовать, тогда null);
+    - articles: остальные опубликованные статьи, published_at desc.
 
-    {
-        "component": "Blog",
-        "props": {
-            "featured": {
-                "id": 1,
-                "slug": "podborka-plaginov-dlya-vs-code-selectel",
-                "title": "Подборка плагинов для VS Code",
-                "excerpt": "Какие расширения реально экономят часы рутины.",
-                "cover_image": "https://example.com/cover.jpg",
-                "category": "dev",
-                "tags": ["vs code", "плагины"],
-                "read_time": 12,
-                "published_at": "2026-08-04T08:00:00+00:00",
-                "views_count": 120,
-                "author_name": "Иван Иванов"
-            },
-            "articles": [
-                {
-                    "id": 2,
-                    "slug": "sut-asinhronnosti-v-python",
-                    "title": "Суть асинхронности в Python",
-                    "excerpt": "Корутины, событийный цикл и таски без магии.",
-                    "cover_image": "https://example.com/cover2.jpg",
-                    "category": "dev",
-                    "tags": ["python", "asyncio"],
-                    "read_time": 8,
-                    "published_at": "2026-07-05T14:00:00+00:00",
-                    "views_count": 89,
-                    "author_name": "Иван Иванов"
-                }
-            ]
-        },
-        "url": "/blog/"
-    }
-
-    Примечания:
-    - отдаются только опубликованные статьи (is_published=True);
-    - featured: последняя статья с is_featured=True, может отсутствовать
-      (тогда фронт получает null и не рисует выделенный блок);
-    - articles: остальные опубликованные статьи без featured,
-      упорядоченные по published_at desc;
-    - страница публичная, авторизация не требуется.
+    Страница публичная, авторизация не требуется.
     """
 
     def get(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
-        dto = BlogListService().build()
+        service = BlogListService()
+        return render_inertia_from_dto(
+            request, "Blog", props=service.build_mock()
+        )
+
+        dto = service.build()
         return render_inertia_from_dto(request, "Blog", props=dto)
 
 
@@ -76,55 +45,23 @@ class BlogArticleDetailView(View):
     """
     Inertia view для страницы статьи блога (/blog/<slug>/).
 
-    Пример Inertia payload для фронтенда (значения пока иллюстративные):
+    Сейчас всегда отдаются моковые данные (реестр
+    apps.blog.mock_data): страница рендерится всегда, slug вне
+    реестра отдаёт featured-демо с подставленным slug.
+    Логика с БД ниже оставлена для prod-переключения позже:
+    отдаётся только опубликованная статья (is_published=True),
+    для отсутствующей или неопубликованной — 404, чтобы черновики
+    не утекали наружу; views_count растёт только на полный заход,
+    а не на SPA-навигацию.
 
-    {
-        "component": "BlogPost",
-        "props": {
-            "id": 1,
-            "slug": "podborka-plaginov-dlya-vs-code-selectel",
-            "title": "Подборка плагинов для VS Code",
-            "excerpt": "Какие расширения реально экономят часы рутины.",
-            "cover_image": "https://example.com/cover.jpg",
-            "category": "dev",
-            "tags": ["vs code", "плагины"],
-            "read_time": 12,
-            "published_at": "2026-08-04T08:00:00+00:00",
-            "views_count": 120,
-            "author_name": "Иван Иванов",
-            "body": "## Почему VS Code всё ещё актуален ...",
-            "cta": {
-                "label": "Разобрать канал",
-                "url": "/ai-cabinet"
-            },
-            "related": [
-                {
-                    "id": 2,
-                    "slug": "sut-asinhronnosti-v-python",
-                    "title": "Суть асинхронности в Python",
-                    "excerpt": "Корутины, событийный цикл и таски без магии.",
-                    "cover_image": "https://example.com/cover2.jpg",
-                    "category": "dev",
-                    "tags": ["python", "asyncio"],
-                    "read_time": 8,
-                    "published_at": "2026-07-05T14:00:00+00:00",
-                    "views_count": 89,
-                    "author_name": "Иван Иванов"
-                }
-            ]
-        },
-        "url": "/blog/podborka-plaginov-dlya-vs-code-selectel/"
-    }
-
-    Примечания:
-    - отдаётся только опубликованная статья (is_published=True),
-      остальное отдаёт 404, чтобы черновики не утекали наружу;
+    Props (Inertia-компонент 'BlogPost') — ArticleDetailDTO:
+    - поля карточки (id, slug, title, excerpt, cover_image, category,
+      tags, read_time, published_at, views_count, author_name);
     - body: тело статьи в формате Markdown, HTML собирает фронтенд;
-    - cta: дескриптор кнопки внизу статьи (текст + ссылка);
-    - related: до трёх статей для блока «Читайте также»;
-    - views_count растёт только на полный заход, а не на
-      SPA-навигацию;
-    - страница публичная, авторизация не требуется.
+    - cta: дескриптор кнопки внизу статьи;
+    - related: до трёх других статей (ArticleCardDTO).
+
+    Страница публичная, авторизация не требуется.
     """
 
     def get(
@@ -135,6 +72,10 @@ class BlogArticleDetailView(View):
         **kwargs: Any,
     ) -> HttpResponse:
         service = BlogArticleDetailService()
+
+        return render_inertia_from_dto(
+            request, "BlogPost", props=service.build_mock(slug)
+        )
 
         article = service.get_published_by_slug(slug)
         if article is None:
