@@ -13,10 +13,19 @@ import {
     IconChevronLeft
 } from "@tabler/icons-react";
 import { router } from "@inertiajs/react";
+import type { BlogPostProps } from "@/types/article";
+import formatArticleDate from "@/utils/formatArticleDate";
 
 
+const toParagraphs = (body: string): string[] =>
+    body
+        .split("\n\n")
+        .map((block) => block.replace(/^#+\s*/, "").trim())
+        .filter(Boolean);
 
-export default function BlogPost() {
+
+export default function BlogPost(article: BlogPostProps) {
+    const paragraphs = toParagraphs(article.body);
 
     return (
         <Container>
@@ -36,48 +45,37 @@ export default function BlogPost() {
                 </Anchor>
 
                 <Text size="sm" c="tgblue" fw={600}>
-                    AI
+                    {article.category}
                 </Text>
             </Breadcrumbs>
 
             <Stack gap={6}>
                 <Title order={1} maw={760}>
-                    Как AI помогает авторам расти в 2 раза быстрее
+                    {article.title}
                 </Title>
 
                 <Text c="dimmed">
-                    28 июня 2026 • 6 мин чтения
+                    {formatArticleDate(article.published_at)} • {article.read_time} мин чтения
                 </Text>
             </Stack>
 
             <Paper
                 h={380}
                 radius={20}
-                bg="linear-gradient(135deg,var(--mantine-color-tgpurple-6),var(--mantine-color-tgblue-4))"
+                bg={article.cover_image || undefined}
+                style={{
+                    background: article.cover_image
+                        ? undefined
+                        : "linear-gradient(135deg,var(--mantine-color-tgpurple-6),var(--mantine-color-tgblue-4))",
+                }}
             />
 
             <Stack gap="lg">
-                <Text size="lg" lh={1.8}>
-                    Это демонстрационная статья блога tgpulse.
-                    Здесь мы подробно разбираем тему и
-                    показываем, как сервис помогает авторам
-                    принимать решения на основе данных, а не
-                    интуиции.
-                </Text>
-
-                <Text size="lg" lh={1.8}>
-                    Ключевая идея: смотреть не на абсолютные
-                    цифры, а на динамику и вовлечённость.
-                    AI-модель сервиса подсказывает, какие
-                    форматы и темы работают именно у вашей
-                    аудитории.
-                </Text>
-
-                <Text size="lg" lh={1.8}>
-                    В следующих материалах разберём конкретные
-                    кейсы и покажем, как за месяц вырастить
-                    охват без накруток и агрессивной рекламы.
-                </Text>
+                {paragraphs.map((paragraph) => (
+                    <Text key={paragraph} size="lg" lh={1.8}>
+                        {paragraph}
+                    </Text>
+                ))}
             </Stack>
 
             <Paper
@@ -97,10 +95,10 @@ export default function BlogPost() {
                         </Text>
                     </Stack>
 
-                    <Button radius="md">
-                        Разобрать канал
-                    </Button>
-                </Group>
+                   <Button radius="md" onClick={() => router.visit(article.cta.url)}>
+                       {article.cta.label}
+                   </Button>
+               </Group>
             </Paper>
             </Stack>
         </Container>

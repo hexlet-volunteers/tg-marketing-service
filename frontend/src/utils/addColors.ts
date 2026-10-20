@@ -1,9 +1,7 @@
 import type { UserRequest, UserRequestWithColors } from "@/types/user";
-import type { Article, ArticleWithColor } from '@/types/article';
 import type { CollectionColor, Collection, CollectionWithColor } from "@/types/collection";
 import type { MainCharactersOfChannel, MainCharactersOfChannelAndColor } from "@/types/channel";
 import userRequests from '@/shared/mocks/userRequests';
-import articles from '@/shared/mocks/articles';
 import collections from "@/shared/mocks/collections";
 import chCollection from "@/shared/mocks/chCollection";
 
@@ -19,21 +17,6 @@ const addColorsToUsersRequests = (channelsColors: string[], userRequests: UserRe
 }
 
 export const mockUserRequests = addColorsToUsersRequests(channelsColors, userRequests)
-
-const articleColors: string[] = [
-  "var(--mantine-color-tgblue-5)",
-  "var(--mantine-color-tggreen-5)",
-  "var(--mantine-color-tgorange-5)",
-]
-
-const addColorsToArticles = (articleColors: string[], articles: Article[]): ArticleWithColor[] => {
-  return articles.map((article, index) => {
-    const assignedColor = articleColors[index % articleColors.length];
-    return { ...article, color: assignedColor }
-  })
-}
-
-export const mockArticles = addColorsToArticles(articleColors, articles)
 
 const collectionPageColors = [
   "var(--mantine-color-tgblue-5)",

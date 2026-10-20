@@ -12,10 +12,15 @@ import {
 import { router } from "@inertiajs/react";
 import SmallArticle from "@/components/ui/SmallArticle";
 import type { BlogPageProps } from '@/types/article';
-import { mockArticles } from "@/utils/addColors";
+import formatArticleDate from "@/utils/formatArticleDate";
 
-export default function BlogPage ({ articles = mockArticles }: BlogPageProps) {
+const articleColors = [
+  "var(--mantine-color-tgblue-5)",
+  "var(--mantine-color-tggreen-5)",
+  "var(--mantine-color-tgorange-5)",
+];
 
+export default function BlogPage({ featured, articles }: BlogPageProps) {
   return (
     <Container>
       <Stack gap="xl">
@@ -26,43 +31,54 @@ export default function BlogPage ({ articles = mockArticles }: BlogPageProps) {
         </Text>
       </Box>
 
-        <Card withBorder padding={0} onClick={() => router.visit('/blog/kak-ai-pomogaet-avtoram-rasti-v-2-raza-bystree/')}>
-          <Grid>
-            <Grid.Col span={{ base: 12, md: 7 }}>
-              <Box
-                h={320}
-                style={{
-                  background:
-                    "linear-gradient(135deg,var(--mantine-color-tgpurple-6),var(--mantine-color-tgblue-4))",
-                }}
-              />
-            </Grid.Col>
+        {featured && (
+          <Card
+            withBorder
+            padding={0}
+            onClick={() => router.visit(`/blog/${featured.slug}/`)}
+          >
+            <Grid>
+              <Grid.Col span={{ base: 12, md: 7 }}>
+                <Box
+                  h={320}
+                  bg={featured.cover_image || undefined}
+                  style={{
+                    background: featured.cover_image
+                      ? undefined
+                      : "linear-gradient(135deg,var(--mantine-color-tgpurple-6),var(--mantine-color-tgblue-4))",
+                  }}
+                />
+              </Grid.Col>
 
-            <Grid.Col span={{ base: 12, md: 5 }}>
-              <Stack p="xl" justify="center" h="100%">
-                <Badge w="fit-content">AI</Badge>
+              <Grid.Col span={{ base: 12, md: 5 }}>
+                <Stack p="xl" justify="center" h="100%">
+                  <Badge w="fit-content">{featured.category}</Badge>
 
-                <Title order={2}>
-                  Как AI помогает авторам расти в 2 раза быстрее
-                </Title>
+                  <Title order={2}>
+                    {featured.title}
+                  </Title>
 
-                <Text c="dimmed">
-                  Разбираем, как рекомендательные модели
-                  подсказывают удачные темы постов и экономят
-                  часы на планировании.
-                </Text>
+                  <Text c="dimmed">
+                    {featured.excerpt}
+                  </Text>
 
-                <Text size="sm" c="dimmed">
-                  28 июня 2026 • 6 мин
-                </Text>
-              </Stack>
-            </Grid.Col>
-          </Grid>
-        </Card>
+                  <Text size="sm" c="dimmed">
+                    {formatArticleDate(featured.published_at)} • {featured.read_time} мин
+                  </Text>
+                </Stack>
+              </Grid.Col>
+            </Grid>
+          </Card>
+        )}
 
       <SimpleGrid cols={{ base: 1, md: 3 }}>
-        {articles.map((article) => (
-          <SmallArticle key={article.id} {...article} onClick={() => router.visit(`/blog/${article.id}/`)} />
+        {articles.map((article, index) => (
+          <SmallArticle
+            key={article.id}
+            color={articleColors[index % articleColors.length]}
+            article={article}
+            onClick={() => router.visit(`/blog/${article.slug}/`)}
+          />
         ))}
       </SimpleGrid>
       </Stack>
