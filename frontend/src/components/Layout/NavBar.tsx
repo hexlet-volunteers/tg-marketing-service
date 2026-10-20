@@ -9,18 +9,18 @@ import {
   IconSparkles,
   IconUser,
 } from '@tabler/icons-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { router, usePage } from '@inertiajs/react';
 
 const menu = [
   { label: 'Главная', path: '/', icon: IconHome },
-  { label: 'Каталог каналов', path: '/channels', icon: IconLayoutGrid },
-  { label: 'Подборки', path: '/collections', icon: IconBooks },
-  { label: 'Дашборд канала', path: '/dashboard', icon: IconChartBar },
-  { label: 'Сравнение', path: '/compare', icon: IconArrowsExchange },
-  { label: 'AI-кабинет', path: '/ai-cabinet', icon: IconSparkles },
-  { label: 'Блог', path: '/blog', icon: IconNews },
-  { label: 'Личный кабинет', path: '/profile', icon: IconUser },
-  { label: 'Админка', path: '/admin', icon: IconSettings },
+  { label: 'Каталог каналов', path: '/channels/', icon: IconLayoutGrid },
+  { label: 'Подборки', path: '/collections/', icon: IconBooks },
+  { label: 'Дашборд канала', path: '/dashboard/', icon: IconChartBar },
+  { label: 'Сравнение', path: '/compare/', icon: IconArrowsExchange },
+  { label: 'AI-кабинет', path: '/ai-cabinet/', icon: IconSparkles },
+  { label: 'Блог', path: '/blog/', icon: IconNews },
+  { label: 'Личный кабинет', path: '/auth/profile/', icon: IconUser },
+  { label: 'Админка', path: '/admin/moderation/', icon: IconSettings },
 ];
 
 interface NavBarProps {
@@ -28,8 +28,8 @@ interface NavBarProps {
 }
 
 export function NavBar({ onClose }: NavBarProps) {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const { url } = usePage();
+  const pathname = url.split('?')[0];
 
   return (
 
@@ -38,7 +38,7 @@ export function NavBar({ onClose }: NavBarProps) {
 
         <Stack gap={4}>
           {menu.map((item) => {
-            const active = location.pathname === item.path;
+            const active = pathname === item.path;
             return (
               <NavLink
                 key={item.label}
@@ -54,7 +54,7 @@ export function NavBar({ onClose }: NavBarProps) {
                 }
                 active={active}
                 onClick={() => {
-                  navigate(item.path);
+                  router.visit(item.path);
                   onClose?.();
                 }}
               />

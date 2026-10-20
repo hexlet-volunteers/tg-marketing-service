@@ -8,15 +8,12 @@ import {
   Title,
 } from '@mantine/core';
 import React, { useMemo, useState } from 'react';
-import ChannelCard from '../ui/ChannelCard';
+import ChannelCard from '@/components/ui/ChannelCard';
 import type { ChannelsProps } from '@/types/channel';
-import channelsCol from '@/shared/mocks/channelsCollection';
-
-const defaultChannels = channelsCol;
 
 type TypeFilter = 'all' | 'channel' | 'group';
 
-const Channels: React.FC<ChannelsProps> = ({ channels = defaultChannels }) => {
+const Channels: React.FC<ChannelsProps> = ({ channels = [] }) => {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 

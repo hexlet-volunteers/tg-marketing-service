@@ -18,9 +18,17 @@ import {
   IconShield,
 } from "@tabler/icons-react";
 import type { UserRequestProps } from "@/types/user";
-import { mockUserRequests } from "@/utils/addColors";
+import { addColorsToUsersRequests } from "@/utils/addColors";
 
-export default function AdminPage({ userRequests = mockUserRequests }: UserRequestProps ) {
+const channelsColors = ["indigo", "orange", "teal", "pink"];
+
+interface AdminProps extends UserRequestProps {
+  pendingCount: number;
+}
+
+export default function Admin({ userRequests, pendingCount }: AdminProps) {
+  const requests = addColorsToUsersRequests(channelsColors, userRequests);
+
   return (
     <Container>
       <Group mb={8}>
@@ -42,7 +50,7 @@ export default function AdminPage({ userRequests = mockUserRequests }: UserReque
             value="moderation"
             rightSection={
               <Badge color="tgorange" size="xs">
-                4
+                {pendingCount}
               </Badge>
             }
           >
@@ -79,7 +87,7 @@ export default function AdminPage({ userRequests = mockUserRequests }: UserReque
             </Table.Thead>
 
             <Table.Tbody>
-              {userRequests.map((userRequest) => (
+              {requests.map((userRequest) => (
                 <Table.Tr key={userRequest.title}>
                   <Table.Td>
                     <Group>

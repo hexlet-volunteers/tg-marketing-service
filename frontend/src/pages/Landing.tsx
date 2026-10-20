@@ -1,5 +1,6 @@
 import { InsightCard } from '@/components/ui/InsightCard';
 import { TariffsBlock } from '@/widgets/TariffsBlock';
+import type { Tariff } from '@/widgets/TariffsBlock/model/types';
 import {
   Badge,
   Box,
@@ -19,7 +20,7 @@ import {
   IconSparkles,
 } from '@tabler/icons-react';
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { router } from '@inertiajs/react';
 
 const stats = [
   { value: '2.4M', label: 'каналов в базе' },
@@ -51,9 +52,12 @@ const features = [
   },
 ];
 
+interface LandingPageProps {
+  tariffs: Tariff[];
+}
 
-const LandingPage: React.FC = () => {
-  const navigate = useNavigate();
+
+const Landing: React.FC<LandingPageProps> = ({ tariffs }) => {
 
   return (
     <Box component="section" bg="white">
@@ -87,14 +91,14 @@ const LandingPage: React.FC = () => {
               <Group gap="md">
                 <Button
                   size="md"
-                  onClick={() => navigate('/channels')}
+                  onClick={() => router.visit('/channels/')}
                 >
                   Добавить свой канал
                 </Button>
                 <Button
                   variant="default"
                   size="md"
-                  onClick={() => navigate('/channels')}
+                  onClick={() => router.visit('/channels/')}
                 >
                   Каталог каналов
                 </Button>
@@ -210,9 +214,9 @@ const LandingPage: React.FC = () => {
         </Box>
       </Box>
 
-      <TariffsBlock />
+      <TariffsBlock tariffs={tariffs} />
     </Box>
   );
 };
 
-export default LandingPage;
+export default Landing;
