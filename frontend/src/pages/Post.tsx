@@ -19,7 +19,6 @@ import {
 } from "@mantine/core";
 import { InsightCard } from "@/components/ui/InsightCard";
 import { IconArrowLeft, IconSparkles, IconBrain } from "@tabler/icons-react";
-import { mockReactions, MOCK_ANALYSIS_DATA } from "@/shared/mocks/posts";
 import type { PostPageProps, PostAnalysis } from "@/types/post";
 
 // TODO: Pages должны быть максимально простыми и которкими,
@@ -38,8 +37,8 @@ import type { PostPageProps, PostAnalysis } from "@/types/post";
  */
 
 const Post: React.FC<PostPageProps> = ({
- reactions = mockReactions,
- analysis: propAnalysis = MOCK_ANALYSIS_DATA,
+ reactions = [],
+ analysis: propAnalysis,
 }) => {
 
  const [analysis, setAnalysis] = useState<PostAnalysis | null>(null);
@@ -52,16 +51,16 @@ const Post: React.FC<PostPageProps> = ({
  //  TODO: когда моковые данные заменятся на данные с бекенда, нужно будет добавить обработку ошибок
 
  const handleStartAnalysis = () => {
-  const baseData = propAnalysis || MOCK_ANALYSIS_DATA;
+  if (!propAnalysis) return;
 
   setAnalysis({
-   ...baseData,
+   ...propAnalysis,
    status: "processing",
   });
 
   setTimeout(() => {
    setAnalysis({
-    ...baseData,
+    ...propAnalysis,
     status: "completed",
    });
   }, 3000);

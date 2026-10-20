@@ -4,14 +4,16 @@ interface User {
   email: string;
 }
 
-interface UserNotification {
-  label: string;
-  defaultChecked: boolean;
+interface UserNotificationSettings {
+  weekly_reports: boolean;
+  trend_notifications: boolean;
+  limit_exceeded: boolean;
+  new_features: boolean;
 }
 
 interface UserProfilePageProps {
   user: User;
-  notifications: UserNotification[] | null;
+  notifications: UserNotificationSettings | null;
 }
 
 interface UserRequest {
@@ -30,5 +32,5 @@ interface UserRequestProps {
   userRequests: UserRequestWithColors[];
 }
 
-export type { UserRequest, UserRequestWithColors, UserRequestProps, User, UserNotification, UserProfilePageProps }
+export type { UserRequest, UserRequestWithColors, UserRequestProps, User, UserNotificationSettings, UserProfilePageProps }
 

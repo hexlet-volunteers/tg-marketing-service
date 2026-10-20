@@ -11,9 +11,14 @@ import {
 import { IconChevronLeft } from "@tabler/icons-react";
 import { router } from "@inertiajs/react";
 import type { CollectionPageProps } from "@/types/channel";
-import { mockCollection } from "@/utils/addColors";
 
-export default function Collection({ channels = mockCollection }: CollectionPageProps) {
+export default function Collection({
+    title,
+    description,
+    channel_count,
+    channels,
+}: CollectionPageProps) {
+    const channelWord = channel_count === 1 ? "канал" : "канала";
 
     return (
         <Container>
@@ -38,19 +43,18 @@ export default function Collection({ channels = mockCollection }: CollectionPage
             >
                 <Stack gap="sm">
                     <Title order={1} c="white">
-                        Топ IT-каналов
+                        {title}
                     </Title>
 
                     <Text c="rgba(255,255,255,.9)">
-                        Технологии, разработка и цифровые
-                        продукты
+                        {description}
                     </Text>
 
                     <Text
                         c="rgba(255,255,255,.8)"
                         fw={600}
                     >
-                        3 канала
+                        {channel_count} {channelWord}
                     </Text>
                 </Stack>
             </Paper>

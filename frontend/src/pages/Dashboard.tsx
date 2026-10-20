@@ -1,10 +1,6 @@
 import { BrandAvatar } from "@/components/ui/BrandAvatar";
 import { InsightCard } from "@/components/ui/InsightCard";
-import { mockGrowthData, mockKpis } from "@/shared/mocks/channelKpis";
-import channelsCol from "@/shared/mocks/channelsCollection";
-import { mockPosts } from "@/shared/mocks/posts";
-import type { ChannelData } from "@/types/channel";
-import type { PostProps } from "@/types/post";
+import type { DashboardPageProps } from "@/types/dashboard";
 import deltaFormatter from "@/utils/deltaFormatter";
 import getErBadgeColor from "@/utils/getErBadgeColor";
 import { router } from "@inertiajs/react";
@@ -27,33 +23,38 @@ import {
 import { IconCheck, IconDownload } from "@tabler/icons-react";
 import React from "react";
 
-/**
- * Пропсы для страницы панели управления (дашборда).
- * Объединяет в себе данные канала (ChannelData) и список публикаций (PostProps).
- */
-
-interface DashBoardProps extends ChannelData, PostProps { }
-
-const channel = channelsCol[0];
+const insightMeta: Record<
+  string,
+  { color: "green" | "blue" | "purple" | "orange"; label: string }
+> = {
+  trend: { color: "blue", label: "Тренд" },
+  recommendation: { color: "green", label: "Рекомендация" },
+  warning: { color: "orange", label: "Предупреждение" },
+  positive: { color: "green", label: "Позитивный" },
+};
 
 /**
  * Главная страница дашборда аналитики канала.
  *
  * Отображает:
  * - Шапку канала с аватаром, названием, юзернеймом и кнопками управления.
- * - Сетку карточек ключевых показателей (KPI) с абсолютными и процентными дельтами.
+ * - Сетку карточек ключевых показателей (KPI) канала.
  * - График динамики роста аудитории (AreaChart).
  * - Блок AI-советов и рекомендаций (InsightCard).
  * - Интерактивную таблицу последних публикаций со статистикой просмотров, реакций и ER.
  */
 
-const Dashboard: React.FC<DashBoardProps> = ({
+const Dashboard: React.FC<DashboardPageProps> = ({
+  /** Канал, к которому относится дашборд */
+  channel,
   /** Список ключевых показателей эффективности (KPI) канала */
-  kpis = mockKpis,
+  kpis,
   /** Данные для построения графика роста подписчиков */
-  growthData = mockGrowthData,
+  growthData,
   /** Список последних постов для отображения в таблице */
-  posts = mockPosts,
+  posts,
+  /** Непрочитанные AI-инсайты (или fallback-генерация на бэке) */
+  ai_insights,
 }) => {
 
   return (
@@ -136,16 +137,23 @@ const Dashboard: React.FC<DashBoardProps> = ({
             AI-советы
           </Title>
           <Stack gap="sm">
-            <InsightCard color="green" label="Рекомендация">
-              <Text size="xs" c="dimmed">
-                Публикуйте посты в среду в 19:00 — ваша аудитория наиболее активна
-              </Text>
-            </InsightCard>
-            <InsightCard color="blue" label="Тренд">
-              <Text size="xs" c="dimmed">
-                Вовлечённость выросла на 12% за последние 30 дней
-              </Text>
-            </InsightCard>
+            {ai_insights.map((insight, index) => {
+              const meta = insightMeta[insight.type] ?? {
+                color: "purple" as const,
+                label: "Инсайт",
+              };
+              return (
+                <InsightCard
+                  key={insight.id ?? index}
+                  color={meta.color}
+                  label={meta.label}
+                >
+                  <Text size="xs" c="dimmed">
+                    {insight.text}
+                  </Text>
+                </InsightCard>
+              );
+            })}
           </Stack>
           <Button
             color="tgblue"

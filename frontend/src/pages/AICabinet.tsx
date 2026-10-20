@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Badge,
   Box,
@@ -21,20 +21,22 @@ import { SectionCard } from '@/components/ui/SectionCard';
 import { IconSend, IconSparkles } from '@tabler/icons-react';
 import { router } from '@inertiajs/react';
 import type { AiCabinetPageProps } from '@/types/aiCabinet';
-import { mockCompetitors, mockHeatMapData } from '@/shared/mocks/aiPageData';
-import { mockIdeas, mockInsights } from '@/utils/makeIdeasAndInsights';
+import { makeIdeas, makeInsights } from '@/utils/makeIdeasAndInsights';
 import { formatNumber } from '@/utils/formatNumberShort';
 import getHeatColor from '@/utils/getHeatColor';
 import staticData from '@/shared/const/AICabinetPageStaticData';
 
 const AICabinet = ({
-  ideas = mockIdeas, 
-  insights = mockInsights, 
-  competitors= mockCompetitors, 
-  heatMapData = mockHeatMapData,
+  ideas: ideasData,
+  insights: insightsData,
+  competitors,
+  heatMapData,
 }: AiCabinetPageProps) => {
   const { quickQuestions, daysOfWeek, hours} = staticData
   const [questionText, setQuestionText] = useState('');
+
+  const ideas = useMemo(() => makeIdeas(ideasData), [ideasData]);
+  const insights = useMemo(() => makeInsights(insightsData), [insightsData]);
 
   return (
     <Container>

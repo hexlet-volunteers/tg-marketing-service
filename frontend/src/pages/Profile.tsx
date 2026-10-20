@@ -15,12 +15,53 @@ import {
 } from '@mantine/core';
 import { IconEdit, IconLogout, IconPlus } from '@tabler/icons-react';
 import { router } from '@inertiajs/react';
-import type { UserProfilePageProps } from '@/types/user';
-import { mockUser, mockNotifications } from '@/shared/mocks/user';
+import { useState } from 'react';
+import type { UserProfilePageProps, UserNotificationSettings } from '@/types/user';
 
+const EMPTY_NOTIFICATIONS: UserNotificationSettings = {
+  weekly_reports: false,
+  trend_notifications: false,
+  limit_exceeded: false,
+  new_features: false,
+};
 
-const Profile = ({ user = mockUser, notifications }: UserProfilePageProps ) => {
-  const notificationItems = notifications ?? mockNotifications;
+type SAVABLE_NOTIFICATION_KEY =
+  | 'weekly_reports'
+  | 'trend_notifications'
+  | 'new_features';
+
+const NOTIFICATION_ROWS: ReadonlyArray<{ key: SAVABLE_NOTIFICATION_KEY; label: string }> = [
+  { key: 'weekly_reports', label: 'Еженедельные отчёты' },
+  { key: 'trend_notifications', label: 'Уведомления о трендах' },
+  { key: 'new_features', label: 'Новые функции' },
+];
+
+const Profile = ({ user, notifications }: UserProfilePageProps ) => {
+  const serverSettings = notifications ?? EMPTY_NOTIFICATIONS;
+  const [draft, setDraft] = useState<UserNotificationSettings | null>(null);
+  const [pending, setPending] = useState(false);
+  const settings = draft ?? serverSettings;
+
+  const toggleNotification = (key: SAVABLE_NOTIFICATION_KEY, checked: boolean) => {
+    const next = { ...settings, [key]: checked };
+    setDraft(next);
+    router.post(
+      '/auth/profile/',
+      {
+        action: 'notifications',
+        weekly_reports: String(next.weekly_reports),
+        trend_notifications: String(next.trend_notifications),
+        new_features: String(next.new_features),
+      },
+      {
+        forceFormData: true,
+        preserveScroll: true,
+        onStart: () => setPending(true),
+        onFinish: () => setPending(false),
+        onError: () => setDraft(null),
+      },
+    );
+  };
 
   return (
     <Container>
@@ -84,12 +125,21 @@ const Profile = ({ user = mockUser, notifications }: UserProfilePageProps ) => {
 
         <SectionCard title="Уведомления">
           <Stack>
-            {notificationItems.map((n, i) => (
-              <Group key={i} justify="space-between">
-                <Text size="sm">{n.label}</Text>
-                <Switch size="sm" defaultChecked={n.defaultChecked} />
+            {NOTIFICATION_ROWS.map(({ key, label }) => (
+              <Group key={key} justify="space-between">
+                <Text size="sm">{label}</Text>
+                <Switch
+                  size="sm"
+                  checked={settings[key]}
+                  disabled={pending}
+                  onChange={(event) => toggleNotification(key, event.currentTarget.checked)}
+                />
               </Group>
             ))}
+            <Group justify="space-between">
+              <Text size="sm">Превышение лимитов</Text>
+              <Switch size="sm" checked={settings.limit_exceeded} disabled />
+            </Group>
           </Stack>
         </SectionCard>
       </SimpleGrid>

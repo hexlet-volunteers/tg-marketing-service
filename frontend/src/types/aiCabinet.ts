@@ -10,10 +10,6 @@ interface Idea extends IdeaData {
   icon: React.ElementType;
 }
 
-interface Ideas {
-  ideas: Idea[]
-}
-
 interface InsightData {
   type: 'recommendation' | 'trend' | 'warning' | 'positive';
   text: string;
@@ -32,8 +28,9 @@ interface Competitor {
 
 type HeatMapData = Record<string, Record<number, number>>
 
-interface AiCabinetPageProps extends Ideas {
-  insights: Insight[];
+interface AiCabinetPageProps {
+  ideas: IdeaData[];
+  insights: InsightData[];
   competitors: Competitor[];
   heatMapData: HeatMapData;
 }

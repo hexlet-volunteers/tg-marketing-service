@@ -1,5 +1,6 @@
 import { InsightCard } from '@/components/ui/InsightCard';
 import { TariffsBlock } from '@/widgets/TariffsBlock';
+import type { Tariff } from '@/widgets/TariffsBlock/model/types';
 import {
   Badge,
   Box,
@@ -51,8 +52,12 @@ const features = [
   },
 ];
 
+interface LandingPageProps {
+  tariffs: Tariff[];
+}
 
-const Landing: React.FC = () => {
+
+const Landing: React.FC<LandingPageProps> = ({ tariffs }) => {
 
   return (
     <Box component="section" bg="white">
@@ -209,7 +214,7 @@ const Landing: React.FC = () => {
         </Box>
       </Box>
 
-      <TariffsBlock />
+      <TariffsBlock tariffs={tariffs} />
     </Box>
   );
 };

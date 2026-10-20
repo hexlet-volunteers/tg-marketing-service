@@ -1,13 +1,9 @@
 import { Box, Container, SimpleGrid, Title } from '@mantine/core';
 import React, { useState } from 'react';
 import type { TariffsBlockProps } from '../model/types';
-import { useTariffsBlock } from '../model/useTariffsBlock';
 import { TariffCard } from './TariffCard';
 
-export const TariffsBlock: React.FC<TariffsBlockProps> = ({ tariffs: propsTariffs }) => {
-  const { tariffs: tariffFromPage } = useTariffsBlock();
-  const tariffs = propsTariffs ?? tariffFromPage;
-
+export const TariffsBlock: React.FC<TariffsBlockProps> = ({ tariffs }) => {
   const [activeTariffId, setActiveTariffId] = useState<number>(
     tariffs?.find((t) => t.isHighlighted)?.id || tariffs?.[0]?.id || 0
   );

@@ -1,5 +1,4 @@
 import { BrandAvatar } from '@/components/ui/BrandAvatar';
-import channelsCol from '@/shared/mocks/channelsCollection';
 import {
   Badge,
   Container,
@@ -12,12 +11,20 @@ import {
 import { IconTrophy } from '@tabler/icons-react';
 import React from 'react';
 import type { ComparePageProps } from '@/types/channel';
-import { mockMetrics } from '@/shared/mocks/metrics';
+import { formatNumberShortEn } from '@/utils/formatNumberShort';
 
-const Compare: React.FC<ComparePageProps> = ({
-  metrics = mockMetrics, 
-  channels = channelsCol.slice(0, 3)
-}) => {
+const formatters: Record<string, (v: number) => string> = {
+  subscribers: (v) => formatNumberShortEn(v),
+  er: (v) => `${v.toFixed(1)}%`,
+  growth30d: (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`,
+  avgReach: (v) => formatNumberShortEn(v),
+  reachPerSub: (v) => `${v.toFixed(1)}%`,
+};
+
+const formatValue = (key: string, value: number): string =>
+  formatters[key]?.(value) ?? String(value);
+
+const Compare: React.FC<ComparePageProps> = ({ metrics, channels }) => {
   const getVal = (ch: (typeof channels)[number], key: string): number => {
     const map: Record<string, number> = {
       subscribers: ch.subscribers,
@@ -82,7 +89,7 @@ const Compare: React.FC<ComparePageProps> = ({
                   {channels.map((ch, i) => (
                     <Table.Td key={ch.id}>
                       <Group gap="xs">
-                        {m.format(getVal(ch, m.key))}
+                        {formatValue(m.key, getVal(ch, m.key))}
                         {i === bestIdx && (
                           <Badge size="xs" variant="filled" color="tggreen" leftSection={<IconTrophy size={10} />}>
                             лучший
@@ -103,7 +110,7 @@ const Compare: React.FC<ComparePageProps> = ({
           AI-вердикт
         </Title>
         <Text size="sm" c="dimmed">
-          Для рекламы лучше всего подходит канал «{channels[0].name}» — у него наивысшая вовлечённость
+          Для рекламы лучше всего подходит канал «{channels[0]?.name}» — у него наивысшая вовлечённость
           и стабильный рост. Рекомендуемая стоимость размещения: от 15 000 ₽ за пост.
         </Text>
       </Paper>

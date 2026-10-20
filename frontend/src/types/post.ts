@@ -6,10 +6,6 @@ interface Post {
   er: number;
 }
 
-interface PostProps {
-  posts: Post[]
-}
-
 interface PostReaction {
   emoji: '🔥' | '❤️' | '👍' | '🤯';
   label: 'Огонь' | 'Сердце' | 'Лайк' | 'Восторг';
@@ -44,4 +40,4 @@ interface PostPageProps {
 
 
 
-export type { Post, PostProps, PostAnalysis, PostReaction, PostPageProps}
+export type { Post, PostAnalysis, PostReaction, PostPageProps}
