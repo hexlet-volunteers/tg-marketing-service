@@ -73,6 +73,19 @@ class UserRegisterTest(TestCase):
         self.assertEqual(consent.ip, "203.0.113.42")
         self.assertEqual(consent.user_agent, "RegistrationTest/1.0")
 
+    def test_registration_uses_optional_username(self) -> None:
+        response = self.client.post(
+            reverse("users:user_create"),
+            data=self.valid_payload(username="custom-username"),
+        )
+        self.assertRedirects(
+            response,
+            reverse("homepage:dashboard"),
+            fetch_redirect_response=False,
+        )
+        user = User.objects.get(email="ada@example.com")
+        self.assertEqual(user.username, "custom-username")
+
     @patch("apps.users.views.inertia_render", side_effect=inertia_json_response)
     def test_registration_without_consent_does_not_create_user(
         self, _render: Any
