@@ -20,9 +20,11 @@ def load_fixture(name: str):
 
 @pytest.fixture
 async def channel(db):
-    return await TelegramChannel.objects.acreate(
-        channel_id=12345, title="Test Channel", username="testchannel"
+    channel, created = await TelegramChannel.objects.aget_or_create(
+        channel_id=12345,
+        defaults={"title": "Test Channel", "username": "testchannel"},
     )
+    return channel
 
 
 @pytest.fixture
@@ -130,3 +132,83 @@ class TestPostsParser:
             post=post, emoji=reaction_data["emoji"]
         )
         assert reaction.count == reaction_data["count"]
+
+    @pytest.mark.asyncio
+    async def test_parse_posts_complex_reactions(
+        self, channel, mock_client, parser
+    ):
+        """
+        Тест на:
+        1. Стабильные ключи для CustomEmoji (c:<hash>) и Paid (paid).
+        2. Суммирование реакций с одинаковым ключом.
+        3. Обработку двух кастомных и одной платной реакции.
+        """
+        from telethon.tl.types import ReactionCustomEmoji, ReactionPaid
+
+        # 1. ПОДГОТОВКА ДАННЫХ
+        mock_message = MagicMock()
+        mock_message.id = 777
+        mock_message.service = False
+        mock_message.text = "Complex reactions test"
+        mock_message.date = datetime.now(timezone.utc)
+        mock_message.views = 100
+        mock_message.forwards = 0
+        mock_message.replies = MagicMock(replies=0)
+        mock_message.fwd_from = None
+        mock_message.entities = []
+
+        r1 = MagicMock()
+        r1.reaction = ReactionCustomEmoji(document_id=101)
+        r1.count = 5
+
+        r2 = MagicMock()
+        r2.reaction = ReactionCustomEmoji(document_id=101)
+        r2.count = 3
+
+        r3 = MagicMock()
+        r3.reaction = ReactionCustomEmoji(document_id=202)
+        r3.count = 10
+
+        r4 = MagicMock()
+        r4.reaction = ReactionPaid()
+        r4.count = 2
+
+        mock_reactions_container = MagicMock()
+        mock_reactions_container.results = [r1, r2, r3, r4]
+        mock_message.reactions = mock_reactions_container
+
+        mock_client.get_messages.return_value = [mock_message]
+        mock_channel_entity = MagicMock(username="testchannel")
+
+        # 2. ЗАПУСК
+        await parser.parse_posts(
+            channel_entity=mock_channel_entity, channel_model=channel, limit=1
+        )
+
+        # 3. ПРОВЕРКИ
+        post = await Post.objects.aget(telegram_message_id=777)
+        reactions = [r async for r in PostReaction.objects.filter(post=post)]
+
+        assert len(reactions) == 3
+
+        summed_reaction = next(
+            (
+                r
+                for r in reactions
+                if r.emoji.startswith("c:") and len(r.emoji) == 10
+            ),
+            None,
+        )
+        assert summed_reaction is not None
+        assert summed_reaction.count == 8
+
+        other_custom = next(
+            (r for r in reactions if r.emoji != summed_reaction.emoji), None
+        )
+        assert other_custom.emoji.startswith("c:")
+        assert other_custom.count == 10
+
+        # Проверка платной реакции
+        paid_reaction = next((r for r in reactions if r.emoji == "paid"), None)
+        assert paid_reaction is not None
+        assert paid_reaction.count == 2
