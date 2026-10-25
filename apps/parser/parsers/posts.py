@@ -35,9 +35,14 @@ class PostsParser:
         total_reposts = 0
         post_count = 0
 
+        pinned_ids = set(channel_model.pinned_messages or [])
+
         for message in messages[:limit]:
             if message.service:
                 continue
+
+            media_type = "none"
+            is_pinned = message.id in pinned_ids
 
             # Обработка поста
             permalink = (
@@ -49,6 +54,22 @@ class PostsParser:
             current_forwards = message.forwards or 0
             current_comments = message.replies.replies if message.replies else 0
             current_views = message.views or 0
+
+            if message.media:
+                if hasattr(message.media, "document"):
+                    mime = getattr(message.media.document, "mime_type", "")
+                    if mime.startswith("video/"):
+                        media_type = "video"
+                    elif mime.startswith("audio/"):
+                        media_type = "audio"
+                    elif mime.startswith("image/"):
+                        media_type = "image"
+                    else:
+                        media_type = "file"
+                elif hasattr(message.media, "photo"):
+                    media_type = "photo"
+                else:
+                    media_type = message.media.__class__.__name__.lower()
 
             fwd_from = None
             if message.fwd_from:
@@ -79,12 +100,22 @@ class PostsParser:
                     "comments_count": current_comments,
                     "fwd_from": fwd_from,
                     "mentions": mentions,
+                    "is_pinned": is_pinned,
+                    "media_type": media_type,
                 },
             )
 
             # 2. Обновление полей для существующих постов
             if not created:
                 update_fields = []
+
+                if is_pinned != post.is_pinned:
+                    post.is_pinned = is_pinned
+                    update_fields.append("is_pinned")
+
+                if media_type != post.media_type:
+                    post.media_type = media_type
+                    update_fields.append("media_type")
 
                 if current_views > post.views:
                     post.views = current_views

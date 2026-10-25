@@ -134,6 +134,89 @@ class TestPostsParser:
         assert reaction.count == reaction_data["count"]
 
     @pytest.mark.asyncio
+    async def test_parse_posts_media_and_pinned(
+        self, channel, mock_client, parser
+    ):
+        """
+        Тест на:
+        1. Корректное определение media_type (на примере Photo).
+        2. Корректное определение is_pinned на основе pinned_messages канала.
+        """
+
+        # 1. ПОДГОТОВКА ДАННЫХ
+        message_id = 999
+        pinned_id = 999
+
+        channel.pinned_messages = [pinned_id]
+        await channel.asave()
+
+        mock_message = MagicMock()
+        mock_message.id = message_id
+        mock_message.service = False
+        mock_message.text = "Media and pinned test"
+        mock_message.date = datetime.now(timezone.utc)
+        mock_message.views = 50
+        mock_message.forwards = 5
+        mock_message.replies = MagicMock(replies=2)
+        mock_message.fwd_from = None
+        mock_message.entities = []
+
+        mock_message.media = MagicMock()
+        mock_message.media.photo = MagicMock()
+
+        mock_message.reactions = MagicMock(results=[])
+
+        mock_client.get_messages.return_value = [mock_message]
+        mock_channel_entity = MagicMock(username="testchannel")
+
+        # 2. ЗАПУСК
+        await parser.parse_posts(
+            channel_entity=mock_channel_entity, channel_model=channel, limit=1
+        )
+
+        # 3. ПРОВЕРКИ
+        post = await Post.objects.aget(telegram_message_id=message_id)
+
+        assert post.media_type == "video"
+
+        assert post.is_pinned is True
+
+    @pytest.mark.asyncio
+    async def test_parse_posts_non_pinned_no_media(
+        self, channel, mock_client, parser
+    ):
+        """
+        Тест на обычное сообщение без медиа и без закрепа.
+        """
+        mock_message = MagicMock()
+        mock_message.id = 1000
+        mock_message.service = False
+        mock_message.text = "Plain text"
+        mock_message.date = datetime.now(timezone.utc)
+        mock_message.views = 0
+        mock_message.forwards = 0
+        mock_message.replies = MagicMock(replies=0)
+        mock_message.fwd_from = None
+        mock_message.entities = []
+        mock_message.media = None
+        mock_message.reactions = MagicMock(results=[])
+
+        channel.pinned_messages = [1, 2, 3]
+        await channel.asave()
+
+        mock_client.get_messages.return_value = [mock_message]
+        mock_channel_entity = MagicMock(username="testchannel")
+
+        await parser.parse_posts(
+            channel_entity=mock_channel_entity, channel_model=channel, limit=1
+        )
+
+        post = await Post.objects.aget(telegram_message_id=1000)
+
+        assert post.media_type == "none"
+        assert post.is_pinned is False
+
+    @pytest.mark.asyncio
     async def test_parse_posts_complex_reactions(
         self, channel, mock_client, parser
     ):
