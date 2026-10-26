@@ -63,11 +63,6 @@ export default function BlogPost(article: BlogPostProps) {
                 h={380}
                 radius={20}
                 bg={article.cover_image || undefined}
-                style={{
-                    background: article.cover_image
-                        ? undefined
-                        : "linear-gradient(135deg,var(--mantine-color-tgpurple-6),var(--mantine-color-tgblue-4))",
-                }}
             />
 
             <Stack gap="lg">

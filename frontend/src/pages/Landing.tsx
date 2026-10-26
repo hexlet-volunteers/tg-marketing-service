@@ -22,11 +22,6 @@ import {
 import React from 'react';
 import { router } from '@inertiajs/react';
 
-const stats = [
-  { value: '2.4M', label: 'каналов в базе' },
-  { value: '18 млрд', label: 'проанализ. постов' },
-  { value: '120K', label: 'авторов' },
-];
 
 const features = [
   {
@@ -54,10 +49,11 @@ const features = [
 
 interface LandingPageProps {
   tariffs: Tariff[];
+  stats?: Array<{ value: string; label: string }>;
 }
 
 
-const Landing: React.FC<LandingPageProps> = ({ tariffs }) => {
+const Landing: React.FC<LandingPageProps> = ({ tariffs, stats }) => {
 
   return (
     <Box component="section" bg="white">
@@ -105,7 +101,7 @@ const Landing: React.FC<LandingPageProps> = ({ tariffs }) => {
               </Group>
 
               <Group gap={48} mt="lg">
-                {stats.map((stat) => (
+                {stats?.map((stat) => (
                   <div key={stat.label}>
                     <Text fw={800} c="primary" lh={1.1} fz="32px">
                       {stat.value}

@@ -42,11 +42,6 @@ export default function BlogPage({ featured, articles }: BlogPageProps) {
                 <Box
                   h={320}
                   bg={featured.cover_image || undefined}
-                  style={{
-                    background: featured.cover_image
-                      ? undefined
-                      : "linear-gradient(135deg,var(--mantine-color-tgpurple-6),var(--mantine-color-tgblue-4))",
-                  }}
                 />
               </Grid.Col>
 
