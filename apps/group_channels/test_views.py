@@ -1,12 +1,12 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.group_channels.mock_data import MOCK_COLLECTIONS
 from apps.group_channels.models import Group
 from apps.group_channels.services.collections_catalog_service import (
     CollectionsCatalogService,
 )
 from apps.group_channels.views import DEFAULT_AVATAR_GROUP
+from apps.parser.models import TelegramChannel
 from apps.users.models import User
 
 
@@ -39,6 +39,59 @@ class CreateGroupViewTest(TestCase):
 
 
 class CollectionsCatalogViewTest(TestCase):
+    tech_group: Group
+    crypto_group: Group
+    design_group: Group
+
+    @classmethod
+    def setUpTestData(cls):
+        owner = User.objects.create_user(
+            username="catalog-owner",
+            email="catalog-owner@example.com",
+            role="user",
+        )
+        tech = TelegramChannel.objects.create(
+            channel_id=1,
+            title="Tech",
+            category="Технологии",
+            country="Россия",
+        )
+        crypto = TelegramChannel.objects.create(
+            channel_id=2,
+            title="Crypto",
+            category="Криптовалюты",
+            country="Казахстан",
+        )
+        design = TelegramChannel.objects.create(
+            channel_id=3,
+            title="Design",
+            category="Дизайн",
+            country="Россия",
+        )
+
+        cls.tech_group = Group.objects.create(
+            name="Топ IT-каналов",
+            description="Технологии",
+            owner=owner,
+            is_editorial=True,
+            order=0,
+        )
+        cls.tech_group.channels.add(tech)
+        cls.crypto_group = Group.objects.create(
+            name="Крипта без шума",
+            description="Аналитика рынка",
+            owner=owner,
+            order=1,
+        )
+        cls.crypto_group.channels.add(crypto)
+        cls.design_group = Group.objects.create(
+            name="Дизайн и продукт",
+            description="UX и UI",
+            owner=owner,
+            order=2,
+        )
+        cls.design_group.channels.add(design)
+
     def _get_catalog(self, query: str = "") -> dict:
         response = self.client.get(
             "/collections/" + query,
@@ -50,44 +103,23 @@ class CollectionsCatalogViewTest(TestCase):
         self.assertEqual(data["component"], "Collections")
         return data["props"]
 
-    def test_renders_mock_catalog_without_db_rows(self) -> None:
+    def test_renders_db_catalog(self) -> None:
         props = self._get_catalog()
 
         self.assertEqual(
             [item["name"] for item in props["collections"]],
-            [item["name"] for item in MOCK_COLLECTIONS],
+            ["Топ IT-каналов", "Крипта без шума", "Дизайн и продукт"],
         )
-        self.assertTrue(props["featured"])
         self.assertEqual(len(props["featured"]), 3)
         self.assertTrue(props["sections"])
         self.assertIn("country_options", props["filters"])
 
-    def test_catalog_ignores_db_groups(self) -> None:
-        Group.objects.create(
-            name="Не показывать",
-            owner=User.objects.create_user(
-                username="catalog-owner",
-                email="catalog-owner@example.com",
-                role="user",
-            ),
-        )
-
-        props = self._get_catalog()
-
-        self.assertNotIn(
-            "Не показывать",
-            [item["name"] for item in props["collections"]],
-        )
-        self.assertEqual(
-            props["collections"][0]["name"], MOCK_COLLECTIONS[0]["name"]
-        )
-
     def test_catalog_applies_query_filter(self) -> None:
-        props = self._get_catalog("?q=крипта")
+        props = self._get_catalog("?q=Крипта")
 
         self.assertEqual(len(props["collections"]), 1)
         self.assertEqual(props["collections"][0]["name"], "Крипта без шума")
-        self.assertEqual(props["filters"]["q"], "крипта")
+        self.assertEqual(props["filters"]["q"], "Крипта")
 
     def test_catalog_applies_country_and_category_filters(self) -> None:
         by_country = self._get_catalog("?country=Казахстан")

@@ -1,10 +1,3 @@
-"""Мок-реестр данных AI-кабинета (Inertia: AICabinet).
-
-Данные перенесены сюда из frontend/src/shared/mocks/aiPageData и
-frontend/src/utils/makeIdeasAndInsights (иконки/цвета инсайтов
-дополняются на фронтенде по полю type).
-"""
-
 from typing import Any, Dict, List
 
 MOCK_IDEAS: List[Dict[str, Any]] = [

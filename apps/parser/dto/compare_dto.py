@@ -15,8 +15,8 @@ class CompareMetricDTO(BaseModel):
 class CompareDTO(BaseModel):
     """Props страницы 'Compare' (/compare/).
 
-    Пока отдаются моки из реестра apps/parser/mock_data.py;
-    форматирование значений метрик остаётся на фронтенде.
+    Каналы берутся из БД с fallback полей из mocks/parser.py;
+    определения метрик приходят из мока, форматирование — на фронтенде.
     """
 
     metrics: List[CompareMetricDTO] = Field(default_factory=list)

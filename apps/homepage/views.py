@@ -5,7 +5,6 @@ from django.shortcuts import redirect
 from django.views import View
 from inertia import render as inertia_render
 
-from .mock_data import MOCK_CHANNEL, MOCK_GROWTH_DATA, MOCK_KPIS, MOCK_POSTS
 from .services.dashboard_service import DashboardService
 
 
@@ -14,9 +13,10 @@ class DashboardView(View):
     Inertia view для дашборда авторизованного пользователя.
 
     Помимо реального `DashboardDTO` (stats/channels/ai_insights/...) отдаются
-    FE-формированные пропсы страницы из мок-реестра `mock_data.py`
-    (channel/kpis/growthData/posts) — до подключения БД (см.
-    docs/inertia-contract.md).
+    FE-пропсы страницы (channel/kpis/growthData/posts), собранные из БД.
+    Поля, которых нет в моделях, но которые нужны FE, дополняются из
+    `mocks/`. Если строк в БД нет, секция остаётся пустой
+    (см. docs/inertia-contract.md).
 
     Пример Inertia payload для фронтенда:
 
@@ -127,7 +127,7 @@ class DashboardView(View):
     - growth: процентный рост подписчиков за последний период
     - days_left: дней до конца текущего периода подписки (Subscription)
     - is_auto: признак автоматической/ручной коллекции
-    - channel/kpis/growthData/posts: FE-структура из mock_data.py
+    - channel/kpis/growthData/posts: данные БД + моки для отсутствующих полей
     """
 
     def get(
@@ -144,9 +144,6 @@ class DashboardView(View):
             "Dashboard",
             props={
                 **dto.model_dump(mode="json"),
-                "channel": MOCK_CHANNEL,
-                "kpis": MOCK_KPIS,
-                "growthData": MOCK_GROWTH_DATA,
-                "posts": MOCK_POSTS,
+                **service.build_page_props(),
             },
         )

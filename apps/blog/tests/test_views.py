@@ -1,9 +1,11 @@
 from datetime import datetime
 
-from django.test import SimpleTestCase
+from django.test import TestCase
 from django.urls import reverse
+from django.utils.dateparse import parse_datetime
 
-from apps.blog.mock_data import MOCK_ARTICLES, get_featured_mock
+from apps.blog.models import BlogArticle
+from mocks.blog import ARTICLES
 
 CARD_FIELDS = {
     "id",
@@ -22,8 +24,32 @@ CARD_FIELDS = {
 DETAIL_FIELDS = CARD_FIELDS | {"body", "cta", "related"}
 
 
-class BlogListViewTest(SimpleTestCase):
-    """Страница списка: всегда моковые данные (реестр mock_data)."""
+class BlogListViewTest(TestCase):
+    """Страница списка: данные из БД."""
+
+    @classmethod
+    def setUpTestData(cls):
+        for data in ARTICLES:
+            BlogArticle.objects.update_or_create(
+                slug=data["slug"],
+                defaults={
+                    "title": data["title"],
+                    "excerpt": data.get("excerpt", ""),
+                    "body": data.get("body", ""),
+                    "cover_image": data.get("cover_image", ""),
+                    "category": data.get("category", "") or "marketing",
+                    "tags": data.get("tags", []),
+                    "read_time": data.get("read_time", 5),
+                    "is_featured": data.get("is_featured", False),
+                    "is_published": True,
+                    "published_at": (
+                        parse_datetime(str(data["published_at"]))
+                        if data.get("published_at")
+                        else None
+                    ),
+                    "views_count": data.get("views_count", 0),
+                },
+            )
 
     def _get_inertia_props(self) -> dict[str, object]:
         response = self.client.get(
@@ -58,19 +84,26 @@ class BlogListViewTest(SimpleTestCase):
         self.assertIn("featured", props)
         self.assertIn("articles", props)
 
-    def test_featured_is_featured_mock(self) -> None:
+    def test_featured_is_featured_article(self) -> None:
         props = self._get_inertia_props()
 
+        expected = (
+            BlogArticle.objects.filter(is_featured=True)
+            .order_by("-published_at")
+            .first()
+        )
+        self.assertIsNotNone(expected)
         featured = props["featured"]
         self.assertIsNotNone(featured)
-        self.assertEqual(featured["slug"], get_featured_mock()["slug"])
+        self.assertEqual(featured["slug"], expected.slug)
 
     def test_featured_card_contains_all_fields(self) -> None:
         props = self._get_inertia_props()
 
+        expected = BlogArticle.objects.get(slug=props["featured"]["slug"])
         featured = props["featured"]
         self.assertEqual(set(featured.keys()), CARD_FIELDS)
-        self.assertEqual(featured["category"], get_featured_mock()["category"])
+        self.assertEqual(featured["category"], expected.category)
 
     def test_featured_excluded_from_articles(self) -> None:
         props = self._get_inertia_props()
@@ -90,7 +123,7 @@ class BlogListViewTest(SimpleTestCase):
 
         expected = {
             article["slug"]
-            for article in MOCK_ARTICLES
+            for article in ARTICLES
             if not article["is_featured"]
         }
         self.assertEqual(
@@ -103,8 +136,32 @@ class BlogListViewTest(SimpleTestCase):
         self.assertGreaterEqual(len(props["articles"]), 3)
 
 
-class BlogArticleDetailViewTest(SimpleTestCase):
-    """Страница статьи: всегда моковые данные (реестр mock_data)."""
+class BlogArticleDetailViewTest(TestCase):
+    """Страница статьи: данные из БД."""
+
+    @classmethod
+    def setUpTestData(cls):
+        for data in ARTICLES:
+            BlogArticle.objects.update_or_create(
+                slug=data["slug"],
+                defaults={
+                    "title": data["title"],
+                    "excerpt": data.get("excerpt", ""),
+                    "body": data.get("body", ""),
+                    "cover_image": data.get("cover_image", ""),
+                    "category": data.get("category", "") or "marketing",
+                    "tags": data.get("tags", []),
+                    "read_time": data.get("read_time", 5),
+                    "is_featured": data.get("is_featured", False),
+                    "is_published": True,
+                    "published_at": (
+                        parse_datetime(str(data["published_at"]))
+                        if data.get("published_at")
+                        else None
+                    ),
+                    "views_count": data.get("views_count", 0),
+                },
+            )
 
     def _detail_url(self, slug: str) -> str:
         return reverse("blog:detail", kwargs={"slug": slug})
@@ -125,7 +182,7 @@ class BlogArticleDetailViewTest(SimpleTestCase):
         self.assertEqual(self._detail_url("demo-slug"), "/blog/demo-slug/")
 
     def test_view_returns_blog_article_component_and_url(self) -> None:
-        slug = MOCK_ARTICLES[1]["slug"]
+        slug = ARTICLES[1]["slug"]
         response = self._get_inertia(slug)
         self.assertEqual(response.status_code, 200)
 
@@ -137,31 +194,32 @@ class BlogArticleDetailViewTest(SimpleTestCase):
         self.assertEqual(data["component"], "BlogPost")
         self.assertEqual(data["url"], f"/blog/{slug}/")
 
-    def test_registry_slug_returns_its_mock(self) -> None:
-        data = MOCK_ARTICLES[1]
+    def test_known_slug_returns_db_article(self) -> None:
+        data = ARTICLES[1]
+        article = BlogArticle.objects.get(slug=data["slug"])
 
         props = self._get_inertia_props(data["slug"])
 
         self.assertTrue(DETAIL_FIELDS.issubset(props.keys()))
-        self.assertEqual(props["id"], data["id"])
-        self.assertEqual(props["slug"], data["slug"])
-        self.assertEqual(props["title"], data["title"])
-        self.assertEqual(props["excerpt"], data["excerpt"])
-        self.assertEqual(props["cover_image"], data["cover_image"])
-        self.assertEqual(props["category"], data["category"])
-        self.assertEqual(props["tags"], data["tags"])
-        self.assertEqual(props["read_time"], data["read_time"])
+        self.assertEqual(props["id"], article.id)
+        self.assertEqual(props["slug"], article.slug)
+        self.assertEqual(props["title"], article.title)
+        self.assertEqual(props["excerpt"], article.excerpt)
+        self.assertEqual(props["cover_image"], article.cover_image)
+        self.assertEqual(props["category"], article.category)
+        self.assertEqual(props["tags"], article.tags)
+        self.assertEqual(props["read_time"], article.read_time)
         self.assertEqual(
             datetime.fromisoformat(props["published_at"]),
-            datetime.fromisoformat(data["published_at"]),
+            article.published_at,
         )
-        self.assertEqual(props["views_count"], data["views_count"])
+        self.assertEqual(props["views_count"], article.views_count)
         self.assertIsNone(props["author_name"])
-        self.assertEqual(props["body"], data["body"])
+        self.assertEqual(props["body"], article.body)
         self.assertIn("##", props["body"])
 
     def test_cta_prop_is_button_descriptor(self) -> None:
-        props = self._get_inertia_props(MOCK_ARTICLES[0]["slug"])
+        props = self._get_inertia_props(ARTICLES[0]["slug"])
 
         self.assertEqual(
             props["cta"],
@@ -169,7 +227,7 @@ class BlogArticleDetailViewTest(SimpleTestCase):
         )
 
     def test_related_excludes_current_and_respects_limit(self) -> None:
-        slug = MOCK_ARTICLES[0]["slug"]
+        slug = ARTICLES[0]["slug"]
 
         props = self._get_inertia_props(slug)
 
@@ -180,18 +238,28 @@ class BlogArticleDetailViewTest(SimpleTestCase):
             all(set(item.keys()) == CARD_FIELDS for item in props["related"])
         )
 
-    def test_unknown_slug_returns_demo_with_injected_slug(self) -> None:
-        props = self._get_inertia_props("net-takogo-sluga")
+    def test_unknown_slug_returns_404(self) -> None:
+        response = self._get_inertia("net-takogo-sluga")
 
-        self.assertEqual(props["slug"], "net-takogo-sluga")
-        self.assertEqual(props["title"], get_featured_mock()["title"])
+        self.assertEqual(response.status_code, 404)
 
-    def test_known_registry_slug_not_overridden(self) -> None:
-        # Slug, совпадающий с реестром, отдаёт статью реестра,
-        # а не featured-демо.
-        data = MOCK_ARTICLES[2]
+    def test_unpublished_slug_returns_404(self) -> None:
+        article = BlogArticle.objects.create(
+            title="Черновик",
+            slug="chernovik-view",
+            excerpt="Анонс.",
+            body="Черновик",
+            category="news",
+            is_published=False,
+        )
+
+        response = self._get_inertia(article.slug)
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_known_slug_returns_its_title(self) -> None:
+        data = ARTICLES[2]
 
         props = self._get_inertia_props(data["slug"])
 
         self.assertEqual(props["title"], data["title"])
-        self.assertNotEqual(props["title"], get_featured_mock()["title"])

@@ -15,10 +15,7 @@ class CollectionChannelDTO(BaseModel):
 
 
 class CollectionDetailDTO(BaseModel):
-    """Props страницы 'Collection' (/collections/<pk>/).
-
-    Пока отдаются моки из реестра apps/group_channels/mock_data.py.
-    """
+    """Props страницы 'Collection' (/collections/<pk>/)."""
 
     title: str = ""
     description: str = ""

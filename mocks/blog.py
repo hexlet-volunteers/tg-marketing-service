@@ -1,5 +1,10 @@
 from typing import Any, Dict, List, Optional
 
+COVER_GRADIENT = (
+    "linear-gradient(135deg,var(--mantine-color-tgpurple-6),"
+    "var(--mantine-color-tgblue-4))"
+)
+
 CARD_FIELDS = (
     "id",
     "slug",
@@ -14,7 +19,7 @@ CARD_FIELDS = (
     "author_name",
 )
 
-MOCK_ARTICLES: List[Dict[str, Any]] = [
+ARTICLES: List[Dict[str, Any]] = [
     {
         "id": 1,
         "slug": "kak-ai-pomogaet-avtoram-rasti-v-2-raza-bystree",
@@ -23,7 +28,7 @@ MOCK_ARTICLES: List[Dict[str, Any]] = [
             "Разбираем, как рекомендательные модели подсказывают "
             "удачные темы постов и экономят часы на планировании."
         ),
-        "cover_image": "",
+        "cover_image": COVER_GRADIENT,
         "body": (
             "## Почему рост упирается в ручной труд\n\n"
             "Автор тратит больше времени на поиск тем и анализ "
@@ -49,6 +54,7 @@ MOCK_ARTICLES: List[Dict[str, Any]] = [
         "views_count": 0,
         "author_name": None,
         "is_featured": True,
+        "is_published": True,
     },
     {
         "id": 2,
@@ -58,7 +64,7 @@ MOCK_ARTICLES: List[Dict[str, Any]] = [
             "Разбираемся, есть ли «золотой час» для публикаций "
             "и что говорят данные вашей аудитории."
         ),
-        "cover_image": "",
+        "cover_image": COVER_GRADIENT,
         "body": (
             "## Универсальных часов не существует\n\n"
             "Советы вроде «публикуйте в 19:00» работают в "
@@ -84,6 +90,7 @@ MOCK_ARTICLES: List[Dict[str, Any]] = [
         "views_count": 0,
         "author_name": None,
         "is_featured": False,
+        "is_published": True,
     },
     {
         "id": 3,
@@ -93,7 +100,7 @@ MOCK_ARTICLES: List[Dict[str, Any]] = [
             "Какие цифры смотреть, чтобы принимать решения, "
             "и какие метрики только создают иллюзию роста."
         ),
-        "cover_image": "",
+        "cover_image": COVER_GRADIENT,
         "body": (
             "## Охват ничего не решает сам по себе\n\n"
             "Тысяча просмотров без вовлечённости хуже ста "
@@ -121,6 +128,7 @@ MOCK_ARTICLES: List[Dict[str, Any]] = [
         "views_count": 0,
         "author_name": None,
         "is_featured": False,
+        "is_published": True,
     },
     {
         "id": 4,
@@ -130,7 +138,7 @@ MOCK_ARTICLES: List[Dict[str, Any]] = [
             "Практический чек-лист: как проверить канал "
             "перед размещением и на какие цифры смотреть."
         ),
-        "cover_image": "",
+        "cover_image": COVER_GRADIENT,
         "body": (
             "## Подписчики важнее охвата\n\n"
             "Канал на 50 тысяч ботов с охватом 2 тысячи "
@@ -157,6 +165,7 @@ MOCK_ARTICLES: List[Dict[str, Any]] = [
         "views_count": 0,
         "author_name": None,
         "is_featured": False,
+        "is_published": True,
     },
 ]
 
@@ -168,10 +177,10 @@ def as_card(data: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_featured_mock() -> Dict[str, Any]:
     """Моковая featured-статья (is_featured=True)."""
-    for article in MOCK_ARTICLES:
-        if article["is_featured"]:
+    for article in ARTICLES:
+        if article.get("is_featured"):
             return dict(article)
-    return dict(MOCK_ARTICLES[0])
+    return dict(ARTICLES[0])
 
 
 def get_mock_article(slug: str) -> Dict[str, Any]:
@@ -181,7 +190,7 @@ def get_mock_article(slug: str) -> Dict[str, Any]:
     Если slug не найден в реестре — возвращается featured-демо
     с подставленным запрошенным slug.
     """
-    for article in MOCK_ARTICLES:
+    for article in ARTICLES:
         if article["slug"] == slug:
             return dict(article)
     fallback = get_featured_mock()
@@ -195,8 +204,12 @@ def get_mock_cards(
     """Карточки всех моковых статей (по убыванию published_at)."""
     cards = [
         as_card(article)
-        for article in MOCK_ARTICLES
+        for article in ARTICLES
         if article["slug"] != exclude_slug
     ]
-    cards.sort(key=lambda card: card["published_at"] or "", reverse=True)
-    return cards[:limit] if limit is not None else cards
+    cards_sorted = sorted(
+        cards, key=lambda card: card["published_at"] or "", reverse=True
+    )
+    if limit is not None:
+        return cards_sorted[:limit]
+    return cards_sorted

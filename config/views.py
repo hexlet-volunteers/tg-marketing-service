@@ -5,7 +5,7 @@ from django.shortcuts import redirect
 from django.views.generic.base import View
 from inertia import render as inertia_render
 
-from apps.homepage.mock_data import MOCK_TARIFFS
+from apps.billing.models import Plan
 from apps.homepage.models import HomePageComponent
 
 
@@ -65,7 +65,14 @@ class IndexView(View):
 
         page_props = {
             "components": components_data,
-            "tariffs": MOCK_TARIFFS,
+            "tariffs": [
+                plan.to_tariff_payload() for plan in Plan.objects.all()
+            ],
+            "stats": [
+                {"value": "2.4M", "label": "каналов в базе"},
+                {"value": "18 млрд", "label": "проанализ. постов"},
+                {"value": "120K", "label": "авторов"},
+            ],
         }
 
         # коментируем до изменеий в UserRegister

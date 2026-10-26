@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from django.test import SimpleTestCase, TestCase
+from django.test import TestCase
 
 from apps.blog.dto.blog_dto import (
     ArticleCardDTO,
@@ -8,147 +8,12 @@ from apps.blog.dto.blog_dto import (
     BlogListDTO,
     CallToActionDTO,
 )
-from apps.blog.mock_data import (
-    MOCK_ARTICLES,
-    get_featured_mock,
-    get_mock_article,
-    get_mock_cards,
-)
 from apps.blog.models import BlogArticle
 from apps.blog.services.blog_article_detail_service import (
     BlogArticleDetailService,
 )
 from apps.blog.services.blog_list_service import BlogListService
 from apps.users.models import User
-
-
-class MockDataHelpersTest(SimpleTestCase):
-    def test_featured_mock_is_featured(self) -> None:
-        self.assertTrue(get_featured_mock()["is_featured"])
-
-    def test_get_mock_article_known_slug_returns_itself(self) -> None:
-        slug = MOCK_ARTICLES[1]["slug"]
-
-        data = get_mock_article(slug)
-
-        self.assertEqual(data["slug"], slug)
-        self.assertEqual(data["title"], MOCK_ARTICLES[1]["title"])
-
-    def test_get_mock_article_unknown_slug_injects_slug(self) -> None:
-        data = get_mock_article("net-v-reestre")
-
-        self.assertEqual(data["slug"], "net-v-reestre")
-        self.assertEqual(data["title"], get_featured_mock()["title"])
-        self.assertTrue(data["is_featured"])
-
-    def test_get_mock_cards_excludes_slug_and_sorts_desc(self) -> None:
-        cards = get_mock_cards(exclude_slug=MOCK_ARTICLES[0]["slug"])
-
-        self.assertEqual(len(cards), len(MOCK_ARTICLES) - 1)
-        self.assertNotIn(
-            MOCK_ARTICLES[0]["slug"], [card["slug"] for card in cards]
-        )
-        dates = [card["published_at"] for card in cards]
-        self.assertEqual(dates, sorted(dates, reverse=True))
-
-    def test_get_mock_cards_respects_limit(self) -> None:
-        cards = get_mock_cards(limit=2)
-
-        self.assertEqual(len(cards), 2)
-
-
-class BlogListServiceMockTest(SimpleTestCase):
-    def test_build_mock_returns_blog_list_dto(self) -> None:
-        dto = BlogListService().build_mock()
-
-        self.assertIsInstance(dto, BlogListDTO)
-        self.assertIsInstance(dto.featured, ArticleCardDTO)
-        self.assertTrue(
-            all(isinstance(article, ArticleCardDTO) for article in dto.articles)
-        )
-
-    def test_featured_is_featured_mock(self) -> None:
-        dto = BlogListService().build_mock()
-
-        self.assertEqual(dto.featured.slug, get_featured_mock()["slug"])
-
-    def test_featured_excluded_from_articles(self) -> None:
-        dto = BlogListService().build_mock()
-
-        slugs = [article.slug for article in dto.articles]
-        self.assertNotIn(dto.featured.slug, slugs)
-        self.assertEqual(len(slugs), len(MOCK_ARTICLES) - 1)
-
-    def test_articles_sorted_by_published_at_desc(self) -> None:
-        dto = BlogListService().build_mock()
-
-        dates = [article.published_at for article in dto.articles]
-        self.assertEqual(dates, sorted(dates, reverse=True))
-
-
-class BlogArticleDetailServiceMockTest(SimpleTestCase):
-    def test_build_mock_returns_article_detail_dto(self) -> None:
-        dto = BlogArticleDetailService().build_mock(MOCK_ARTICLES[0]["slug"])
-
-        self.assertIsInstance(dto, ArticleDetailDTO)
-
-    def test_build_mock_maps_registry_fields(self) -> None:
-        data = MOCK_ARTICLES[1]
-
-        dto = BlogArticleDetailService().build_mock(data["slug"])
-
-        self.assertEqual(dto.id, data["id"])
-        self.assertEqual(dto.slug, data["slug"])
-        self.assertEqual(dto.title, data["title"])
-        self.assertEqual(dto.excerpt, data["excerpt"])
-        self.assertEqual(dto.cover_image, data["cover_image"])
-        self.assertEqual(dto.category, data["category"])
-        self.assertEqual(dto.tags, data["tags"])
-        self.assertEqual(dto.read_time, data["read_time"])
-        self.assertEqual(dto.views_count, data["views_count"])
-        self.assertIsNone(dto.author_name)
-
-    def test_build_mock_returns_raw_markdown_body(self) -> None:
-        data = MOCK_ARTICLES[1]
-
-        dto = BlogArticleDetailService().build_mock(data["slug"])
-
-        self.assertEqual(dto.body, data["body"])
-        self.assertIn("##", dto.body)
-
-    def test_build_mock_unknown_slug_injects_slug_keeps_demo(self) -> None:
-        dto = BlogArticleDetailService().build_mock("net-v-reestre")
-
-        self.assertEqual(dto.slug, "net-v-reestre")
-        self.assertEqual(dto.title, get_featured_mock()["title"])
-
-    def test_build_mock_includes_cta_descriptor(self) -> None:
-        dto = BlogArticleDetailService().build_mock(MOCK_ARTICLES[0]["slug"])
-
-        self.assertIsInstance(dto.cta, CallToActionDTO)
-        self.assertEqual(dto.cta.label, "Разобрать канал")
-        self.assertEqual(dto.cta.url, "/ai-cabinet")
-
-    def test_build_mock_related_excludes_current(self) -> None:
-        slug = MOCK_ARTICLES[0]["slug"]
-
-        dto = BlogArticleDetailService().build_mock(slug)
-
-        self.assertNotIn(slug, [item.slug for item in dto.related])
-
-    def test_build_mock_related_respects_limit(self) -> None:
-        dto = BlogArticleDetailService().build_mock(MOCK_ARTICLES[0]["slug"])
-
-        self.assertEqual(
-            len(dto.related), BlogArticleDetailService.RELATED_LIMIT
-        )
-
-    def test_build_mock_related_items_are_cards(self) -> None:
-        dto = BlogArticleDetailService().build_mock(MOCK_ARTICLES[0]["slug"])
-
-        self.assertTrue(
-            all(isinstance(item, ArticleCardDTO) for item in dto.related)
-        )
 
 
 class BlogListServiceTest(TestCase):

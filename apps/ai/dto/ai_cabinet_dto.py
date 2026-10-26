@@ -30,8 +30,8 @@ class CompetitorDTO(BaseModel):
 class AICabinetDTO(BaseModel):
     """Props страницы 'AICabinet' (/ai-cabinet/).
 
-    Пока отдаются моки из реестра apps/ai/mock_data.py;
-    имена полей повторяют контракт props фронтенда.
+    Инсайты берутся из AIInsight, остальные поля — из мок-реестра
+    mocks/ai.py, пока нет соответствующих данных в БД.
     """
 
     ideas: List[IdeaDTO] = Field(default_factory=list)

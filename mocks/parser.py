@@ -1,8 +1,7 @@
 """Мок-реестр данных публичных страниц parser-приложения.
 
-Отдаётся из view до подключения данных БД (см. docs/inertia-contract.md).
-Данные перенесены сюда из frontend/src/shared/mocks/ (channelsCollection,
-metrics, posts).
+Используется как источник demo-данных для ``seed_demo`` и как fallback для
+полей, которых нет в моделях (например, ``type``/``imageUrl`` карточек).
 """
 
 from typing import Any, Dict, List
@@ -190,3 +189,15 @@ MOCK_POST_ANALYSIS: Dict[str, Any] = {
         },
     ],
 }
+
+
+def get_mock_channel(username: str | None) -> Dict[str, Any] | None:
+    """Возвращает мок-канал по username без учёта регистра и '@'."""
+    normalized = (username or "").lstrip("@").lower()
+    if not normalized:
+        return None
+    for channel in MOCK_CHANNELS:
+        mock_username = str(channel.get("username") or "").lstrip("@")
+        if mock_username.lower() == normalized:
+            return channel
+    return None

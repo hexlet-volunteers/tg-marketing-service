@@ -1,8 +1,8 @@
-"""Мок-реестр данных дашборда и лендинга homepage-приложения.
+"""Mock registry for homepage and landing pages.
 
-Отдаётся из view до подключения данных БД (см. docs/inertia-contract.md).
-Данные перенесены сюда из frontend/src/shared/mocks/ (channelKpis,
-channelsCollection, posts, widgets).
+Contains dashboard presentation data, landing tariffs and landing blocks.
+Production views read equivalent data from the database; these constants
+are used as seed/reference data and by tests.
 """
 
 from typing import Any, Dict, List
@@ -138,5 +138,100 @@ MOCK_TARIFFS: List[Dict[str, Any]] = [
             {"id": 4, "text": "Командный доступ"},
         ],
         "button": {"label": "Выбрать Agency", "variant": "default"},
+    },
+]
+
+LANDING_COMPONENTS: List[Dict[str, Any]] = [
+    {
+        "component_type": "hero",
+        "title": "Hero",
+        "order": 0,
+        "is_active": True,
+        "content": {
+            "title": "Аналитика Telegram-каналов",
+            "subtitle": "Собираем статистику, строим инсайты",
+            "primaryButton": {"label": "Попробовать", "href": "/channels/"},
+            "secondaryButton": {"label": "Демо", "href": "/demo/"},
+            "stats": [
+                {"label": "Каналов", "value": "2.4M"},
+                {"label": "Постов", "value": "120K"},
+            ],
+            "demo": True,
+        },
+    },
+    {
+        "component_type": "features",
+        "title": "Возможности",
+        "order": 1,
+        "is_active": True,
+        "content": {
+            "title": "Возможности",
+            "cards": [
+                {
+                    "icon": "tgstats",
+                    "title": "Аналитика",
+                    "description": "Метрики и динамика",
+                },
+                {
+                    "icon": "ai",
+                    "title": "AI",
+                    "description": "Анализ и рекомендации",
+                },
+            ],
+            "demo": True,
+        },
+    },
+    {
+        "component_type": "ai_assistant",
+        "title": "AI ассистент",
+        "order": 2,
+        "is_active": True,
+        "content": {
+            "title": "AI-ассистент",
+            "subtitle": "Поможет с анализом",
+            "badge": {"text": "AI", "color": "green"},
+            "handle": "@product_radar",
+            "cards": [
+                {
+                    "title": "Тренд",
+                    "description": "Тренд растет",
+                    "color": "green",
+                },
+                {"title": "ER", "description": "Хороший ER", "color": "blue"},
+            ],
+            "demo": True,
+        },
+    },
+    {
+        "component_type": "how_it_works",
+        "title": "Как это работает",
+        "order": 3,
+        "is_active": True,
+        "content": {
+            "title": "Как это работает",
+            "steps": [{"title": "Шаг 1"}, {"title": "Шаг 2"}],
+            "demo": True,
+        },
+    },
+    {
+        "component_type": "subscriptions",
+        "title": "Подписки",
+        "order": 4,
+        "is_active": True,
+        "content": {"title": "Тарифы", "plans": [], "demo": True},
+    },
+    {
+        "component_type": "faq",
+        "title": "FAQ",
+        "order": 5,
+        "is_active": True,
+        "content": {"title": "Вопросы и ответы", "items": [], "demo": True},
+    },
+    {
+        "component_type": "footer",
+        "title": "Футер",
+        "order": 6,
+        "is_active": True,
+        "content": {"text": "demo", "demo": True},
     },
 ]

@@ -16,13 +16,10 @@ from apps.group_channels.forms import (
     CreateGroupForm,
     UpdateGroupForm,
 )
-from apps.group_channels.mock_data import (
-    MOCK_COLLECTION_DESCRIPTION,
-    MOCK_COLLECTION_TITLE,
-    build_mock_catalog,
-    build_mock_collection_channels,
-)
 from apps.group_channels.models import Group
+from apps.group_channels.services.collections_catalog_service import (
+    CollectionsCatalogService,
+)
 from apps.parser.models import TelegramChannel
 from config.mixins import UserAuthenticationCheckMixin
 from config.renderers import render_inertia_from_dto
@@ -205,13 +202,7 @@ class AddChannelsView(UserAuthenticationCheckMixin, UserPassesTestMixin, View):
 
 
 class CollectionsCatalogView(View):
-    """Публичный каталог подборок.
-
-    Пока отдаются моки из реестра apps/group_channels/mock_data.py
-    (`build_mock_catalog`) с применением фильтров q/country/category.
-    Реальная выборка из БД (CollectionsCatalogService) сохранена ниже
-    и используется при подключении данных БД.
-    """
+    """Публичный каталог подборок."""
 
     def get(
         self,
@@ -223,35 +214,42 @@ class CollectionsCatalogView(View):
         country = request.GET.get("country", "").strip() or None
         category = request.GET.get("category", "").strip() or None
 
-        # Реальная логика БД (пока не используется):
-        # dto = CollectionsCatalogService().build(
-        #     q=q,
-        #     country=country,
-        #     category=category,
-        # )
-
-        dto = build_mock_catalog(q=q, country=country, category=category)
+        dto = CollectionsCatalogService().build(
+            q=q,
+            country=country,
+            category=category,
+        )
 
         return render_inertia_from_dto(request, "Collections", props=dto)
 
 
 class CollectionDetailView(View):
-    """Детальная страница подборки (Inertia: Collection).
-
-    Пока отдаются моки из реестра apps/group_channels/mock_data.py,
-    поэтому существование подборки с данным pk не проверяется.
-    """
+    """Детальная страница подборки (Inertia: Collection)."""
 
     def get(
-        self, request: HttpRequest, *args: Any, **kwargs: Any
+        self, request: HttpRequest, pk: int, *args: Any, **kwargs: Any
     ) -> HttpResponse:
-        channels = [
-            CollectionChannelDTO(**data)
-            for data in build_mock_collection_channels()
-        ]
+        group = get_object_or_404(Group, pk=pk)
+        channels = []
+        for channel in group.channels.all():
+            last_stat = channel.last_stat()
+            growth30d = 0.0
+            if last_stat and last_stat.daily_growth:
+                participants = max(channel.participants_count or 1, 1)
+                growth30d = float(last_stat.daily_growth) / participants * 100
+            channels.append(
+                CollectionChannelDTO(
+                    name=channel.title,
+                    username=channel.username,
+                    subscribers=channel.participants_count or 0,
+                    er=float(getattr(channel, "citation_index", 0) or 0),
+                    growth30d=float(growth30d),
+                    color="#4C6EF5",
+                )
+            )
         dto = CollectionDetailDTO(
-            title=MOCK_COLLECTION_TITLE,
-            description=MOCK_COLLECTION_DESCRIPTION,
+            title=group.name,
+            description=group.description or "",
             channel_count=len(channels),
             channels=channels,
         )

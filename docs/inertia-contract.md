@@ -11,8 +11,10 @@
 - [#198](https://github.com/hexlet-volunteers/tg-marketing-service/issues/198) —
   Inertia-маршруты и канонические имена компонентов для всех 14 экранов.
 
-> ⚠️ Ни одна ветка сейчас не содержит обе задачи одновременно. Пока #194 и #198
-> не влиты в `main`, часть экранов резолвится только через SPA-роутер
+> ⚠️ В `main` задачи #194 и #198 ещё не влиты. В объединённой ветке
+> `test/inertia-combined-194-196-198` обе задачи уже есть: glob-резолвер и
+> канонические имена компонентов. Пока изменения не попали в `main`, часть
+> экранов там резолвится только через SPA-роутер
 > (`frontend/src/app/routes/routes.tsx`), а не через `inertia_render`.
 
 Связанные документы:
@@ -24,7 +26,9 @@
 - [`collections_catalog_contract.md`](./collections_catalog_contract.md) —
   детальный контракт `/collections/`;
 - [`registration_contract.md`](./registration_contract.md) — детальный контракт
-  регистрации.
+  регистрации;
+- [`demo_data.md`](./demo_data.md) — команды `seed_demo` / `clear_demo` и
+  состав демо-данных из `mocks/`.
 
 ## Конверт ответа
 
@@ -83,12 +87,16 @@ const pages = import.meta.glob("./pages/**/*.tsx");
   (`Home`, `ComparePages`, `MassParsing`, `…Page`) выполнено там же (коммит
   `3da2a9f`), отдельная миграция имён не требуется.
 - `issue/198` — backend отдаёт канонические `component` для всех 14 экранов.
+- `test/inertia-combined-194-196-198` — обе задачи уже объединены: glob-резолвер
+  в `frontend/src/main.tsx`, канонические `component` на backend,
+  `frontend/src/app/routes/routes.tsx` отсутствует. Именно это состояние
+  описано ниже.
 - `main` — пока использует старые имена (`Home`, `UserProfilePage`,
-  `AdminModeration`, `PostPage`, `BlogArticle`); они исчезнут после слияния
-  #198.
+  `AdminModeration`, `PostPage`, `BlogArticle`) и SPA-роутер; они исчезнут
+  после слияния #194/#198.
 
-Компоненты, которые backend отдаёт (#198), но страницы `pages/<Name>.tsx` ещё
-нет, — для них нужен файл страницы (в рамках #194/#198):
+Компоненты, которые backend отдаёт, но страницы `pages/<Name>.tsx` ещё
+нет, — для них нужен файл страницы (в объединённой ветке их по-прежнему нет):
 `FormRegistration.tsx`, `GroupDetail.tsx`, `ChannelAnalytics.tsx`,
 `UpdateUserProfile.tsx`, `RestorePasswordRequest.tsx`, `RestorePassword.tsx`.
 
@@ -96,21 +104,36 @@ const pages = import.meta.glob("./pages/**/*.tsx");
 
 Обозначения столбца `pages/<Name>.tsx`: `✅` — файл уже есть (#194);
 `🆕` — файла нет. Обозначения столбца `props`: `✅` — реальные и совпадают с
-FE, `✅ мок BE` — контракт совпадает с FE, но данные моковые и отдаются
-бэкендом из реестров `apps/*/mock_data.py`, `🔸` — мок/пустые,
-`⚠️` — backend и frontend используют **разные наборы
-props** (целевая структура — FE, см. раздел экрана).
+FE, `✅ БД + mock` — данные из БД, а поля, которых нет в моделях, берутся из
+`mocks/`, `🔸` — мок/пустые, `⚠️` — backend и frontend используют
+**разные наборы props** (целевая структура — FE, см. раздел экрана).
+
+### Жизненный цикл данных
+
+1. Пустая БД — view отдаёт пустые props для отсутствующих строк.
+2. `make seed-demo` (`seed_demo`) переносит данные из `mocks/` в БД.
+3. Inertia-view собирает props из БД.
+4. Если FE требует поле, которого нет в модели, оно добавляется из
+   соответствующего реестра `mocks/`.
+5. `make clear-demo` удаляет только записи, созданные `seed_demo`.
+   Тарифы `Plan` создаются миграцией и командами не изменяются.
+
+Подробное описание команд, состава данных и критериев очистки —
+[`demo_data.md`](./demo_data.md).
+
+Моки не подменяют отсутствующие строки БД: fallback работает только на
+уровне отдельных полей.
 
 | Экран | `component` | URL | Django view | `pages/<Name>.tsx` | props |
 |-------|-------------|-----|-------------|--------------------|-------|
 | Landing | `Landing` | `/` | `IndexView` | ✅ `Landing.tsx` | ✅ |
-| Channels | `Channels` | `/channels/` | `ChannelCatalogView` | ✅ `Channels.tsx` | ✅ мок BE |
-| Dashboard | `Dashboard` | `/dashboard/` | `DashboardView` | ✅ `Dashboard.tsx` | ⚠️ BE≠FE |
+| Channels | `Channels` | `/channels/` | `ChannelCatalogView` | ✅ `Channels.tsx` | ✅ БД + mock |
+| Dashboard | `Dashboard` | `/dashboard/` | `DashboardView` | ✅ `Dashboard.tsx` | ✅ БД + mock |
 | Post | `Post` | `/post/`, `/parser/post/…` | `PostPageView`, `PostDetailView`, `PostAIAnalysisView` | ✅ `Post.tsx` | ⚠️ BE≠FE |
-| Compare | `Compare` | `/compare/` | `CompareView` | ✅ `Compare.tsx` | ✅ мок BE |
-| AICabinet | `AICabinet` | `/ai-cabinet/` | `AICabinetView` | ✅ `AICabinet.tsx` | ✅ мок BE |
+| Compare | `Compare` | `/compare/` | `CompareView` | ✅ `Compare.tsx` | ✅ БД + mock |
+| AICabinet | `AICabinet` | `/ai-cabinet/` | `AICabinetView` | ✅ `AICabinet.tsx` | ✅ БД + mock |
 | Collections | `Collections` | `/collections/` | `CollectionsCatalogView` | ✅ `Collections.tsx` | ✅ |
-| Collection | `Collection` | `/collections/<pk>/` | `CollectionDetailView` | ✅ `Collection.tsx` | ✅ мок BE |
+| Collection | `Collection` | `/collections/<pk>/` | `CollectionDetailView` | ✅ `Collection.tsx` | ✅ |
 | Profile | `Profile` | `/auth/profile/` | `UserCabinetView` | ✅ `Profile.tsx` | ✅ |
 | Blog | `Blog` | `/blog/` | `BlogListView` | ✅ `Blog.tsx` | ✅ |
 | BlogPost | `BlogPost` | `/blog/<slug>/` | `BlogArticleDetailView` | ✅ `BlogPost.tsx` | ✅ |
@@ -193,20 +216,23 @@ props** (целевая структура — FE, см. раздел экран
 | `components[].props.*` | `Any` | нет | распаковка `content` |
 | `components[].props.type` | `str` | да | `component_type` (дубль `component`) |
 | `components[].url` | `str` | да | `request.path` (слот блока, не Inertia-компонент) |
-| `tariffs` | `list[Tariff]` | да | `MOCK_TARIFFS` (`apps/homepage/mock_data.py`); рендерит `TariffsBlock` |
+| `tariffs` | `list[Tariff]` | да | `Plan` из миграции; `seed_demo`/`clear_demo` их не меняют; отображение собирает `Plan.to_tariff_payload()` и рендерит `TariffsBlock` |
 
 `TariffsBlock` (тип `Tariff` — `frontend/src/widgets/TariffsBlock/model/types.ts`)
 получает тарифы через проп. Прочие блоки лендинга (шаги, FAQ, AI-демо)
-отдаются через `components[]` (БД пока пуста).
+отдаются через `components[]` (`HomePageComponent`; заполняется
+`make seed-demo`).
 
 Успешный логин (`LoginView.post`) редиректит на `/dashboard/` с общим
 `flash.success` — см. [модалку «Логин»](#логин).
 
 ## Channels — `/channels/`
 
-Каталог каналов. Мок-данные карточек отдаются бэкендом из реестра
-`apps/parser/mock_data.py` (`MOCK_CHANNELS`); до подключения БД фронтенд
-не рендерит своих моков.
+Каталог каналов. Карточки собираются из `TelegramChannel`; поля `type` и
+`imageUrl`, которых нет в модели, берутся из `mocks/parser.py`
+(`get_mock_channel` по username). Если канала нет в моке, используются
+значения по умолчанию: `type="channel"`, `imageUrl=""`. До
+`make seed-demo` каталог пуст.
 
 ```json
 {
@@ -243,11 +269,11 @@ Props страницы отдаются бэкендом в двух частя�
 
 1. реальный `DashboardDTO` (`stats`/`channels`/`ai_insights`/`collections`/
    `quick_actions`) — из `DashboardService`;
-2. FE-структура страницы из мок-реестра
-   `apps/homepage/mock_data.py` — `channel`/`kpis`/`growthData`/`posts`
-   (перенесены сюда из бывших `frontend/src/shared/mocks/`:
-   `channelKpis`, `channelsCollection`, `posts`). До подключения БД фронтенд
-   не рендерит своих моков.
+2. FE-структура страницы `channel`/`kpis`/`growthData`/`posts` собирается
+   из БД. Поля `channel.type`, `channel.imageUrl` и недостающие поля KPI
+   (`delta`/`percentDelta`/`positive` для охвата, ER и индекса цитирования)
+   берутся из `mocks/landing.py` и `mocks/parser.py`, потому что их нет в
+   моделях. Если строк в БД нет, секция остаётся пустой.
 
 ### Целевые props (FE)
 
@@ -266,10 +292,11 @@ Props страницы отдаются бэкендом в двух частя�
       "growth30d": 3.2
     },
     "kpis": [
-      { "label": "Посты", "value": 2347, "delta": 120, "percentDelta": 5.4, "positive": true }
+      { "label": "Подписчики", "value": 142340, "delta": 2480, "percentDelta": 1.8, "positive": true },
+      { "label": "Ср. охват", "value": 12500, "delta": 120, "percentDelta": 5.4, "positive": true }
     ],
     "growthData": [
-      { "date": "2026-09-01", "подписчики": 45200 }
+      { "date": "01.06", "подписчики": 134200 }
     ],
     "posts": [
       { "title": "Заголовок поста", "views": 15200, "reactions": 120, "forwards": 340, "er": 3.4 }
@@ -284,15 +311,15 @@ Props страницы отдаются бэкендом в двух частя�
 
 | prop | тип | обяз. | источник |
 |------|-----|-------|----------|
-| `channel` | `Channel` | да | `MOCK_CHANNEL` (`apps/homepage/mock_data.py`) |
-| `kpis[]` | `Kpi[]` | да | `MOCK_KPIS` (`apps/homepage/mock_data.py`) |
-| `kpis[].label` | `str` | да | подпись KPI |
-| `kpis[].value` | `int` | да | |
-| `kpis[].delta` | `int` | нет | абсолютный прирост |
-| `kpis[].percentDelta` | `int` | нет | % прироста |
-| `kpis[].positive` | `bool` | да | направление дельты |
-| `growthData[]` | `GrowthSubscribersData[]` | да | `MOCK_GROWTH_DATA`; временной ряд `{date, подписчики}` |
-| `posts[]` | `Post[]` | да | `MOCK_POSTS`; топ постов |
+| `channel` | `Channel` | да | `TelegramChannel`; `type`/`imageUrl` — из мока; нет канала — `{}` |
+| `kpis[]` | `Kpi[]` | да | значения из БД; нет канала — `[]` |
+| `kpis[].label` | `str` | да | `Подписчики`, `Ср. охват`, `ER`, `Индекс цитирования` |
+| `kpis[].value` | `int` | да | значение из БД |
+| `kpis[].delta` | `int` | нет | из `ChannelStats`, если вычислим; иначе из `MOCK_KPIS` |
+| `kpis[].percentDelta` | `int` | нет | из `ChannelStats`, если вычислим; иначе из `MOCK_KPIS` |
+| `kpis[].positive` | `bool` | да | из `ChannelStats` или `MOCK_KPIS` |
+| `growthData[]` | `GrowthSubscribersData[]` | да | `ChannelStats`; `date` в формате `%d.%m`; если статистики нет — `[]` |
+| `posts[]` | `Post[]` | да | посты БД; если постов нет — `[]` |
 | `posts[].title` | `str` | да | |
 | `posts[].views` | `int` | да | |
 | `posts[].reactions` | `int` | да | сумма реакций |
@@ -354,8 +381,9 @@ Props страницы отдаются бэкендом в двух частя�
 
 | Целевой prop (FE) | Источник (BE) | Статус |
 |-------------------|---------------|--------|
-| `channel` | `MOCK_CHANNEL` | перенесён с FE-мока `channelsCollection[0]` |
-| `kpis[]`, `growthData[]`, `posts[]` | `MOCK_KPIS`, `MOCK_GROWTH_DATA`, `MOCK_POSTS` | перенесены с FE-моков в реестр |
+| `channel` | `TelegramChannel` + `mocks/parser.py` | БД + mock для `type`/`imageUrl`; пустой канал — `{}` |
+| `kpis[]` | `TelegramChannel`, `Post`, `MOCK_KPIS` | значения из БД + недостающие поля из мока |
+| `growthData[]`, `posts[]` | `ChannelStats`, `Post` | без fallback: нет данных — пустой список |
 | `ai_insights[]` | `AIInsight` / fallback `DashboardService` | FE рендерит карточки из этих данных |
 | — | `stats`, `channels`, `collections`, `quick_actions` | передаётся BE, **FE не потребляет** (сохранено для БД) |
 
@@ -368,16 +396,16 @@ Props страницы отдаются бэкендом в двух частя�
 |-----|------|-------|
 | `/parser/post/<channel_id>/<telegram_message_id>/` | `PostDetailView` | `post` + `channel` |
 | `/parser/ai/channels/<channel_id>/posts/<post_id>/analysis` | `PostAIAnalysisView` | только `post` (`channel` = `null`) |
-| `/post/` | `PostPageView` | **мок** `analysis` + `reactions` из `apps/parser/mock_data.py` |
+| `/post/` | `PostPageView` | `analysis` + `reactions` из `PostAnalysis`/`PostReaction` (заполняются `make seed-demo`) |
 
 ⚠️ **Расхождение BE/FE.** Backend отправляет `post`/`channel` (DTO
 `apps/parser/dto/post_analysis_dto.py`, `PostPagePropsDTO`), а страница
 `pages/Post.tsx` (`PostPageProps` из
 `frontend/src/types/post.ts`) потребляет только `analysis` и `reactions`;
 сам `post`/`channel` FE **не использует** (текст и метрики поста
-захардкожены в JSX). Мок-демо `/post/` отдаёт `analysis`/`reactions`
-с бэкенда; на реальных маршрутах FE при отсутствии этих props показывает
-пустые списки. **Целевая структура — FE** (ниже).
+захардкожены в JSX). `/post/` отдаёт `analysis`/`reactions` из БД; на
+реальных маршрутах FE при отсутствии этих props показывает пустые списки.
+**Целевая структура — FE** (ниже).
 
 ### Целевые props (FE)
 
@@ -501,10 +529,11 @@ Props — DTO `apps/parser/dto/post_analysis_dto.py` (`PostPagePropsDTO`).
 
 ## Compare — `/compare/`
 
-Сравнение каналов. Мок-данные отдаются бэкендом из реестра
-`apps/parser/mock_data.py` (`MOCK_COMPARE_METRICS`, первые 3 канала из
-`MOCK_CHANNELS`); форматирование значений метрик и вычисление
-`avgReach`/`reachPerSub` остаются на фронтенде.
+Сравнение каналов. Каналы берутся из БД (первые 5 публичных); поля
+`type`/`imageUrl` дополняются из `mocks/parser.py` через
+`get_mock_channel`. Определения метрик приходят из
+`MOCK_COMPARE_METRICS` (модели для них нет); форматирование значений и
+вычисление `avgReach`/`reachPerSub` остаются на фронтенде.
 
 ```json
 {
@@ -525,8 +554,13 @@ Props — DTO `apps/parser/dto/post_analysis_dto.py` (`PostPagePropsDTO`).
 
 ## AICabinet — `/ai-cabinet/`
 
-AI-кабинет автора. Мок-данные отдаются бэкендом из реестра
-`apps/ai/mock_data.py`; иконки/цвета инсайтов FE выводит по полю `type`
+AI-кабинет автора. Props собирает `AICabinetService`
+(`apps/ai/services/ai_cabinet_service.py`). `insights` читаются из БД
+(`AIInsight`; для авторизованного пользователя — только его). Остальные
+поля пока берутся из мок-реестра `mocks/ai.py`: `ideas`, `competitors`,
+`heatMapData`. Моки активны, пока в БД есть демо-инсайты; `clear_demo`
+удаляет их, после чего страница отдаёт пустые списки и карту. Иконки/цвета
+инсайтов FE выводит по полю `type`
 (`frontend/src/utils/makeIdeasAndInsights.ts`).
 
 ```json
@@ -558,11 +592,8 @@ AI-кабинет автора. Мок-данные отдаются бэкен�
 Props описаны DTO `apps/group_channels/dto/collections_dto.py`
 (`CollectionsCatalogDTO`).
 
-До подключения БД данные отдаются из мок-реестра
-`apps/group_channels/mock_data.py` (`build_mock_catalog`) с применением
-фильтров `q`/`country`/`category` на стороне бэкенда; реальная выборка из
-`Group` сохранена в `CollectionsCatalogService` и используется при
-подключении БД.
+Данные отдаются из `Group` через `CollectionsCatalogService` с фильтрами
+`q`/`country`/`category`. Наполняется командой `make seed-demo`.
 
 ```json
 {
@@ -622,9 +653,9 @@ Props описаны DTO `apps/group_channels/dto/collections_dto.py`
 
 ## Collection — `/collections/<pk>/`
 
-Детальная страница подборки. Мок-данные отдаются бэкендом из реестра
-`apps/group_channels/mock_data.py` (существование подборки с данным pk
-не проверяется).
+Детальная страница подборки. Данные берутся из `Group` и связанных
+`TelegramChannel`; для отсутствующего pk view отвечает 404. Наполняется
+командой `make seed-demo`.
 
 ```json
 {
@@ -751,11 +782,10 @@ Props описаны DTO `apps/group_channels/dto/collections_dto.py`
 }
 ```
 
-- контент всегда моковый (реестр `apps/blog/mock_data.py`), БД
-  не используется (DB-логика оставлена в вьюхе/сервисе для
-  prod-переключения позже);
-- `featured` — статья с `is_featured=True` (всегда заполнена);
-- `articles` — остальные моковые статьи, `published_at desc`.
+- контент читается из `BlogArticle` (наполняется `make seed-demo`);
+- `featured` — последняя опубликованная статья с `is_featured=True`;
+- `articles` — остальные опубликованные статьи, `published_at desc`;
+- если статей нет, `featured = null`, `articles = []`.
 
 `ArticleCardDTO`: `id:int`, `slug:str`, `title:str`, `excerpt:str`,
 `cover_image:str`, `category:str`, `tags:list[str]`, `read_time:int`,
@@ -790,12 +820,9 @@ Props описаны DTO `apps/group_channels/dto/collections_dto.py`
 
 Примечания:
 
-- контент всегда моковый (реестр `apps/blog/mock_data.py`), страница
-  рендерится всегда (200); slug вне реестра — featured-демо с
-  подставленным `slug`;
-- DB-логика оставлена в вьюхе/сервисе для prod-переключения позже
-  (там отсутствующая/неопубликованная статья — 404, `views_count`
-  растёт только при полной загрузке);
+- статья читается из `BlogArticle` (наполняется `make seed-demo`);
+- отсутствующая или неопубликованная статья — 404;
+- `views_count` растёт только при полной загрузке;
 - `body` — Markdown, HTML собирает frontend;
 - `cta` — дескриптор CTA-кнопки (`{label:str, url:str}`);
 - `related` — не более 3 других статей (`ArticleCardDTO`).
@@ -1026,10 +1053,15 @@ Props — `ModerationDTO`.
       "slug": "nazvanie",
       "description": "...",
       "owner": "ivan",
+      "image_url": "https://...",
+      "cover": "https://...",
+      "curator": null,
       "is_editorial": false,
       "order": 1,
-      "image_url": "https://...",
-      "created_at": "2026-08-13T10:00:00+00:00"
+      "channel_count": 3,
+      "created_at": "2026-08-13T10:00:00+00:00",
+      "saves_count": 0,
+      "views_count": 0
     },
     "channels": [],
     "auto_category": null,
@@ -1220,12 +1252,11 @@ Props каждого экрана описываются Pydantic-DTO, а не �
 | Где | Реальность | Конвенция |
 |-----|-----------|-----------|
 | `apps/users/views.py` `UserCabinetView` docstring | `component: UserProfilePage` | `Profile` (устраняется #198) |
-| `apps/blog/dto/blog_dto.py` docstring | `BlogArticle` | `BlogPost` (устраняется #198) |
 | `apps/parser/views.py` `PostDetailView` docstring | `/post/...` | `/parser/post/...` |
 | `apps/group_channels/views.py` `GroupDetailView` docstring | старый набор ключей `get_data()` | текущий набор |
 | `apps/parser/views.py` `PostDetailView` | дублирует общий prop `csrfToken` в `PostPagePropsDTO` | брать из общего middleware (`inertia-shared-props.md`) |
 | `apps/users/views.py` `UserCabinetView` | props `user_role` и `user.role` повторяют общий `role` | брать `role` из общего middleware |
-| `DashboardView` / `DashboardDTO` vs `pages/Dashboard.tsx` | BE отдаёт реальный `DashboardDTO` **и** FE-структуру `channel`/`kpis`/`growthData`/`posts` из `apps/homepage/mock_data.py`; FE потребляет вторую, первая сохранена для БД | FE-структура перенесена на BE — см. [Dashboard](#dashboard--dashboard) |
+| `DashboardView` / `DashboardDTO` vs `pages/Dashboard.tsx` | BE отдаёт реальный `DashboardDTO` **и** FE-структуру `channel`/`kpis`/`growthData`/`posts` из БД с fallback отсутствующих полей из `mocks/`; FE потребляет вторую, первая сохранена для БД | см. [Dashboard](#dashboard--dashboard) |
 | `PostPagePropsDTO` vs `pages/Post.tsx` | BE: `post`/`channel`; FE: `analysis`/`reactions`; формы `reactions` различаются (`{total, details}` vs список) | целевая — FE; поднять `post_analysis` в top-level `analysis` — см. [Post](#post--детальный-разбор-поста) |
 | `ModerationDTO` vs `pages/Admin.tsx` | BE отдаёт `pendingRequests`/`pendingCount`/`pagination` и готовую FE-структуру `userRequests`; `color` — только на клиенте | маппинг выполняется на BE (`ModerationQueue.get_user_request_data`) — см. [Admin](#admin--adminmoderation) |
 | `main` | старые `component` (`Home`, `UserProfilePage`, `AdminModeration`, `PostPage`, `BlogArticle`) | канонические имена #198 |
@@ -1233,28 +1264,29 @@ Props каждого экрана описываются Pydantic-DTO, а не �
 
 ## Чек-лист
 
-1. Дождаться слияния #194 (glob-резолвер + канонические страницы) и #198
-   (канонические `component` в backend).
+1. Влить `test/inertia-combined-194-196-198` (#194 + #198) в `main`; в самой
+   ветке glob-резолвер и канонические `component` уже согласованы.
 2. Создать отсутствующие страницы `FormRegistration.tsx`, `GroupDetail.tsx`,
    `ChannelAnalytics.tsx`, `UpdateUserProfile.tsx`,
    `RestorePasswordRequest.tsx`, `RestorePassword.tsx`.
 3. Убрать дублирование общих props: `csrfToken` из `PostPagePropsDTO` /
    `PostDetailView`, `role` из `UserCabinetView` (`user_role`, `user.role`).
-4. `Channels`, `Compare`, `AICabinet`, `Collection`, `Collections` (каталог),
-   `Dashboard`, `Admin`, `Legal`, `Landing` (тарифы) переведены на
-   мок-данные/адаптеры бэкенда (`apps/*/mock_data.py`,
-   `ModerationQueue.get_user_request_data`, `LEGAL_DOCUMENTS`);
-   при подключении БД view переключаются с моков на реальные данные.
-   Остаётся согласовать `NotFound`.
+4. `Channels`, `Compare`, `Collection`, `Collections`, `Dashboard`,
+   `Blog`, `BlogPost`, `Landing` читают данные из БД; `make seed-demo`
+   наполняет её из `mocks/`. Для полей, которых нет в моделях
+   (`type`/`imageUrl` карточек, часть KPI, метрики сравнения,
+   `AICabinet`-блоки), используется fallback на `mocks/`.
+   `Admin` использует `ModerationQueue.get_user_request_data`,
+   `Legal` — `LEGAL_DOCUMENTS`. Остаётся согласовать `NotFound`.
 5. Перевести словарные view на DTO из `dto_convention.md` (#197) и заодно
    нормализовать placement `errors` (top-level vs `form.errors` — см.
    [«Формат ошибок валидации»](#формат-ошибок-валидации)).
 6. Обновить docstring-и из таблицы расхождений.
 7. Выровнять `Post` по целевой FE-структуре (см. таблицу маппинга в разделе
    экрана): адаптировать DTO/view на backend **либо** добавить адаптер в
-   странице frontend; до этого мок-дефолт в `pages/Post.tsx` скрывает
-   расхождение. `Dashboard`/`Admin` уже выровнены (FE-структура отдаётся
-   бэкендом).
+   странице frontend; сейчас при отсутствии props страница показывает
+   пустое состояние. `Dashboard`/`Admin` уже выровнены (FE-структура
+   отдаётся бэкендом).
 8. Обновлять контракт при каждом изменении формы props, маршрута или
    имени компонента.
 

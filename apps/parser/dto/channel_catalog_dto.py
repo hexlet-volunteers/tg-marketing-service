@@ -26,7 +26,8 @@ class ChannelCardDTO(BaseModel):
 class ChannelsCatalogDTO(BaseModel):
     """Props страницы 'Channels' (/channels/).
 
-    Пока отдаются моки из реестра apps/parser/mock_data.py.
+    Данные каналов берутся из БД; поля, которых нет в модели,
+    дополняются из mocks/parser.py.
     """
 
     channels: List[ChannelCardDTO] = Field(default_factory=list)

@@ -43,10 +43,7 @@ class ArticleDetailDTO(BaseModel):
     """
     Props для Inertia-страницы 'BlogPost' (/blog/<slug>/).
 
-    Сейчас вьюха всегда отдаёт моковый payload (реестр
-    apps.blog.mock_data, страница рендерится всегда, статус 200);
-    DB-логика оставлена в вьюхе/сервисе для prod-переключения
-    позже (там отсутствующая или неопубликованная статья — 404).
+    Для отсутствующей или неопубликованной статьи вью отвечает 404.
 
     - id, slug, title, excerpt, cover_image, category, tags, read_time,
       published_at, views_count, author_name: как в ArticleCardDTO;

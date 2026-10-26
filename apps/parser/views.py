@@ -15,23 +15,15 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 
 from apps.admin.moderation.models import ModerationRequest
-from apps.parser.dto.channel_catalog_dto import (
-    ChannelCardDTO,
-    ChannelsCatalogDTO,
-)
+from apps.parser.dto.channel_catalog_dto import ChannelsCatalogDTO
 from apps.parser.dto.channel_dto import ChannelDTO, ChannelListDTO
 from apps.parser.dto.compare_dto import CompareDTO, CompareMetricDTO
 from apps.parser.dto.post_analysis_dto import PostDataDTO, PostPagePropsDTO
 from apps.parser.forms import ChannelParseForm
-from apps.parser.mock_data import (
-    MOCK_CHANNELS,
-    MOCK_COMPARE_METRICS,
-    MOCK_POST_ANALYSIS,
-    MOCK_POST_REACTIONS,
-)
 from apps.parser.models import ChannelStats, Post, TelegramChannel
 from apps.parser.parser import tg_parser
 from apps.parser.serializers import PostSerializer
+from apps.parser.services.channel_cards import build_channel_card
 from apps.parser.types import (
     ChannelDataForSave,
     ParsedChannelResult,
@@ -44,6 +36,7 @@ from apps.parser.utils import (
 from apps.users.models import User
 from config.mixins import UserAuthenticationCheckMixin
 from config.renderers import render_inertia_from_dto
+from mocks.parser import MOCK_COMPARE_METRICS
 
 log = logging.getLogger(__name__)
 
@@ -350,18 +343,18 @@ class PostDetailView(View):
 
 
 class ChannelCatalogView(View):
-    """Каталог каналов (Inertia: Channels).
-
-    Пока отдаются моки из реестра apps/parser/mock_data.py;
-    данные БД подключатся позже (см. docs/inertia-contract.md).
-    """
+    """Каталог каналов (Inertia: Channels)."""
 
     def get(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
-        dto = ChannelsCatalogDTO(
-            channels=[ChannelCardDTO(**data) for data in MOCK_CHANNELS],
-        )
+        channels = [
+            build_channel_card(ch)
+            for ch in TelegramChannel.objects.filter(is_public=True).order_by(
+                "-participants_count"
+            )
+        ]
+        dto = ChannelsCatalogDTO(channels=channels)
 
         return render_inertia_from_dto(
             request,
@@ -371,18 +364,18 @@ class ChannelCatalogView(View):
 
 
 class CompareView(View):
-    """Сравнение каналов (Inertia: Compare).
-
-    Пока отдаются моки из реестра apps/parser/mock_data.py;
-    данные БД подключатся позже (см. docs/inertia-contract.md).
-    """
+    """Сравнение каналов (Inertia: Compare)."""
 
     def get(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
+        channels_qs = TelegramChannel.objects.filter(is_public=True).order_by(
+            "-participants_count"
+        )[:5]
+        channels = [build_channel_card(ch) for ch in channels_qs]
         dto = CompareDTO(
             metrics=[CompareMetricDTO(**data) for data in MOCK_COMPARE_METRICS],
-            channels=[ChannelCardDTO(**data) for data in MOCK_CHANNELS[:3]],
+            channels=channels,
         )
 
         return render_inertia_from_dto(
@@ -392,22 +385,85 @@ class CompareView(View):
         )
 
 
-class PostPageView(View):
-    """Демо-страница разбора поста (Inertia: Post).
+REACTION_LABELS = {
+    "🔥": "Огонь",
+    "❤️": "Сердце",
+    "👍": "Лайк",
+    "🤯": "Восторг",
+}
 
-    Мок analysis/reactions отдаётся из реестра apps/parser/mock_data.py;
-    реальные посты отдаются из PostDetailView по адресу
-    /parser/post/<channel_id>/<telegram_message_id>/.
-    """
+
+class PostPageView(View):
+    """Страница разбора поста (Inertia: Post)."""
 
     def get(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
-        return inertia_render(
-            request,
-            "Post",
-            props={
-                "analysis": MOCK_POST_ANALYSIS,
-                "reactions": MOCK_POST_REACTIONS,
-            },
+        post = (
+            Post.objects.select_related("post_analysis")
+            .prefetch_related("post_analysis__similar_posts", "reactions")
+            .filter(post_analysis__isnull=False)
+            .order_by("-published_at")
+            .first()
         )
+        if post is None:
+            post = (
+                Post.objects.prefetch_related("reactions")
+                .order_by("-published_at")
+                .first()
+            )
+
+        props: dict[str, Any] = {"analysis": None, "reactions": []}
+        if post is None:
+            return inertia_render(request, "Post", props=props)
+
+        props["reactions"] = self._build_reactions(post)
+        props["analysis"] = self._build_analysis(post)
+        return inertia_render(request, "Post", props=props)
+
+    @staticmethod
+    def _build_reactions(post: Post) -> list[dict[str, Any]]:
+        total = post.total_reactions()
+        if total <= 0:
+            return []
+
+        return [
+            {
+                "emoji": reaction.emoji,
+                "label": REACTION_LABELS.get(reaction.emoji, reaction.emoji),
+                "count": reaction.count,
+                "percent": round(reaction.count / total * 100, 1),
+            }
+            for reaction in post.reactions.all()
+        ]
+
+    @staticmethod
+    def _build_analysis(post: Post) -> dict[str, Any] | None:
+        analysis = getattr(post, "post_analysis", None)
+        if analysis is None:
+            return None
+
+        return {
+            "status": "completed",
+            "why_worked": PostPageView._as_lines(analysis.why_worked),
+            "how_to_improve": PostPageView._as_lines(analysis.how_to_improve),
+            "similar_posts": [
+                {
+                    "id": item.pk,
+                    "telegram_message_id": item.telegram_message_id,
+                    "text": item.text,
+                    "published_at": item.published_at.isoformat(),
+                    "views": item.views,
+                    "forwards": item.forwards,
+                    "comments_count": item.comments_count,
+                    "permalink": item.permalink or "",
+                }
+                for item in analysis.similar_posts.all()
+            ],
+            "model_version": analysis.model_version,
+        }
+
+    @staticmethod
+    def _as_lines(value: str) -> list[str]:
+        lines = [line.strip() for line in value.splitlines() if line.strip()]
+        return lines or ([value] if value else [])

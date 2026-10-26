@@ -1,9 +1,7 @@
 """Мок-реестр данных страниц подборок (Inertia: Collections, Collection).
 
-Каталог (/collections/) и детальная страница (/collections/<pk>/) отдают
-данные отсюда до подключения БД. Данные перенесены сюда из
-frontend/src/shared/mocks/collections, chCollection и
-frontend/src/utils/addColors (цвета каналов).
+Используется как источник demo-данных для ``seed_demo``. Views читают
+подборки из БД, поэтому моки не подменяют отсутствующие строки.
 """
 
 from collections import defaultdict
