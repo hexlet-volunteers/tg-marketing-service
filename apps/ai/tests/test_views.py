@@ -56,6 +56,27 @@ def test_ai_cabinet_view_uses_db_insights_and_mock_fallback(client):
     ]
 
 
+def test_ai_cabinet_view_hides_non_demo_insights_from_guests(client):
+    _create_demo_insight()
+    other_user = User.objects.create_user(
+        username="author",
+        email="author@example.com",
+        password="secret123",
+        role="user",
+    )
+    AIInsight.objects.create(
+        user=other_user,
+        insight_type="warning",
+        insight_text="Чужой инсайт",
+    )
+
+    props = _props(client)
+
+    assert props["insights"] == [
+        {"type": "recommendation", "text": "Демо-инсайт"}
+    ]
+
+
 def test_clear_demo_empties_ai_cabinet(client):
     _create_demo_insight()
     assert _props(client)["ideas"]

@@ -556,10 +556,12 @@ Props — DTO `apps/parser/dto/post_analysis_dto.py` (`PostPagePropsDTO`).
 
 AI-кабинет автора. Props собирает `AICabinetService`
 (`apps/ai/services/ai_cabinet_service.py`). `insights` читаются из БД
-(`AIInsight`; для авторизованного пользователя — только его). Остальные
+(`AIInsight`; для авторизованного пользователя — только его, для гостя —
+только инсайты демо-пользователей из `DEMO_USERNAMES`; если демо-данных
+нет — пустой список). Остальные
 поля пока берутся из мок-реестра `mocks/ai.py`: `ideas`, `competitors`,
 `heatMapData`. Моки активны, пока в БД есть демо-инсайты; `clear_demo`
-удаляет их, после чего страница отдаёт пустые списки и карту. Иконки/цвета
+удаляет инсайты, после чего страница отдаёт пустые списки и карту. Иконки/цвета
 инсайтов FE выводит по полю `type`
 (`frontend/src/utils/makeIdeasAndInsights.ts`).
 

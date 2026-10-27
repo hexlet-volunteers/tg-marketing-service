@@ -35,7 +35,7 @@ class AICabinetService:
                 if demo_enabled
                 else []
             ),
-            insights=self._build_insights(),
+            insights=self._build_insights(demo_enabled),
             competitors=(
                 [
                     CompetitorDTO.model_validate(item)
@@ -47,15 +47,21 @@ class AICabinetService:
             heatMapData=ai_mocks.MOCK_HEAT_MAP if demo_enabled else {},
         )
 
-    def _build_insights(self) -> list[InsightDTO]:
-        insights = AIInsight.objects.order_by("-created_at")
-        if self._authenticated_user() is not None:
-            insights = insights.filter(user=self.user)
+    def _build_insights(self, demo_enabled: bool) -> list[InsightDTO]:
+        user = self._authenticated_user()
+        if user is not None:
+            insights = AIInsight.objects.filter(user=user)
+        elif demo_enabled:
+            insights = AIInsight.objects.filter(
+                user__username__in=DEMO_USERNAMES
+            )
+        else:
+            return []
         return [
             InsightDTO.model_validate(
                 {"type": insight.insight_type, "text": insight.insight_text}
             )
-            for insight in insights[:INSIGHTS_LIMIT]
+            for insight in insights.order_by("-created_at")[:INSIGHTS_LIMIT]
         ]
 
     def _demo_enabled(self) -> bool:
