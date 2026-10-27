@@ -48,9 +48,9 @@ class AICabinetService:
         )
 
     def _build_insights(self, demo_enabled: bool) -> list[InsightDTO]:
-        user = self._authenticated_user()
-        if user is not None:
-            insights = AIInsight.objects.filter(user=user)
+        auth_user = self._authenticated_user()
+        if auth_user is not None:
+            insights = AIInsight.objects.filter(user=auth_user)
         elif demo_enabled:
             insights = AIInsight.objects.filter(
                 user__username__in=DEMO_USERNAMES
