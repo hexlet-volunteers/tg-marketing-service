@@ -41,10 +41,9 @@ class CallToActionDTO(BaseModel):
 
 class ArticleDetailDTO(BaseModel):
     """
-    Props для Inertia-страницы 'BlogArticle' (/blog/<slug>/).
+    Props для Inertia-страницы 'BlogPost' (/blog/<slug>/).
 
-    Отдаётся только для опубликованной статьи (is_published=True);
-    для отсутствующей или неопубликованной вью отвечает 404.
+    Для отсутствующей или неопубликованной статьи вью отвечает 404.
 
     - id, slug, title, excerpt, cover_image, category, tags, read_time,
       published_at, views_count, author_name: как в ArticleCardDTO;

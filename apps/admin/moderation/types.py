@@ -24,3 +24,11 @@ class ModerationRequestData(TypedDict):
     reject_reason: str | None
     created_at: str
     resolved_at: str | None
+
+
+class UserRequestData(TypedDict):
+    title: str
+    username: str
+    author: str
+    time: str
+    category: str

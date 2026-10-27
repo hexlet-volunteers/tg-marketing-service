@@ -75,7 +75,7 @@ class EmailUniquenessTest(TestCase):
     ) -> None:
         self.client.force_login(self.other)
         urls = (
-            (reverse("users:user_cabinet"), "UserProfilePage"),
+            (reverse("users:user_cabinet"), "Profile"),
             (
                 reverse(
                     "users:user_update",

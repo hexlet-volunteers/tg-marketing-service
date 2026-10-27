@@ -32,6 +32,8 @@ from apps.parser.models import (
 )
 from apps.parser.services.metrics import engagement_rate, growth_30d
 from apps.users.models import User
+from mocks.landing import MOCK_KPIS
+from mocks.parser import get_mock_channel
 
 
 class DashboardService:
@@ -254,6 +256,188 @@ class DashboardService:
             )
 
         return result
+
+    # ------------------------
+    # Page props (FE dashboard)
+    # ------------------------
+
+    def build_page_props(self) -> dict[str, Any]:
+        """Собирает FE-пропсы из БД, дополняя отсутствующие поля моками."""
+        channel = self._get_primary_channel()
+
+        return {
+            "channel": self._build_channel_card(channel),
+            "kpis": self._build_page_kpis(channel),
+            "growthData": self._build_growth_data(channel),
+            "posts": self._build_page_posts(channel),
+        }
+
+    def _get_primary_channel(self) -> TelegramChannel | None:
+        return (
+            TelegramChannel.objects.filter(moderators__user=self.user)
+            .order_by("-participants_count", "pk")
+            .first()
+        )
+
+    def _build_channel_card(
+        self, channel: TelegramChannel | None
+    ) -> dict[str, Any]:
+        if channel is None:
+            return {}
+
+        username = channel.username or ""
+        if username and not username.startswith("@"):
+            username = f"@{username}"
+        mock_channel = get_mock_channel(channel.username) or {}
+
+        return {
+            "id": channel.channel_id,
+            "name": channel.title,
+            "username": username,
+            "type": mock_channel.get("type") or "channel",
+            "subscribers": channel.participants_count or 0,
+            "category": channel.category or "",
+            "verified": channel.is_verified,
+            "country": channel.country or "",
+            "imageUrl": mock_channel.get("imageUrl") or "",
+            "er": round(float(channel.citation_index or 0), 2),
+            "growth30d": self._get_channel_growth_30d(channel),
+        }
+
+    def _build_page_kpis(
+        self, channel: TelegramChannel | None
+    ) -> list[dict[str, Any]]:
+        if channel is None:
+            return []
+
+        recent_stats = list(channel.channelstats_set.order_by("-parsed_at")[:2])
+        subscribers = channel.participants_count or 0
+        previous = (
+            recent_stats[1].participants_count
+            if len(recent_stats) > 1
+            else subscribers
+        )
+        delta = subscribers - previous
+        percent_delta = round(delta / previous * 100, 2) if previous else 0.0
+
+        aggregate = channel.posts.aggregate(
+            total_views=Sum("views"),
+            total_forwards=Sum("forwards"),
+            total_comments=Sum("comments_count"),
+        )
+        total_views = aggregate["total_views"] or 0
+        total_interactions = (
+            (aggregate["total_forwards"] or 0)
+            + (aggregate["total_comments"] or 0)
+            + (
+                PostReaction.objects.filter(post__channel=channel).aggregate(
+                    total=Sum("count")
+                )["total"]
+                or 0
+            )
+        )
+        er = engagement_rate(int(total_interactions), int(total_views)) * 100
+        average_reach = channel.average_views or (
+            round(total_views / channel.posts.count())
+            if channel.posts.exists()
+            else 0
+        )
+        citation_index = int(round(float(channel.citation_index or 0)))
+
+        return [
+            {
+                "label": "Подписчики",
+                "value": subscribers,
+                "delta": delta,
+                "percentDelta": percent_delta,
+                "positive": delta >= 0,
+            },
+            self._merge_missing_kpi(
+                {"label": "Ср. охват", "value": int(average_reach)},
+                "Ср. охват",
+            ),
+            self._merge_missing_kpi(
+                {"label": "ER", "value": round(er, 1)},
+                "ER",
+            ),
+            self._merge_missing_kpi(
+                {
+                    "label": "Индекс цитирования",
+                    "value": citation_index,
+                },
+                "Индекс цитирования",
+            ),
+        ]
+
+    @staticmethod
+    def _merge_missing_kpi(
+        db_kpi: dict[str, Any],
+        label: str,
+    ) -> dict[str, Any]:
+        """Дополняет KPI полями, которых нет в моделях, из мока."""
+        mock_kpi = next(
+            (item for item in MOCK_KPIS if item["label"] == label),
+            None,
+        )
+        if mock_kpi is None:
+            return db_kpi
+
+        merged = dict(db_kpi)
+        for key, value in mock_kpi.items():
+            merged.setdefault(key, value)
+        return merged
+
+    def _build_growth_data(
+        self, channel: TelegramChannel | None
+    ) -> list[dict[str, Any]]:
+        if channel is None:
+            return []
+
+        stats = list(channel.channelstats_set.order_by("-parsed_at")[:30])
+        return [
+            {
+                "date": stat.parsed_at.strftime("%d.%m"),
+                "подписчики": stat.participants_count,
+            }
+            for stat in reversed(stats)
+        ]
+
+    def _build_page_posts(
+        self, channel: TelegramChannel | None
+    ) -> list[dict[str, Any]]:
+        if channel is None:
+            return []
+
+        posts = channel.posts.order_by("-published_at").prefetch_related(
+            "reactions"
+        )[:4]
+        return [
+            {
+                "title": post.text[:80],
+                "views": post.views,
+                "reactions": post.total_reactions(),
+                "forwards": post.forwards,
+                "er": round(post.calculate_er() * 100, 1),
+            }
+            for post in posts
+        ]
+
+    def _get_channel_growth_30d(self, channel: TelegramChannel) -> float:
+        latest = channel.channelstats_set.order_by("-parsed_at").first()
+        if latest is None:
+            return 0.0
+
+        thirty_days_ago = latest.parsed_at - timedelta(days=30)
+        past = (
+            channel.channelstats_set.filter(parsed_at__lte=thirty_days_ago)
+            .order_by("-parsed_at")
+            .first()
+        )
+        _, growth_pct = growth_30d(
+            latest.participants_count,
+            past.participants_count if past else None,
+        )
+        return growth_pct
 
     # ------------------------
     # Utils

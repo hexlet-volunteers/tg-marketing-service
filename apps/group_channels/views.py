@@ -7,6 +7,10 @@ from django.shortcuts import get_object_or_404
 from django.views.generic.base import View
 from inertia import render as inertia_render
 
+from apps.group_channels.dto.collection_detail_dto import (
+    CollectionChannelDTO,
+    CollectionDetailDTO,
+)
 from apps.group_channels.forms import (
     AddChannelForm,
     CreateGroupForm,
@@ -18,6 +22,7 @@ from apps.group_channels.services.collections_catalog_service import (
 )
 from apps.parser.models import TelegramChannel
 from config.mixins import UserAuthenticationCheckMixin
+from config.renderers import render_inertia_from_dto
 
 # константа для дефолтной аватарки
 DEFAULT_AVATAR_GROUP = f"{settings.STATIC_URL}default_avatar_group.jpg"
@@ -215,8 +220,42 @@ class CollectionsCatalogView(View):
             category=category,
         )
 
-        return inertia_render(
+        return render_inertia_from_dto(request, "Collections", props=dto)
+
+
+class CollectionDetailView(View):
+    """Детальная страница подборки (Inertia: Collection)."""
+
+    def get(
+        self, request: HttpRequest, pk: int, *args: Any, **kwargs: Any
+    ) -> HttpResponse:
+        group = get_object_or_404(Group, pk=pk)
+        channels = []
+        for channel in group.channels.all():
+            last_stat = channel.last_stat()
+            growth30d = 0.0
+            if last_stat and last_stat.daily_growth:
+                participants = max(channel.participants_count or 1, 1)
+                growth30d = float(last_stat.daily_growth) / participants * 100
+            channels.append(
+                CollectionChannelDTO(
+                    name=channel.title,
+                    username=channel.username,
+                    subscribers=channel.participants_count or 0,
+                    er=float(getattr(channel, "citation_index", 0) or 0),
+                    growth30d=float(growth30d),
+                    color="#4C6EF5",
+                )
+            )
+        dto = CollectionDetailDTO(
+            title=group.name,
+            description=group.description or "",
+            channel_count=len(channels),
+            channels=channels,
+        )
+
+        return render_inertia_from_dto(
             request,
-            "Collections",
-            props=dto.model_dump(mode="json"),
+            "Collection",
+            props=dto,
         )

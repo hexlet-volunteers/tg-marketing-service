@@ -7,7 +7,15 @@ from django.utils import timezone
 
 from apps.billing.models import Plan, Subscription
 from apps.homepage.models import HomePageComponent
+from apps.parser.models import (
+    ChannelModerator,
+    ChannelStats,
+    Post,
+    PostReaction,
+    TelegramChannel,
+)
 from apps.users.models import User
+from mocks.landing import MOCK_KPIS
 
 
 class IndexViewTest(TestCase):
@@ -53,6 +61,27 @@ class IndexViewTest(TestCase):
             first_component["content"], self.component.content["content"]
         )
         self.assertEqual(first_component["order"], self.component.order)
+
+    def test_index_view_serves_tariffs(self):
+        response = self.client.get(
+            reverse("main_index"),
+            HTTP_ACCEPT="application/json",
+            HTTP_X_INERTIA="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        props = response.json()["props"]
+        tariffs = props["tariffs"]
+
+        self.assertEqual(
+            [tariff["name"] for tariff in tariffs],
+            ["Free", "Pro", "Agency"],
+        )
+        pro = next(tariff for tariff in tariffs if tariff["name"] == "Pro")
+        self.assertEqual(pro["price"], "990 ₽")
+        self.assertEqual(pro["period"], "в месяц")
+        self.assertEqual(pro["button"]["variant"], "primary")
+        self.assertTrue(pro["isHighlighted"])
 
     def _get_inertia_props(
         self,
@@ -288,3 +317,178 @@ class DashboardSubscriptionTest(TestCase):
         stats = self._get_dashboard_stats()
 
         self.assertEqual(stats["days_left"], 7)
+
+
+class DashboardPagePropsTest(TestCase):
+    def _login(self, username: str = "dashuser") -> User:
+        user = User.objects.create_user(
+            username=username,
+            email=f"{username}@example.com",
+            password="secret123",
+            role="user",
+        )
+        self.client.force_login(user)
+        return user
+
+    def _create_channel(
+        self,
+        user: User,
+        *,
+        username: str = "db_channel",
+        with_stats: bool = True,
+        with_posts: bool = True,
+    ) -> TelegramChannel:
+        channel = TelegramChannel.objects.create(
+            channel_id=777,
+            username=username,
+            title="DB Channel",
+            participants_count=1000,
+            average_views=200,
+            citation_index=8.3,
+            category="Технологии",
+            country="Россия",
+            is_public=True,
+            is_verified=True,
+        )
+        ChannelModerator.objects.create(user=user, channel=channel)
+        now = timezone.now()
+        if with_stats:
+            for days_ago, participants in ((30, 800), (0, 1000)):
+                stat = ChannelStats.objects.create(
+                    channel=channel,
+                    participants_count=participants,
+                    daily_growth=0,
+                )
+                ChannelStats.objects.filter(pk=stat.pk).update(
+                    parsed_at=now - timedelta(days=days_ago)
+                )
+        if with_posts:
+            post = Post.objects.create(
+                channel=channel,
+                telegram_message_id=1,
+                text="Пост из БД",
+                published_at=now,
+                views=1000,
+                forwards=10,
+                comments_count=5,
+            )
+            PostReaction.objects.create(post=post, emoji="🔥", count=3)
+        return channel
+
+    def _get_props(self) -> dict[str, Any]:
+        response = self.client.get(
+            reverse("homepage:dashboard"),
+            HTTP_ACCEPT="application/json",
+            HTTP_X_INERTIA="true",
+        )
+        self.assertEqual(response.status_code, 200)
+        return response.json()["props"]
+
+    def test_dashboard_without_db_data_returns_empty_props(self) -> None:
+        self._login()
+
+        props = self._get_props()
+
+        self.assertEqual(props["channel"], {})
+        self.assertEqual(props["kpis"], [])
+        self.assertEqual(props["growthData"], [])
+        self.assertEqual(props["posts"], [])
+
+    def test_public_channel_is_not_used_as_dashboard_fallback(self) -> None:
+        self._login()
+        TelegramChannel.objects.create(
+            channel_id=999,
+            username="unrelated_public",
+            title="Unrelated Public",
+            participants_count=5000,
+            is_public=True,
+        )
+
+        props = self._get_props()
+
+        self.assertEqual(props["channel"], {})
+        self.assertEqual(props["kpis"], [])
+        self.assertEqual(props["growthData"], [])
+        self.assertEqual(props["posts"], [])
+
+    def test_dashboard_channel_without_stats_or_posts(self) -> None:
+        user = self._login()
+        self._create_channel(user, with_stats=False, with_posts=False)
+
+        props = self._get_props()
+
+        channel = props["channel"]
+        self.assertEqual(channel["name"], "DB Channel")
+        self.assertEqual(channel["subscribers"], 1000)
+        self.assertEqual(channel["type"], "channel")
+        self.assertEqual(channel["imageUrl"], "")
+        self.assertEqual(channel["growth30d"], 0.0)
+
+        kpis = {kpi["label"]: kpi for kpi in props["kpis"]}
+        self.assertEqual(kpis["Подписчики"]["value"], 1000)
+        self.assertEqual(kpis["Подписчики"]["delta"], 0)
+        self.assertEqual(kpis["Ср. охват"]["value"], 200)
+        self.assertEqual(
+            kpis["Ср. охват"]["percentDelta"],
+            MOCK_KPIS[1]["percentDelta"],
+        )
+        self.assertEqual(kpis["ER"]["value"], 0.0)
+        self.assertEqual(
+            kpis["ER"]["percentDelta"],
+            MOCK_KPIS[2]["percentDelta"],
+        )
+        self.assertEqual(kpis["Индекс цитирования"]["value"], 8)
+        self.assertEqual(
+            kpis["Индекс цитирования"]["delta"],
+            MOCK_KPIS[3]["delta"],
+        )
+
+        self.assertEqual(props["growthData"], [])
+        self.assertEqual(props["posts"], [])
+
+    def test_dashboard_uses_mock_channel_fields(self) -> None:
+        user = self._login()
+        self._create_channel(
+            user,
+            username="marketinghub",
+            with_stats=False,
+            with_posts=False,
+        )
+
+        props = self._get_props()
+
+        self.assertEqual(props["channel"]["type"], "group")
+        self.assertEqual(props["channel"]["imageUrl"], "")
+
+    def test_dashboard_uses_db_growth_and_posts(self) -> None:
+        user = self._login()
+        self._create_channel(user)
+
+        props = self._get_props()
+
+        kpis = {kpi["label"]: kpi for kpi in props["kpis"]}
+        self.assertEqual(kpis["Подписчики"]["value"], 1000)
+        self.assertEqual(kpis["Подписчики"]["delta"], 200)
+        self.assertEqual(kpis["Ср. охват"]["value"], 200)
+        self.assertEqual(kpis["ER"]["value"], 1.8)
+        self.assertEqual(props["growthData"][-1]["подписчики"], 1000)
+        self.assertEqual(props["posts"][0]["views"], 1000)
+        self.assertEqual(props["posts"][0]["reactions"], 3)
+
+    def test_dashboard_keeps_real_dto_props(self) -> None:
+        self._login()
+        props = self._get_props()
+
+        self.assertIn("stats", props)
+        self.assertIn("ai_insights", props)
+        self.assertGreaterEqual(len(props["ai_insights"]), 1)
+        self.assertIn("quick_actions", props)
+
+    def test_dashboard_requires_auth(self) -> None:
+        response = self.client.get(
+            reverse("homepage:dashboard"),
+            HTTP_ACCEPT="application/json",
+            HTTP_X_INERTIA="true",
+        )
+
+        self.assertEqual(response.status_code, 302)

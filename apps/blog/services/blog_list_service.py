@@ -11,10 +11,8 @@ class BlogListService:
     """
     Собирает данные для страницы списка блога (Inertia 'Blog', /blog/).
 
-    Возвращает:
-    - featured: последняя опубликованная статья с is_featured=True;
-    - articles: все остальные опубликованные статьи (без featured),
-      отсортированные по published_at desc.
+    featured — последняя опубликованная is_featured=True,
+    articles — остальные опубликованные по published_at desc.
     """
 
     def build(self) -> BlogListDTO:

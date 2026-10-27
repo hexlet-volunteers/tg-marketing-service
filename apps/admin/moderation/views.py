@@ -36,7 +36,7 @@ class ModerationRequestListView(AdminRequiredMixin, View):
         ]
 
         dto = ModerationListService().build(paginator, page, requests_data)
-        return render_inertia_from_dto(request, "AdminModeration", props=dto)
+        return render_inertia_from_dto(request, "Admin", props=dto)
 
     def post(
         self,
