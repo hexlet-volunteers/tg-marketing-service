@@ -263,4 +263,119 @@ def test_parser_view_creates_pending_moderation_request() -> None:
     assert moderation_request.status == "pending"
     assert moderation_request.submitted_by == user
     assert moderation_request.channel_by.channel_id == 987654321  # type: ignore
-    assert moderation_request.channel_identifier == "@new_channel"
+    assert moderation_request.channel_identifier == "new_channel"
+
+
+@pytest.mark.parametrize(
+    ("channel_identifier", "expected"),
+    [
+        ("@durov", "durov"),
+        ("durov", "durov"),
+        ("t.me/durov", "durov"),
+        ("https://t.me/durov", "durov"),
+        ("https://t.me/s/durov", "durov"),
+        ("@Example_Channel", "example_channel"),
+    ],
+)
+def test_channel_parse_form_accepts_valid_username(
+    channel_identifier: str,
+    expected: str,
+) -> None:
+    from apps.parser.forms import ChannelParseForm
+
+    form = ChannelParseForm(
+        data={
+            "channel_identifier": channel_identifier,
+            "category": "Технологии",
+            "country": "RU",
+            "language": "ru",
+            "limit": 10,
+        }
+    )
+
+    assert form.is_valid(), form.errors
+    assert form.cleaned_data["channel_identifier"] == expected
+
+
+@pytest.mark.parametrize(
+    "channel_identifier",
+    [
+        "+79991234567",
+        "t.me/+AbCdEf",
+        "https://t.me/+AbCdEf",
+        "t.me/joinchat/xxx",
+        "https://t.me/joinchat/xxx",
+        "https://evil.com/foo",
+        "du",
+        "a" * 33,
+        "bad-name",
+    ],
+)
+def test_channel_parse_form_rejects_invalid_username(
+    channel_identifier: str,
+) -> None:
+    from apps.parser.forms import ChannelParseForm
+
+    form = ChannelParseForm(
+        data={
+            "channel_identifier": channel_identifier,
+            "category": "Технологии",
+            "country": "RU",
+            "language": "ru",
+            "limit": 10,
+        }
+    )
+
+    assert not form.is_valid()
+    assert "channel_identifier" in form.errors
+
+
+def test_channel_parse_form_rejects_invalid_username() -> None:
+    from apps.parser.forms import ChannelParseForm
+
+    form = ChannelParseForm(
+        data={
+            "channel_identifier": "https://evil.com/foo",
+            "category": "Технологии",
+            "country": "RU",
+            "language": "ru",
+            "limit": 10,
+        }
+    )
+
+    assert not form.is_valid()
+    assert "channel_identifier" in form.errors
+
+@pytest.mark.django_db
+def test_parser_view_does_not_parse_invalid_channel() -> None:
+    user_model = get_user_model()
+    user = user_model.objects.create_user(
+        username="invalid-channel-user",
+        email="invalid@example.com",
+        password="password",
+        role="user",
+    )
+
+    view = ParserView()
+    request = RequestFactory().post("/parser/")
+    request.user = user
+    request.session = {}
+    setattr(request, "_messages", FallbackStorage(request))
+    view.setup(request)
+
+    form = view.get_form_class()(
+        data={
+            "channel_identifier": "https://evil.com/foo",
+            "category": "Технологии",
+            "country": "RU",
+            "language": "ru",
+            "limit": 10,
+        }
+    )
+
+    with patch("apps.parser.views.async_to_sync") as parser_mock:
+        response = view.form_invalid(form)
+
+    assert not form.is_valid()
+    assert response.status_code == 200
+    parser_mock.assert_not_called()
