@@ -6,6 +6,7 @@ from django.db.models import QuerySet
 # from config.channel.models import Channel
 from apps.group_channels.models import Group
 from apps.parser.models import TelegramChannel
+from apps.users.validators import validate_http_url
 
 
 class CreateGroupForm(forms.ModelForm):
@@ -36,6 +37,7 @@ class CreateGroupForm(forms.ModelForm):
     )
     image_url = forms.CharField(
         required=False,
+        validators=[validate_http_url],
         label="Изображение (URL)",
         widget=forms.URLInput(
             attrs={
@@ -84,6 +86,7 @@ class UpdateGroupForm(forms.ModelForm):
     )
     image_url = forms.CharField(
         required=False,
+        validators=[validate_http_url],
         label="Изображение (URL)",
         widget=forms.URLInput(
             attrs={

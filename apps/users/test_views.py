@@ -56,7 +56,9 @@ class UserRegisterTest(TestCase):
 
         user = User.objects.get(email="ada@example.com")
         self.assertEqual(user.role, "user")
-        self.assertEqual(user.avatar_image, DEFAULT_AVATAR_URL)
+        self.assertEqual(
+            user.avatar_image, f"http://testserver{DEFAULT_AVATAR_URL}"
+        )
         self.assertTrue(user.username.startswith("ada_"))
         self.assertEqual(get_user(self.client).pk, user.pk)
 

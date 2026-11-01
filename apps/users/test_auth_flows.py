@@ -16,6 +16,7 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
 from apps.users.consents import get_current_document_version
+from apps.users.forms import UserLoginForm
 from apps.users.models import Consent, PartnerProfile, User
 
 PASSWORD = "AuthFlow-Strong-Password-42!"  # noqa: S105
@@ -63,6 +64,7 @@ class EmailLoginFlowTest(InertiaAuthTestCase):
         self.assertEqual(props["role"], "guest")
         self.assertFalse(props["is_admin"])
         self.assertTrue(props["csrfToken"])
+        self.assertEqual(props["next"], "")
 
     def test_email_login_authenticates_and_opens_dashboard(self) -> None:
         response = self.client.post(
@@ -81,6 +83,188 @@ class EmailLoginFlowTest(InertiaAuthTestCase):
         self.assertEqual(props["auth"]["id"], self.user.pk)
         self.assertEqual(props["role"], "user")
         self.assertIn("success", props["flash"])
+        self.assertNotIn("user", props)
+        self.assertNotIn("username", props)
+
+    def test_form_exposes_only_email_and_password(self) -> None:
+        form = UserLoginForm(
+            data={
+                "email": self.user.email,
+                "password": PASSWORD,
+                "username": "ignored",
+                "usernme": "ignored",
+            }
+        )
+        self.assertEqual(set(form.fields), {"email", "password"})
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(set(form.cleaned_data), {"email", "password"})
+        self.assertEqual(form.get_user(), self.user)
+
+    def test_login_errors_are_attached_to_documented_fields(self) -> None:
+        cases: tuple[tuple[dict[str, str], set[str]], ...] = (
+            ({}, {"email", "password"}),
+            ({"email": "invalid", "password": PASSWORD}, {"email"}),
+            ({"email": self.user.email}, {"password"}),
+            ({"email": self.user.email, "password": "wrong"}, {"email"}),
+            ({"email": "unknown@example.com", "password": PASSWORD}, {"email"}),
+        )
+        for data, fields in cases:
+            with self.subTest(data=data):
+                props = self.assert_page(
+                    self.client.post(reverse("users:login"), data), "Auth"
+                )
+                self.assertEqual(set(props["form"]["errors"]), fields)
+                for errors in props["form"]["errors"].values():
+                    self.assertIsInstance(errors, list)
+                    self.assertTrue(
+                        all(isinstance(error, str) for error in errors)
+                    )
+                self.assertNotIn(SESSION_KEY, self.client.session)
+
+    def test_login_preserves_spaces_in_password(self) -> None:
+        password = f" {PASSWORD} "
+        self.user.set_password(password)
+        self.user.save(update_fields=["password"])
+        self.client.post(
+            reverse("users:login"),
+            {"email": self.user.email, "password": password},
+        )
+        self.assertEqual(get_user(self.client).pk, self.user.pk)
+
+    def test_get_login_validates_next_without_changing_form_contract(
+        self,
+    ) -> None:
+        for next_url, expected in (
+            (reverse("users:user_cabinet"), reverse("users:user_cabinet")),
+            ("https://evil.example/path", ""),
+        ):
+            with self.subTest(next=next_url):
+                props = self.assert_page(
+                    self.client.get(reverse("users:login"), {"next": next_url}),
+                    "Auth",
+                )
+                self.assertEqual(props["next"], expected)
+                self.assertEqual(
+                    props["form"],
+                    {
+                        "data": {"email": "", "password": ""},
+                        "errors": {},
+                    },
+                )
+
+    def test_successful_login_returns_to_safe_next_from_query_or_post(
+        self,
+    ) -> None:
+        target = reverse("users:user_cabinet")
+        for use_query in (True, False):
+            with self.subTest(use_query=use_query):
+                self.client = Client(HTTP_X_INERTIA="true")
+                data = {"email": self.user.email, "password": PASSWORD}
+                url = reverse("users:login")
+                if use_query:
+                    url += f"?next={target}"
+                else:
+                    data["next"] = target
+                response = self.client.post(url, data)
+                self.assertRedirects(
+                    response, target, fetch_redirect_response=False
+                )
+                self.assertEqual(get_user(self.client).pk, self.user.pk)
+                props = self.assert_page(
+                    self.client.get(target), "UserProfilePage"
+                )
+                self.assertEqual(props["auth"]["id"], self.user.pk)
+                self.assertIn("success", props["flash"])
+
+    def test_post_next_takes_precedence_over_query(self) -> None:
+        target = reverse("users:user_cabinet")
+        response = self.client.post(
+            reverse("users:login") + "?next=/dashboard/",
+            {"email": self.user.email, "password": PASSWORD, "next": target},
+        )
+        self.assertRedirects(response, target, fetch_redirect_response=False)
+
+    def test_invalid_login_preserves_safe_next_and_only_email(self) -> None:
+        target = reverse("users:user_cabinet")
+        props = self.assert_page(
+            self.client.post(
+                reverse("users:login"),
+                {
+                    "email": self.user.email,
+                    "password": "wrong",
+                    "next": target,
+                },
+            ),
+            "Auth",
+        )
+        self.assertEqual(props["next"], target)
+        self.assertEqual(
+            props["form"]["data"], {"email": self.user.email, "password": ""}
+        )
+        self.assertIn("email", props["form"]["errors"])
+        self.assertIsNone(props["auth"])
+
+    def test_external_and_unsafe_next_urls_fall_back_to_dashboard(self) -> None:
+        for next_url in (
+            "https://evil.example/path",
+            "//evil.example/path",
+            "///evil.example/path",
+            r"/\evil.example/path",
+            "javascript:alert(1)",
+            "http:///evil.example/path",
+            "https://testserver.evil.example/path",
+            "https://testserver@evil.example/path",
+        ):
+            with self.subTest(next=next_url):
+                self.client = Client(HTTP_X_INERTIA="true")
+                response = self.client.post(
+                    reverse("users:login"),
+                    {
+                        "email": self.user.email,
+                        "password": PASSWORD,
+                        "next": next_url,
+                    },
+                )
+                self.assertRedirects(
+                    response,
+                    reverse("homepage:dashboard"),
+                    fetch_redirect_response=False,
+                )
+                self.assertEqual(get_user(self.client).pk, self.user.pk)
+
+    def test_https_login_rejects_downgrade_and_allows_same_host_https(
+        self,
+    ) -> None:
+        for next_url, target in (
+            ("http://testserver/auth/profile/", reverse("homepage:dashboard")),
+            (
+                "https://testserver/auth/profile/",
+                "https://testserver/auth/profile/",
+            ),
+        ):
+            with self.subTest(next=next_url):
+                self.client = Client(HTTP_X_INERTIA="true")
+                response = self.client.post(
+                    reverse("users:login"),
+                    {
+                        "email": self.user.email,
+                        "password": PASSWORD,
+                        "next": next_url,
+                    },
+                    secure=True,
+                )
+                self.assertRedirects(
+                    response, target, fetch_redirect_response=False
+                )
+
+    def test_login_requires_csrf(self) -> None:
+        browser = Client(enforce_csrf_checks=True)
+        response = browser.post(
+            reverse("users:login"),
+            {"email": self.user.email, "password": PASSWORD},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(get_user(browser).is_authenticated)
 
     def test_login_rejects_invalid_credentials_and_preserves_only_email(
         self,
@@ -630,6 +814,39 @@ class RoleAssignmentSignalTest(InertiaAuthTestCase):
         )
         user.refresh_from_db()
         self.assertEqual(user.role, "admin")
+
+    def test_partner_activation_does_not_overwrite_admin_role(self) -> None:
+        self.user.role = "admin"
+        self.user.save(update_fields=["role"])
+        profile = PartnerProfile.objects.create(user=self.user)
+
+        profile.status = "active"
+        profile.save(update_fields=["status"])
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.role, "admin")
+
+    def test_saving_active_admin_partner_keeps_admin_shared_props(self) -> None:
+        self.user.role = "admin"
+        self.user.save(update_fields=["role"])
+        self.assertFalse(self.user.is_staff)
+        self.assertFalse(self.user.is_superuser)
+        profile = PartnerProfile.objects.create(user=self.user, status="active")
+        self.client.force_login(self.user)
+
+        profile.payment_details = "Updated payment details"
+        profile.save(update_fields=["payment_details"])
+
+        self.user.refresh_from_db()
+        profile.refresh_from_db()
+        self.assertEqual(profile.payment_details, "Updated payment details")
+        self.assertEqual(self.user.role, "admin")
+        props = self.assert_page(
+            self.client.get(reverse("users:login")), "Auth"
+        )
+        self.assertEqual(props["auth"]["role"], "admin")
+        self.assertEqual(props["role"], "admin")
+        self.assertTrue(props["is_admin"])
 
     def test_partner_activation_assigns_role_visible_in_shared_auth(
         self,

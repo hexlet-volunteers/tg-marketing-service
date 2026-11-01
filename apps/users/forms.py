@@ -1,20 +1,22 @@
 from typing import Any
 
 from django import forms
+from django.contrib.auth import authenticate
 from django.contrib.auth.forms import (
-    AuthenticationForm,
     PasswordResetForm,
     SetPasswordForm,
     UserChangeForm,
     UserCreationForm,
 )
 from django.contrib.auth.password_validation import validate_password
+from django.http import HttpRequest
 from django.utils.crypto import get_random_string
 
 from apps.users.models import NotificationSettings, User
+from apps.users.validators import validate_http_url
 
 
-class UserLoginForm(AuthenticationForm):
+class UserLoginForm(forms.Form):
     email = forms.EmailField(
         label="Email",
         widget=forms.EmailInput(
@@ -27,6 +29,7 @@ class UserLoginForm(AuthenticationForm):
     )
     password = forms.CharField(
         label="Пароль",
+        strip=False,
         widget=forms.PasswordInput(
             attrs={
                 "autocomplete": "current-password",
@@ -36,21 +39,38 @@ class UserLoginForm(AuthenticationForm):
         ),
     )
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self, request: HttpRequest | None = None, *args: Any, **kwargs: Any
+    ) -> None:
+        self.request = request
+        self.user_cache: User | None = None
         super().__init__(*args, **kwargs)
-        self.fields.pop("username")
 
     def clean(self) -> dict[str, Any]:
-        email = self.cleaned_data.get("email")
-        password = self.cleaned_data.get("password")
+        cleaned_data = super().clean() or {}
+        email = cleaned_data.get("email")
+        password = cleaned_data.get("password")
         if email and password:
             try:
                 user = User.objects.get(email__iexact=email)
             except (User.DoesNotExist, User.MultipleObjectsReturned):
                 User().set_password(password)
-                raise self.get_invalid_login_error() from None
-            self.cleaned_data["username"] = user.username
-        return super().clean() or {}
+            else:
+                self.user_cache = authenticate(
+                    self.request, username=user.username, password=password
+                )
+            if self.user_cache is None or not self.user_cache.is_active:
+                self.user_cache = None
+                self.add_error(
+                    "email",
+                    forms.ValidationError(
+                        "Неверный email или пароль.", code="invalid_login"
+                    ),
+                )
+        return cleaned_data
+
+    def get_user(self) -> User | None:
+        return self.user_cache
 
 
 class UserRegForm(UserCreationForm):
@@ -137,6 +157,7 @@ class UserRegForm(UserCreationForm):
     )
     avatar_image = forms.CharField(
         required=False,
+        validators=[validate_http_url],
         label="URL аватара",
         widget=forms.TextInput(
             attrs={"name": "avatar_image", "class": "form-control"}
@@ -218,6 +239,7 @@ class UserUpdateForm(forms.ModelForm):
     )
     avatar_image = forms.CharField(
         required=False,
+        validators=[validate_http_url],
         label="URL аватара",
         widget=forms.TextInput(
             attrs={"name": "avatar_image", "class": "form-control"}
@@ -289,21 +311,23 @@ class NotificationSettingsForm(forms.ModelForm):
 
 
 class AvatarChange(UserChangeForm):
+    avatar_image = forms.CharField(
+        required=False,
+        validators=[validate_http_url],
+        label="URL аватара",
+        widget=forms.TextInput(
+            attrs={
+                "id": "avatarUrl",
+                "name": "avatar_image",
+                "class": "form-control",
+                "placeholder": "https://example.com/avatar.jpg",
+            }
+        ),
+    )
+
     class Meta:
         model = User
         fields = ("avatar_image",)
-        avatar_image = forms.CharField(
-            required=False,
-            label="URL аватара",
-            widget=forms.TextInput(
-                attrs={
-                    "id": "avatarUrl",
-                    "name": "avatar_image",
-                    "class": "form-control",
-                    "placeholder": "https://example.com/avatar.jpg",
-                }
-            ),
-        )
 
 
 class RestorePasswordRequestForm(PasswordResetForm):
