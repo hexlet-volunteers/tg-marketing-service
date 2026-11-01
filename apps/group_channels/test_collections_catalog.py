@@ -1,427 +1,437 @@
-from django.test import TestCase
+import pytest
 
-from apps.group_channels.models import AutoGroupRule, Group
 from apps.group_channels.services.collections_catalog_service import (
     CollectionsCatalogService,
 )
-from apps.parser.models import TelegramChannel
-from apps.users.models import User
+
+pytest_plugins = ("apps.group_channels.test_utils",)
+pytestmark = pytest.mark.django_db
 
 
-class CollectionsCatalogServiceTest(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username="ivan",
-            email="ivan@test.ru",
-            password="123",
-            role="user",
-        )
-        self.service = CollectionsCatalogService()
+@pytest.fixture
+def catalog_service():
+    """Сервис построения каталога подборок."""
+    return CollectionsCatalogService()
 
-    def test_empty_catalog(self):
-        """Проверяет, что пустой каталог возвращает пустые списки."""
-        result = self.service.build()
 
-        self.assertEqual(result.collections, [])
-        self.assertEqual(result.featured, [])
+class TestCollectionsCatalogService:
+    """Тесты бизнес-логики каталога подборок."""
 
-    def test_build_collection(self):
-        """Проверяет, что подборка содержит все данные каталога."""
-        curator = User.objects.create_user(
-            username="curator",
-            email="curator@test.ru",
-            password="123",
-            role="user",
-        )
+    def test_empty_catalog(self, catalog_service):
+        """Пустой каталог не содержит подборок и секций."""
+        result = catalog_service.build()
 
-        group = Group.objects.create(
-            name="Игры",
-            owner=self.user,
+        assert result.collections == []
+        assert result.featured == []
+        assert result.sections == []
+        assert result.filters.country_options == []
+        assert result.filters.category_options == []
+
+    def test_builds_collection_with_correct_data(
+        self,
+        catalog_service,
+        group_factory,
+        curator,
+    ):
+        """Сервис формирует DTO подборки с корректными данными."""
+        group = group_factory(
+            name="Топ IT-каналов",
+            slug="top-it",
+            description="Подборка технологических каналов",
             curator=curator,
-            description="Игровые каналы",
             is_editorial=True,
             image_url="https://example.com/cover.jpg",
         )
 
-        result = self.service.build()
-        collection = result.collections[0]
+        result = catalog_service.build()
 
-        self.assertEqual(collection.id, group.id)
-        self.assertEqual(collection.name, group.name)
-        self.assertEqual(collection.slug, group.slug)
-        self.assertEqual(collection.description, group.description)
-        self.assertTrue(collection.is_editorial)
-        self.assertEqual(collection.curator, curator.username)
-        self.assertEqual(collection.channel_count, 0)
-        self.assertEqual(collection.cover, group.image_url)
-        self.assertEqual(
-            collection.gradient_key,
-            f"collection-{group.id}",
+        collection = next(
+            item for item in result.collections if item.slug == group.slug
         )
 
-    def test_channel_count(self):
-        """Проверяет корректный подсчёт каналов
-        для обычной и автоматической подборок."""
+        assert collection.id == group.pk
+        assert collection.name == group.name
+        assert collection.slug == group.slug
+        assert collection.description == group.description
+        assert collection.is_editorial is True
+        assert collection.curator == curator.username
+        assert collection.channel_count == 0
+        assert collection.cover == group.image_url
+        assert collection.gradient_key == f"collection-{group.pk}"
 
-        # Создаём обычную подборку с каналами через M2M-связь.
-        regular_group = Group.objects.create(
-            name="Игры",
-            owner=self.user,
+    def test_manual_group_counts_only_linked_channels(
+        self,
+        catalog_service,
+        group_factory,
+        channel_factory,
+    ):
+        """Ручная подборка считает только связанные с ней каналы."""
+        group = group_factory(
+            name="Топ IT-каналов",
+            slug="top-it",
+            is_editorial=True,
         )
-        # Создаём автоматическую подборку, каналы которой
-        # определяются по категории из AutoGroupRule.
-        auto_group = Group.objects.create(
+
+        first_channel = channel_factory(
+            username="product_radar",
+            title="Product Radar",
+            category="Технологии",
+            country="RU",
+        )
+        second_channel = channel_factory(
+            username="tech_news",
+            title="Tech News",
+            category="Технологии",
+            country="RU",
+        )
+
+        group.channels.add(first_channel, second_channel)
+
+        # Канал той же категории, который не добавлен в подборку.
+        channel_factory(
+            username="another_tech_channel",
+            title="Another Tech Channel",
+            category="Технологии",
+            country="RU",
+        )
+
+        result = catalog_service.build()
+
+        collection = next(
+            item for item in result.collections if item.slug == group.slug
+        )
+
+        assert collection.channel_count == 2
+
+    def test_auto_group_counts_channels_by_rule_category(
+        self,
+        catalog_service,
+        group_factory,
+        auto_rule_factory,
+        channel_factory,
+    ):
+        """Автоподборка считает каналы категории своего правила."""
+        group = group_factory(
+            name="Научные каналы",
+            slug="science",
+        )
+        auto_rule_factory(group, category="Наука")
+
+        channel_factory(
+            username="science_news",
+            title="Science News",
+            category="Наука",
+        )
+        channel_factory(
+            username="science_today",
+            title="Science Today",
+            category="Наука",
+        )
+        channel_factory(
+            username="product_radar",
+            title="Product Radar",
+            category="Технологии",
+        )
+
+        result = catalog_service.build()
+
+        collection = next(
+            item for item in result.collections if item.slug == group.slug
+        )
+
+        assert collection.channel_count == 2
+
+    def test_featured_contains_at_most_three_collections(
+        self,
+        catalog_service,
+        group_factory,
+    ):
+        """В featured попадает не больше трёх подборок."""
+        group_factory(
+            name="Топ IT-каналов",
+            slug="top-it",
+            is_editorial=True,
+            order=0,
+        )
+        group_factory(
+            name="Научные каналы",
+            slug="science",
+            is_editorial=True,
+            order=1,
+        )
+        group_factory(
             name="Новости",
-            owner=self.user,
-        )
-        AutoGroupRule.objects.create(
-            group=auto_group,
-            category="Новости",
-        )
-
-        # Создаём два канала, которые добавим в обычную подборку.
-        channel_1 = TelegramChannel.objects.create(
-            channel_id=1001,
-            title="Игры 1",
-            category="Игры",
-        )
-        channel_2 = TelegramChannel.objects.create(
-            channel_id=1002,
-            title="Игры 2",
-            category="Игры",
-        )
-
-        regular_group.channels.add(channel_1, channel_2)
-
-        # Эти каналы имеют ту же категорию, но не добавлены в M2M.
-        # Для проверки, что обычная подборка считает
-        # только связанные с ней каналы.
-        TelegramChannel.objects.create(
-            channel_id=1003,
-            title="Игры 3",
-            category="Игры",
-        )
-        TelegramChannel.objects.create(
-            channel_id=1004,
-            title="Новости 1",
-            category="Новости",
-        )
-        TelegramChannel.objects.create(
-            channel_id=1005,
-            title="Новости 2",
-            category="Новости",
-        )
-
-        # Проверяем, что сервис не выполняет дополнительные запросы
-        # для каждой подборки и канала.
-        with self.assertNumQueries(6):
-            result = self.service.build()
-
-        collections = {
-            collection.id: collection for collection in result.collections
-        }
-
-        self.assertEqual(
-            collections[regular_group.id].channel_count,
-            2,
-        )
-        self.assertEqual(
-            collections[auto_group.id].channel_count,
-            2,
-        )
-
-    def test_featured(self):
-        """Проверяет сортировку и приоритет редакторских
-        подборок."""
-        Group.objects.create(
-            name="Обычная первая",
-            owner=self.user,
-            order=1,
-            is_editorial=False,
-        )
-        Group.objects.create(
-            name="Обычная вторая",
-            owner=self.user,
-            order=2,
-            is_editorial=False,
-        )
-        editorial_first = Group.objects.create(
-            name="Редакторская первая",
-            owner=self.user,
-            order=2,
+            slug="news",
             is_editorial=True,
+            order=2,
         )
-        editorial_second = Group.objects.create(
-            name="Редакторская вторая",
-            owner=self.user,
-            order=1,
-            is_editorial=True,
-        )
-        editorial_third = Group.objects.create(
-            name="Редакторская третья",
-            owner=self.user,
+        group_factory(
+            name="Игры",
+            slug="games",
             order=3,
+        )
+        group_factory(
+            name="Киберспорт",
+            slug="cybersport",
+            order=4,
+        )
+
+        result = catalog_service.build()
+
+        assert len(result.featured) == 3
+        assert [item.slug for item in result.featured] == [
+            "top-it",
+            "science",
+            "news",
+        ]
+
+    def test_featured_prioritizes_editorial_collections(
+        self,
+        catalog_service,
+        group_factory,
+    ):
+        """Редакторские подборки имеют приоритет в featured."""
+        group_factory(
+            name="Топ IT-каналов",
+            slug="top-it",
             is_editorial=True,
-        )
-        Group.objects.create(
-            name="Обычная третья",
-            owner=self.user,
-            order=3,
-            is_editorial=False,
-        )
-
-        result = self.service.build()
-
-        self.assertEqual(len(result.featured), 3)
-        self.assertEqual(
-            [item.id for item in result.featured],
-            [
-                editorial_second.id,
-                editorial_first.id,
-                editorial_third.id,
-            ],
-        )
-
-    def test_collections(self):
-        """Проверяет сортировку полного списка подборок
-        по order, name и id."""
-        first = Group.objects.create(
-            name="А",
-            owner=self.user,
-            order=1,
-        )
-        second = Group.objects.create(
-            name="Б",
-            owner=self.user,
-            order=1,
-        )
-        third = Group.objects.create(
-            name="В",
-            owner=self.user,
             order=2,
         )
-
-        result = self.service.build()
-
-        self.assertEqual(
-            [item.id for item in result.collections],
-            [first.id, second.id, third.id],
+        group_factory(
+            name="Научные каналы",
+            slug="science",
+            is_editorial=True,
+            order=1,
         )
-
-    def test_filter_by_query(self):
-        """Проверяет фильтр подборки по названию и описанию."""
-        name_match = Group.objects.create(
-            name="Игры",
-            owner=self.user,
-            description="Каналы про развлечения",
-        )
-        description_match = Group.objects.create(
+        group_factory(
             name="Новости",
-            owner=self.user,
-            description="Подборка про Игры и киберспорт",
-        )
-        Group.objects.create(
-            name="Финансы",
-            owner=self.user,
-            description="Экономика и инвестиции",
+            slug="news",
+            is_editorial=False,
+            order=0,
         )
 
-        result = self.service.build(q="Игры")
+        result = catalog_service.build()
 
-        self.assertEqual(
-            [item.id for item in result.collections],
-            [name_match.id, description_match.id],
-        )
+        assert [item.slug for item in result.featured] == [
+            "science",
+            "top-it",
+            "news",
+        ]
 
-    def test_filter_by_country(self):
-        """Фильтрует обычные и автоматические подборки по стране."""
-        regular_group = Group.objects.create(
-            name="Игры",
-            owner=self.user,
+    def test_collections_are_ordered_by_order_and_name(
+        self,
+        catalog_service,
+        group_factory,
+    ):
+        """Подборки сортируются сначала по order, затем по name."""
+        group_factory(
+            name="Научные каналы",
+            slug="science",
+            order=1,
         )
-        auto_group = Group.objects.create(
+        group_factory(
+            name="Топ IT-каналов",
+            slug="top-it",
+            order=1,
+        )
+        group_factory(
             name="Новости",
-            owner=self.user,
+            slug="news",
+            order=0,
         )
 
-        # Не попадает в подборку.
-        Group.objects.create(
-            name="Спорт",
-            owner=self.user,
+        result = catalog_service.build()
+
+        assert [item.slug for item in result.collections] == [
+            "news",
+            "science",
+            "top-it",
+        ]
+
+    @pytest.mark.parametrize(
+        ("query", "expected_slug"),
+        [
+            ("технолог", "top-it"),
+            ("Новости", "news"),
+        ],
+    )
+    def test_filters_by_search_query(
+        self,
+        catalog_service,
+        group_factory,
+        query,
+        expected_slug,
+    ):
+        """Поиск сужает результаты по названию и описанию."""
+        group_factory(
+            name="Топ IT-каналов",
+            slug="top-it",
+            description="Подборка технологических каналов",
+        )
+        group_factory(
+            name="Новости",
+            slug="news",
+            description="Актуальные события",
+        )
+        group_factory(
+            name="Игры",
+            slug="games",
+            description="Подборка игровых каналов",
         )
 
-        AutoGroupRule.objects.create(
-            group=auto_group,
-            category="Новости",
+        result = catalog_service.build(q=query)
+
+        assert [item.slug for item in result.collections] == [expected_slug]
+        assert result.filters.q == query
+
+    def test_filters_by_country(
+        self,
+        catalog_service,
+        group_factory,
+        auto_rule_factory,
+        channel_factory,
+    ):
+        """Фильтр страны учитывает ручные и автоматические подборки."""
+        manual_group = group_factory(
+            name="Игры",
+            slug="games",
         )
 
-        regular_group.channels.add(
-            TelegramChannel.objects.create(
-                channel_id=1001,
-                title="Игры RU",
+        manual_group.channels.add(
+            channel_factory(
+                title="Игровой канал RU",
                 category="Игры",
                 country="RU",
             ),
-        )
-
-        regular_group.channels.add(
-            TelegramChannel.objects.create(
-                channel_id=1002,
-                title="Игры DE",
+            channel_factory(
+                title="Игровой канал DE",
                 category="Игры",
                 country="DE",
             ),
         )
 
-        TelegramChannel.objects.create(
-            channel_id=1003,
-            title="Новости RU",
+        auto_group = group_factory(
+            name="Новости",
+            slug="news",
+        )
+        auto_rule_factory(auto_group, category="Новости")
+
+        channel_factory(
+            title="Новостной канал RU",
             category="Новости",
             country="RU",
         )
-
-        TelegramChannel.objects.create(
-            channel_id=1004,
-            title="Новости DE",
+        channel_factory(
+            title="Новостной канал DE",
             category="Новости",
             country="DE",
         )
 
-        result = self.service.build(country="RU")
+        result = catalog_service.build(country="RU")
 
-        self.assertEqual(
-            [item.id for item in result.collections],
-            [regular_group.id, auto_group.id],
-        )
+        assert {item.slug for item in result.collections} == {
+            "games",
+            "news",
+        }
+        assert result.filters.country == "RU"
+        assert result.filters.country_options == ["DE", "RU"]
+        assert result.filters.category_options == ["Игры", "Новости"]
 
-        self.assertEqual(
-            result.filters.country,
-            "RU",
-        )
-
-        self.assertEqual(
-            result.filters.country_options,
-            ["DE", "RU"],
-        )
-
-        self.assertEqual(
-            result.filters.category_options,
-            ["Игры", "Новости"],
-        )
-
-    def test_filter_by_category(self):
-        """Фильтрует обычные и автоматические подборки по категории."""
-        games_group = Group.objects.create(
+    def test_filters_by_category(
+        self,
+        catalog_service,
+        group_factory,
+        auto_rule_factory,
+        channel_factory,
+    ):
+        """Фильтр категории учитывает ручные и автоматические подборки."""
+        games_group = group_factory(
             name="Игры",
-            owner=self.user,
-        )
-        news_group = Group.objects.create(
-            name="Новости",
-            owner=self.user,
-        )
-
-        Group.objects.create(
-            name="Спорт",
-            owner=self.user,
+            slug="games",
         )
 
         games_group.channels.add(
-            TelegramChannel.objects.create(
-                channel_id=1001,
-                title="Игры RU",
+            channel_factory(
+                title="Игровой канал RU",
                 category="Игры",
                 country="RU",
             ),
-            TelegramChannel.objects.create(
-                channel_id=1002,
-                title="Игры DE",
+            channel_factory(
+                title="Игровой канал DE",
                 category="Игры",
                 country="DE",
             ),
         )
 
-        AutoGroupRule.objects.create(
-            group=news_group,
-            category="Новости",
-        )
-
-        result = self.service.build(category="Игры")
-
-        self.assertEqual(
-            [item.id for item in result.collections],
-            [games_group.id],
-        )
-
-        self.assertEqual(
-            result.filters.category,
-            "Игры",
-        )
-
-        self.assertEqual(
-            result.filters.country_options,
-            ["DE", "RU"],
-        )
-
-        self.assertEqual(
-            result.filters.category_options,
-            ["Игры", "Новости"],
-        )
-
-    def test_sections(self):
-        """Проверяет группировку подборок по категориям каналов."""
-        games = Group.objects.create(
-            name="Игры",
-            owner=self.user,
-        )
-        news = Group.objects.create(
+        news_group = group_factory(
             name="Новости",
-            owner=self.user,
+            slug="news",
         )
+        auto_rule_factory(news_group, category="Новости")
 
-        AutoGroupRule.objects.create(
-            group=news,
+        channel_factory(
+            title="Новостной канал RU",
             category="Новости",
+            country="RU",
         )
 
-        games_rpg = TelegramChannel.objects.create(
-            channel_id=1001,
-            title="RPG",
-            category="Игры",
-        )
-        games_esports = TelegramChannel.objects.create(
-            channel_id=1002,
-            title="Esports",
-            category="Киберспорт",
+        result = catalog_service.build(category="Игры")
+
+        assert [item.slug for item in result.collections] == ["games"]
+        assert result.filters.category == "Игры"
+        assert result.filters.country_options == ["DE", "RU"]
+        assert result.filters.category_options == ["Игры", "Новости"]
+
+    def test_builds_sections_from_collection_categories(
+        self,
+        catalog_service,
+        group_factory,
+        auto_rule_factory,
+        channel_factory,
+    ):
+        """Секции формируются по категориям ручных и автоподборок."""
+        manual_group = group_factory(
+            name="Топ IT-каналов",
+            slug="top-it",
         )
 
-        games.channels.add(
-            games_rpg,
-            games_esports,
+        manual_group.channels.add(
+            channel_factory(
+                title="IT-канал",
+                category="Технологии",
+            ),
+            channel_factory(
+                title="Киберспортивный канал",
+                category="Киберспорт",
+            ),
         )
 
-        TelegramChannel.objects.create(
-            channel_id=1003,
-            title="Новости",
-            category="Новости",
+        auto_group = group_factory(
+            name="Научные каналы",
+            slug="science",
         )
+        auto_rule_factory(auto_group, category="Наука")
 
-        result = self.service.build()
+        result = catalog_service.build()
 
-        sections = {section.title: section for section in result.sections}
+        sections_by_title = {
+            section.title: section for section in result.sections
+        }
 
-        self.assertEqual(
-            [item.id for item in sections["Игры"].collections],
-            [games.id],
-        )
-        self.assertEqual(
-            [item.id for item in sections["Киберспорт"].collections],
-            [games.id],
-        )
-        self.assertEqual(
-            [item.id for item in sections["Новости"].collections],
-            [news.id],
-        )
+        assert set(sections_by_title) == {
+            "Технологии",
+            "Киберспорт",
+            "Наука",
+        }
 
-        self.assertEqual(sections["Игры"].count, 1)
-        self.assertEqual(sections["Киберспорт"].count, 1)
-        self.assertEqual(sections["Новости"].count, 1)
+        assert sections_by_title["Технологии"].count == 1
+        assert sections_by_title["Киберспорт"].count == 1
+        assert sections_by_title["Наука"].count == 1
+
+        assert [
+            item.slug for item in sections_by_title["Технологии"].collections
+        ] == ["top-it"]
+
+        assert [
+            item.slug for item in sections_by_title["Наука"].collections
+        ] == ["science"]

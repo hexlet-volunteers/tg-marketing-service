@@ -104,62 +104,69 @@ class DeleteGroupView(UserAuthenticationCheckMixin, View):
 
 
 class GroupDetailView(View):
-    """
-    Методы:
-    group.get_data выводит данные:
-            'id': self.id,
-            'name': self.name,
-            'slug': self.slug,
-            'description': self.description,
-            'owner': self.owner.username,
-            'is_editorial': self.is_editorial,
-            'order': self.order,
-            'image_url': self.image_url,
-            'created_at': self.created_at.isoformat()
-
-    channels.get_data выводит данные:
-            'id': self.channel_id,
-            'username': self.username,
-            'title': self.title,
-            'description': self.description,
-            'participants_count': self.participants_count,
-            'parsed_at': self.parsed_at,
-            'pinned_messages': self.pinned_messages,
-            'creation_date': self.creation_date,
-            'last_messages': self.last_messages,
-            'average_views': self.average_views,
-            'category': self.category,
-            'country': self.country,
-            'language': self.language
-    """
+    """Детальная страница подборки"""
 
     def get(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
         slug = kwargs["slug"]
-        group = get_object_or_404(Group, slug=slug)
-
-        channels = group.channels.all()
+        group = get_object_or_404(
+            Group.objects.select_related(
+                "owner",
+                "curator",
+                "auto_rule",
+            ),
+            slug=slug,
+        )
 
         auto_category = None
-        if hasattr(group, "auto_rule"):
+        if group.is_auto:
             auto_category = group.auto_rule.category
-            channels = TelegramChannel.objects.filter(category=auto_category)
+            channels_qs = TelegramChannel.objects.filter(
+                category=auto_category,
+            )
+        else:
+            channels_qs = group.channels.all()
+
+        channels = list(channels_qs)
 
         is_owner = request.user.is_authenticated and (
             group.owner == request.user
         )
         add_form: AddChannelForm | None = None
-        if is_owner and not hasattr(group, "auto_rule"):
+        if is_owner and not group.is_auto:
             free_qs = TelegramChannel.objects.exclude(groups=group)
             add_form = AddChannelForm(channel_qs=free_qs)
 
+        header = {
+            "name": group.name,
+            "description": group.description,
+            "gradient_key": f"collection-{group.pk}",
+            "is_editorial": group.is_editorial,
+            "curator": (group.curator.username if group.curator else None),
+            "channel_count": len(channels),
+            "category": auto_category,
+        }
+
+        channel_cards = [
+            {
+                "title": channel.title,
+                "username": channel.username,
+                "avatar": "",
+                "subscribers": channel.participants_count,
+                "average_views": channel.average_views,
+                "category": channel.category,
+                "country": channel.country,
+            }
+            for channel in channels
+        ]
         return inertia_render(
             request,
             "GroupDetail",
             props={
+                "header": header,
                 "group": group.get_data(),
-                "channels": [channel.get_data() for channel in channels],
+                "channels": channel_cards,
                 "auto_category": auto_category,
                 "add_form": add_form,
                 "is_owner": is_owner,
