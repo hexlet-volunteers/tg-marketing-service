@@ -24,6 +24,7 @@ class PostsParser:
         self,
         channel_entity: "Channel",
         channel_model: TelegramChannel,
+        pinned_ids: set[int],
         limit: int = 10,
     ) -> ParsedPostsData:
         """Парсинг постов и реакций."""
@@ -39,6 +40,9 @@ class PostsParser:
             if message.service:
                 continue
 
+            media_type = "none"
+            is_pinned = message.id in pinned_ids
+
             # Обработка поста
             permalink = (
                 f"https://t.me/{channel_entity.username}/{message.id}"
@@ -49,6 +53,39 @@ class PostsParser:
             current_forwards = message.forwards or 0
             current_comments = message.replies.replies if message.replies else 0
             current_views = message.views or 0
+
+            if message.media:
+                # Проверка на Photo
+                if hasattr(message.media, "photo"):
+                    media_type = "photo"
+
+                # Проверка на Sticker
+                elif hasattr(message.media, "sticker"):
+                    media_type = "sticker"
+
+                # Проверка на Video
+                elif hasattr(message.media, "video") or (
+                    hasattr(message.media, "document")
+                    and getattr(
+                        message.media.document, "mime_type", ""
+                    ).startswith("video/")
+                ):
+                    media_type = "video"
+
+                # Проверка на Document (включая аудио и прочие файлы)
+                elif hasattr(message.media, "document"):
+                    mime = getattr(message.media.document, "mime_type", "")
+                    if mime.startswith("image/"):
+                        media_type = "photo"
+                    elif mime.startswith("video/"):
+                        media_type = "video"
+                    else:
+                        media_type = "document"
+
+                else:
+                    media_type = "document"
+            else:
+                media_type = "none"
 
             fwd_from = None
             if message.fwd_from:
@@ -79,12 +116,22 @@ class PostsParser:
                     "comments_count": current_comments,
                     "fwd_from": fwd_from,
                     "mentions": mentions,
+                    "is_pinned": is_pinned,
+                    "media_type": media_type,
                 },
             )
 
             # 2. Обновление полей для существующих постов
             if not created:
                 update_fields = []
+
+                if is_pinned != post.is_pinned:
+                    post.is_pinned = is_pinned
+                    update_fields.append("is_pinned")
+
+                if media_type != post.media_type:
+                    post.media_type = media_type
+                    update_fields.append("media_type")
 
                 if current_views > post.views:
                     post.views = current_views

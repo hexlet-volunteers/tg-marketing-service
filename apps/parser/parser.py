@@ -56,6 +56,14 @@ async def tg_parser(
             channel_data = await channel_parser.parse_channel(url)
             data.update(channel_data)
 
+            # Парсинг закрепов
+            pinned_messages_list = channel_data.get("pinned_messages", [])
+            current_pinned_ids = {
+                msg["id"]
+                for msg in pinned_messages_list
+                if isinstance(msg, dict) and "id" in msg
+            }
+
             # Поиск модели канала в Django
             django_channel = await TelegramChannel.objects.aget(
                 channel_id=channel_data["channel_id"]
@@ -66,6 +74,7 @@ async def tg_parser(
             posts_data = await posts_parser.parse_posts(
                 channel_entity=await client.get_entity(url),
                 channel_model=django_channel,
+                pinned_ids=current_pinned_ids,
                 limit=limit,
             )
             data.update(posts_data)
