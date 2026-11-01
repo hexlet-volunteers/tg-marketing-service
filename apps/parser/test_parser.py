@@ -6,10 +6,8 @@ from unittest.mock import patch
 
 import pytest
 from django.contrib.auth import get_user_model
-from django.contrib.messages.middleware import MessageMiddleware
-from django.contrib.sessions.middleware import SessionMiddleware
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.exceptions import ImproperlyConfigured
-from django.http import HttpResponse
 from django.test import RequestFactory
 from django.test.utils import override_settings
 
@@ -188,8 +186,8 @@ def test_parser_view_notifies_about_existing_channel() -> None:
     request = RequestFactory().post("/parser/")
     view.setup(request)
 
-    SessionMiddleware(lambda request: HttpResponse()).process_request(request)
-    MessageMiddleware(lambda request: HttpResponse()).process_request(request)
+    request.session = {}  # type: ignore
+    setattr(request, "_messages", FallbackStorage(request))
 
     form = view.get_form_class()(
         data={
@@ -224,8 +222,8 @@ def test_parser_view_creates_pending_moderation_request() -> None:
     view = ParserView()
     request = RequestFactory().post("/parser/")
     request.user = user
-    SessionMiddleware(lambda request: HttpResponse()).process_request(request)
-    MessageMiddleware(lambda request: HttpResponse()).process_request(request)
+    request.session = {}  # type: ignore
+    setattr(request, "_messages", FallbackStorage(request))
     view.setup(request)
 
     form = view.get_form_class()(
@@ -264,6 +262,5 @@ def test_parser_view_creates_pending_moderation_request() -> None:
     assert response.status_code == 302
     assert moderation_request.status == "pending"
     assert moderation_request.submitted_by == user
-    assert moderation_request.channel_by is not None
-    assert moderation_request.channel_by.channel_id == 987654321
+    assert moderation_request.channel_by.channel_id == 987654321  # type: ignore
     assert moderation_request.channel_identifier == "@new_channel"

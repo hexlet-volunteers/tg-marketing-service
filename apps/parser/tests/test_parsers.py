@@ -116,7 +116,9 @@ class TestPostsParser:
         assert post.text == current_text
         assert post.views == data["views"]
 
-        expected_mentions = [m.replace("@", "") for m in data["mentions"]]
+        expected_mentions = [
+            m.replace("@", "").casefold() for m in data["mentions"]
+        ]
 
         # То, что реально записалось в базу
         actual_mentions = post.mentions

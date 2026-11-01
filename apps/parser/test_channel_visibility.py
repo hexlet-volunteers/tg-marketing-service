@@ -55,10 +55,7 @@ class ChannelVisibilityTest(TestCase):
             username=username,
         )
 
-    def create_moderation_request(
-        self, channel: TelegramChannel, status: str
-    ) -> ModerationRequest:
-        assert channel.username is not None
+    def create_moderation_request(self, channel, status) -> ModerationRequest:
         return ModerationRequest.objects.create(
             submitted_by=self.user,
             channel_identifier=channel.username,
@@ -99,7 +96,7 @@ class ChannelVisibilityTest(TestCase):
             {"unmoderated_channel", "approved_channel"},
         )
 
-    def test_new_channel_without_moderation_request_is_hidden(self) -> None:
+    def test_new_channel_without_moderation_request_is_hidden(self):
         channel = self.create_channel(
             1005,
             "Failed parsing channel",
