@@ -1,17 +1,31 @@
-interface Article {
-  id: string;
-  category: string;
+export interface ArticleCard {
+  id: number;
+  slug: string;
   title: string;
-  date: string;
-  time: string;
+  excerpt: string;
+  cover_image: string;
+  category: string;
+  tags: string[];
+  read_time: number;
+  published_at: string | null;
+  views_count: number;
+  author_name: string | null;
 }
 
-interface ArticleWithColor extends Article {
-  color: string;
+export interface CallToAction {
+  label: string;
+  url: string;
 }
 
-interface BlogPageProps {
-  articles: ArticleWithColor[];
+export interface ArticleDetail extends ArticleCard {
+  body: string;
+  cta: CallToAction;
+  related: ArticleCard[];
 }
 
-export type { Article, ArticleWithColor, BlogPageProps };
+export interface BlogPageProps {
+  featured: ArticleCard | null;
+  articles: ArticleCard[];
+}
+
+export type BlogPostProps = ArticleDetail;

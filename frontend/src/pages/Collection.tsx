@@ -9,17 +9,21 @@ import {
     Title
 } from "@mantine/core";
 import { IconChevronLeft } from "@tabler/icons-react";
-import { useNavigate } from "react-router-dom";
+import { router } from "@inertiajs/react";
 import type { CollectionPageProps } from "@/types/channel";
-import { mockCollection } from "@/utils/addColors";
 
-export default function CollectionPage({ channels = mockCollection }: CollectionPageProps) {
-    const navigate = useNavigate();
+export default function Collection({
+    title,
+    description,
+    channel_count,
+    channels,
+}: CollectionPageProps) {
+    const channelWord = channel_count === 1 ? "канал" : "канала";
 
     return (
         <Container>
             <Stack gap="xl">
-            <Group gap={4} style={{ cursor: 'pointer' }} onClick={() => navigate('/collections')}>
+            <Group gap={4} style={{ cursor: 'pointer' }} onClick={() => router.visit('/collections/')}>
                 <IconChevronLeft
                     size={14}
                     color="gray"
@@ -39,19 +43,18 @@ export default function CollectionPage({ channels = mockCollection }: Collection
             >
                 <Stack gap="sm">
                     <Title order={1} c="white">
-                        Топ IT-каналов
+                        {title}
                     </Title>
 
                     <Text c="rgba(255,255,255,.9)">
-                        Технологии, разработка и цифровые
-                        продукты
+                        {description}
                     </Text>
 
                     <Text
                         c="rgba(255,255,255,.8)"
                         fw={600}
                     >
-                        3 канала
+                        {channel_count} {channelWord}
                     </Text>
                 </Stack>
             </Paper>

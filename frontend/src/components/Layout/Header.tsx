@@ -1,5 +1,5 @@
 import { Avatar, Box, Burger, Button, Flex, Text, Title } from "@mantine/core";
-import { useNavigate } from "react-router-dom";
+import { router } from "@inertiajs/react";
 import { SearchBar } from "../ui/SearchBar";
 
 interface HeaderProps {
@@ -9,7 +9,6 @@ interface HeaderProps {
 }
 
 const Header = ({ opened, onToggle, showSearchBar = true }: HeaderProps) => {
- const navigate = useNavigate();
 
  return (
   <Flex px="md" py="sm" gap="sm" justify="space-between">
@@ -33,7 +32,7 @@ const Header = ({ opened, onToggle, showSearchBar = true }: HeaderProps) => {
      </Box>
     )}
     <Flex align="center" gap="sm" ml="auto" style={{ flexShrink: 0 }}>
-     <Button variant="subtle" onClick={() => navigate("/auth")}>
+     <Button variant="subtle" onClick={() => router.visit("/auth/login/")}>
       Войти
      </Button>
      <Text>Мария Л.</Text>

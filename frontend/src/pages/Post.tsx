@@ -19,8 +19,6 @@ import {
 } from "@mantine/core";
 import { InsightCard } from "@/components/ui/InsightCard";
 import { IconArrowLeft, IconSparkles, IconBrain } from "@tabler/icons-react";
-import { useNavigate } from "react-router-dom";
-import { mockReactions, MOCK_ANALYSIS_DATA } from "@/shared/mocks/posts";
 import type { PostPageProps, PostAnalysis } from "@/types/post";
 
 // TODO: Pages должны быть максимально простыми и которкими,
@@ -38,11 +36,10 @@ import type { PostPageProps, PostAnalysis } from "@/types/post";
  *   3. Завершена (вывод карточек инсайтов "Почему зашел", "Что улучшить" и "Похожие идеи").
  */
 
-const PostPage: React.FC<PostPageProps> = ({
- reactions = mockReactions,
- analysis: propAnalysis = MOCK_ANALYSIS_DATA,
+const Post: React.FC<PostPageProps> = ({
+ reactions = [],
+ analysis: propAnalysis,
 }) => {
- const navigate = useNavigate();
 
  const [analysis, setAnalysis] = useState<PostAnalysis | null>(null);
 
@@ -54,16 +51,16 @@ const PostPage: React.FC<PostPageProps> = ({
  //  TODO: когда моковые данные заменятся на данные с бекенда, нужно будет добавить обработку ошибок
 
  const handleStartAnalysis = () => {
-  const baseData = propAnalysis || MOCK_ANALYSIS_DATA;
+  if (!propAnalysis) return;
 
   setAnalysis({
-   ...baseData,
+   ...propAnalysis,
    status: "processing",
   });
 
   setTimeout(() => {
    setAnalysis({
-    ...baseData,
+    ...propAnalysis,
     status: "completed",
    });
   }, 3000);
@@ -76,7 +73,7 @@ const PostPage: React.FC<PostPageProps> = ({
     color="tgblue"
     leftSection={<IconArrowLeft size={16} />}
     mb="md"
-    onClick={() => navigate(-1)}
+    onClick={() => window.history.back()}
    >
     Назад к каналу
    </Button>
@@ -222,4 +219,4 @@ const PostPage: React.FC<PostPageProps> = ({
  );
 };
 
-export default PostPage;
+export default Post;
