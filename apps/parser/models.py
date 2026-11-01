@@ -450,6 +450,11 @@ class PostAnalysis(models.Model):
         verbose_name="Дата генерации",
     )
 
+    generated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Дата последней генерации",
+    )
+
     model_version = models.CharField(
         max_length=100,
         blank=True,
