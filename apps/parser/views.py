@@ -2,6 +2,7 @@ import logging
 from typing import Any, cast
 
 from asgiref.sync import async_to_sync
+from django.conf import settings
 from django.contrib import messages
 from django.db.models import Q, QuerySet
 from django.http import HttpRequest, HttpResponse, JsonResponse
@@ -10,6 +11,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import DetailView, FormView, ListView, View
+from django_ratelimit.core import get_usage
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
@@ -133,6 +135,30 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
             f"For channel: {channel.title} parsed stat; "
             f"- participants: {current_count} growth: {daily_growth}"
         )
+
+    def post(
+        self, 
+        request: HttpRequest, 
+        *args: Any, 
+        **kwargs: Any,
+    ) -> HttpResponse:
+        usage = get_usage(
+            request,
+        group="parser_channel_submission",
+        key="user",
+        rate=settings.PARSER_RATE_LIMIT,
+        method="POST",
+        increment=True,
+            )
+        if usage and usage["should_limit"]:
+            form = self.get_form()
+            form.add_error(
+                None,
+                "Вы отправили слишком много запросов. Попробуйте позже.",
+            )
+            return self.form_invalid(form)
+
+        return super().post(request, *args, **kwargs)
 
     def form_valid(self, form: ChannelParseForm) -> HttpResponse:
         """Обработка формы"""

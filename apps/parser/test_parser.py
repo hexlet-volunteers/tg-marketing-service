@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.messages.storage.fallback import FallbackStorage
+from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.test import RequestFactory
 from django.test.utils import override_settings
@@ -330,22 +331,6 @@ def test_channel_parse_form_rejects_invalid_username(
     assert "channel_identifier" in form.errors
 
 
-def test_channel_parse_form_rejects_invalid_username() -> None:
-    from apps.parser.forms import ChannelParseForm
-
-    form = ChannelParseForm(
-        data={
-            "channel_identifier": "https://evil.com/foo",
-            "category": "Технологии",
-            "country": "RU",
-            "language": "ru",
-            "limit": 10,
-        }
-    )
-
-    assert not form.is_valid()
-    assert "channel_identifier" in form.errors
-
 @pytest.mark.django_db
 def test_parser_view_does_not_parse_invalid_channel() -> None:
     user_model = get_user_model()
@@ -379,3 +364,69 @@ def test_parser_view_does_not_parse_invalid_channel() -> None:
     assert not form.is_valid()
     assert response.status_code == 200
     parser_mock.assert_not_called()
+
+
+@pytest.mark.django_db
+@override_settings(
+    PARSER_RATE_LIMIT="5/hour",
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        }
+    },
+)
+def test_parser_view_limits_sixth_submission() -> None:
+    user_model = get_user_model()
+    user = user_model.objects.create_user(
+        username="rate-limit-user",
+        email="rate-limit@example.com",
+        password="password",
+        role="user",
+    )
+
+    cache.clear()
+
+    form_data = {
+        "channel_identifier": "@new_channel",
+        "category": "Технологии",
+        "country": "RU",
+        "language": "ru",
+        "limit": 10,
+    }
+
+    for attempt in range(1, 7):
+        request = RequestFactory().post("/parser/", data=form_data)
+        request.user = user
+
+        view = ParserView()
+        view.setup(request)
+
+        with (
+            patch.object(
+                view, 
+                "form_valid", 
+                return_value=None,
+            ) as valid_mock,
+
+            patch.object(
+                view, 
+                "form_invalid", 
+                return_value=None,
+            ) as invalid_mock,
+        ):
+            view.post(request)
+
+        if attempt <= 5:
+            valid_mock.assert_called_once()
+            invalid_mock.assert_not_called()
+        else:
+            valid_mock.assert_not_called()
+            invalid_mock.assert_called_once()
+
+            form = invalid_mock.call_args.args[0]
+            assert (
+                "Вы отправили слишком много запросов. Попробуйте позже."
+                in form.non_field_errors()
+            )
+
+    cache.clear()
