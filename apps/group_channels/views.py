@@ -6,6 +6,10 @@ from django.shortcuts import get_object_or_404
 from django.views.generic.base import View
 from inertia import render as inertia_render
 
+from apps.group_channels.dto.collection_detail_dto import (
+    CollectionChannelDTO,
+    CollectionDetailDTO,
+)
 from apps.group_channels.forms import (
     AddChannelForm,
     CreateGroupForm,
@@ -17,6 +21,7 @@ from apps.group_channels.services.collections_catalog_service import (
 )
 from apps.parser.models import TelegramChannel
 from config.mixins import GroupOwnerRequiredMixin, UserAuthenticationCheckMixin
+from config.renderers import render_inertia_from_dto
 
 # константа для дефолтной аватарки
 DEFAULT_AVATAR_GROUP = f"{settings.STATIC_URL}default_avatar_group.jpg"
@@ -31,7 +36,9 @@ class CreateGroupView(UserAuthenticationCheckMixin, View):
             group = form.save(commit=False)
             group.owner = request.user
             if not group.image_url or not group.image_url.strip():
-                group.image_url = DEFAULT_AVATAR_GROUP
+                group.image_url = request.build_absolute_uri(
+                    DEFAULT_AVATAR_GROUP
+                )
             group.save()
             return inertia_render(
                 request,
@@ -50,7 +57,7 @@ class CreateGroupView(UserAuthenticationCheckMixin, View):
                     "description": form.data.get("description", ""),
                     "image_url": form.data.get("image_url", ""),
                 },
-                "errors": form.errors,
+                "errors": form.errors.get_json_data(),
             },
         )
 
@@ -79,7 +86,7 @@ class UpdateGroupView(
                     "description": form.data.get("description"),
                     "image_url": request.POST.get("image_url", ""),
                 },
-                "errors": form.errors,
+                "errors": form.errors.get_json_data(),
             },
         )
 
@@ -99,62 +106,69 @@ class DeleteGroupView(
 
 
 class GroupDetailView(View):
-    """
-    Методы:
-    group.get_data выводит данные:
-            'id': self.id,
-            'name': self.name,
-            'slug': self.slug,
-            'description': self.description,
-            'owner': self.owner.username,
-            'is_editorial': self.is_editorial,
-            'order': self.order,
-            'image_url': self.image_url,
-            'created_at': self.created_at.isoformat()
-
-    channels.get_data выводит данные:
-            'id': self.channel_id,
-            'username': self.username,
-            'title': self.title,
-            'description': self.description,
-            'participants_count': self.participants_count,
-            'parsed_at': self.parsed_at,
-            'pinned_messages': self.pinned_messages,
-            'creation_date': self.creation_date,
-            'last_messages': self.last_messages,
-            'average_views': self.average_views,
-            'category': self.category,
-            'country': self.country,
-            'language': self.language
-    """
+    """Детальная страница подборки"""
 
     def get(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
         slug = kwargs["slug"]
-        group = get_object_or_404(Group, slug=slug)
-
-        channels = group.channels.all()
+        group = get_object_or_404(
+            Group.objects.select_related(
+                "owner",
+                "curator",
+                "auto_rule",
+            ),
+            slug=slug,
+        )
 
         auto_category = None
-        if hasattr(group, "auto_rule"):
+        if group.is_auto:
             auto_category = group.auto_rule.category
-            channels = TelegramChannel.objects.filter(category=auto_category)
+            channels_qs = TelegramChannel.objects.filter(
+                category=auto_category,
+            )
+        else:
+            channels_qs = group.channels.all()
+
+        channels = list(channels_qs)
 
         is_owner = request.user.is_authenticated and (
             group.owner == request.user
         )
         add_form: AddChannelForm | None = None
-        if is_owner and not hasattr(group, "auto_rule"):
+        if is_owner and not group.is_auto:
             free_qs = TelegramChannel.objects.exclude(groups=group)
             add_form = AddChannelForm(channel_qs=free_qs)
 
+        header = {
+            "name": group.name,
+            "description": group.description,
+            "gradient_key": f"collection-{group.pk}",
+            "is_editorial": group.is_editorial,
+            "curator": (group.curator.username if group.curator else None),
+            "channel_count": len(channels),
+            "category": auto_category,
+        }
+
+        channel_cards = [
+            {
+                "title": channel.title,
+                "username": channel.username,
+                "avatar": "",
+                "subscribers": channel.participants_count,
+                "average_views": channel.average_views,
+                "category": channel.category,
+                "country": channel.country,
+            }
+            for channel in channels
+        ]
         return inertia_render(
             request,
             "GroupDetail",
             props={
+                "header": header,
                 "group": group.get_data(),
-                "channels": [channel.get_data() for channel in channels],
+                "channels": channel_cards,
                 "auto_category": auto_category,
                 "add_form": add_form,
                 "is_owner": is_owner,
@@ -183,7 +197,12 @@ class AddChannelsView(
         return inertia_render(
             request,
             "GroupDetail",
-            props={"form": {"errors": form.errors, "values": form.data}},
+            props={
+                "form": {
+                    "errors": form.errors.get_json_data(),
+                    "values": form.data,
+                }
+            },
         )
 
 
@@ -206,8 +225,42 @@ class CollectionsCatalogView(View):
             category=category,
         )
 
-        return inertia_render(
+        return render_inertia_from_dto(request, "Collections", props=dto)
+
+
+class CollectionDetailView(View):
+    """Детальная страница подборки (Inertia: Collection)."""
+
+    def get(
+        self, request: HttpRequest, pk: int, *args: Any, **kwargs: Any
+    ) -> HttpResponse:
+        group = get_object_or_404(Group, pk=pk)
+        channels = []
+        for channel in group.channels.all():
+            last_stat = channel.last_stat()
+            growth30d = 0.0
+            if last_stat and last_stat.daily_growth:
+                participants = max(channel.participants_count or 1, 1)
+                growth30d = float(last_stat.daily_growth) / participants * 100
+            channels.append(
+                CollectionChannelDTO(
+                    name=channel.title,
+                    username=channel.username,
+                    subscribers=channel.participants_count or 0,
+                    er=float(getattr(channel, "citation_index", 0) or 0),
+                    growth30d=float(growth30d),
+                    color="#4C6EF5",
+                )
+            )
+        dto = CollectionDetailDTO(
+            title=group.name,
+            description=group.description or "",
+            channel_count=len(channels),
+            channels=channels,
+        )
+
+        return render_inertia_from_dto(
             request,
-            "Collections",
-            props=dto.model_dump(mode="json"),
+            "Collection",
+            props=dto,
         )

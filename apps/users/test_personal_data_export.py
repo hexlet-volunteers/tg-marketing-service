@@ -1,14 +1,22 @@
 import json
+from datetime import timedelta
 from decimal import Decimal
 from typing import Any, Literal, cast
 
 from django.http import HttpResponse
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.group_channels.models import Group
 from apps.parser.models import AIInsight, ChannelModerator, TelegramChannel
-from apps.users.models import DataSubjectRequestLog, PartnerProfile, User
+from apps.users.models import (
+    Consent,
+    DataSubjectRequestLog,
+    PartnerProfile,
+    User,
+)
+from apps.users.personal_data_export import build_personal_data_export
 
 
 class PersonalDataExportTest(TestCase):
@@ -90,10 +98,12 @@ class PersonalDataExportTest(TestCase):
         )
         self.assertIn("attachment;", response["Content-Disposition"])
         self.assertEqual(response["Cache-Control"], "no-store")
-        self.assertEqual(payload["format_version"], "1.0")
+        self.assertEqual(payload["format_version"], "1.1")
 
         data = payload["personal_data"]
         self.assertIn("consents", data)
+        self.assertEqual(data["consents"], [])
+        self.assertIn("subject_requests", data)
         self.assertEqual(
             set(data["profile"]),
             {
@@ -127,6 +137,76 @@ class PersonalDataExportTest(TestCase):
         self.assertTrue(processing["retention_terms"])
         self.assertIn("personal_data_fields", processing)
 
+    def test_export_journals_use_dates_instead_of_ids(self) -> None:
+        now = timezone.now()
+        consents = []
+        requests = []
+        for user, received in (
+            (self.user, now),
+            (self.user, now - timedelta(days=1)),
+            (self.other_user, now),
+        ):
+            consents.append(
+                Consent.objects.create(
+                    user=user,
+                    document_type=Consent.DocumentType.PERSONAL_DATA,
+                    version="2026-07-01",
+                    timestamp=received,
+                    source=Consent.Source.EMAIL_REGISTRATION,
+                )
+            )
+            requests.append(
+                DataSubjectRequestLog.objects.create(
+                    subject=user,
+                    subject_id_snapshot=user.pk,
+                    request_type=DataSubjectRequestLog.RequestType.ACCESS,
+                    http_method="POST",
+                    requested_at=received,
+                    due_at=received + timedelta(days=10),
+                    original_due_at=received + timedelta(days=10),
+                )
+            )
+
+        data = build_personal_data_export(self.user, now)["personal_data"]
+        self.assertEqual(
+            [consent["id"] for consent in data["consents"]],
+            [consents[0].pk, consents[1].pk],
+        )
+        self.assertEqual(
+            [log["id"] for log in data["subject_requests"]],
+            [requests[0].pk, requests[1].pk],
+        )
+        self.assertEqual(
+            set(data["consents"][0]),
+            {
+                "id",
+                "document_type",
+                "version",
+                "timestamp",
+                "ip",
+                "user_agent",
+                "source",
+                "withdrawn_at",
+                "withdrawal_request_id",
+            },
+        )
+        self.assertEqual(
+            set(data["subject_requests"][0]),
+            {
+                "id",
+                "request_type",
+                "requested_at",
+                "due_at",
+                "original_due_at",
+                "completed_at",
+                "status",
+                "result",
+                "extension_reason",
+            },
+        )
+        self.assertIsNone(data["consents"][0]["withdrawn_at"])
+        self.assertIsNone(data["consents"][0]["withdrawal_request_id"])
+
     def test_partner_receives_own_payment_details_and_balance(self) -> None:
         PartnerProfile.objects.create(
             user=self.user,
@@ -159,3 +239,4 @@ class PersonalDataExportTest(TestCase):
         self.assertEqual(log.request_type, "export")
         self.assertEqual(log.http_method, "POST")
         self.assertEqual(log.status, "completed")
+        self.assertEqual(log.result, {"format_version": "1.1"})

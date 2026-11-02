@@ -2,7 +2,11 @@ from django.test import TestCase
 from django.urls import reverse
 
 from apps.group_channels.models import Group
+from apps.group_channels.services.collections_catalog_service import (
+    CollectionsCatalogService,
+)
 from apps.group_channels.views import DEFAULT_AVATAR_GROUP
+from apps.parser.models import TelegramChannel
 from apps.users.models import User
 
 
@@ -26,7 +30,9 @@ class CreateGroupViewTest(TestCase):
         self.assertEqual(group.owner, user)
         self.assertEqual(group.name, "My collection")
         self.assertEqual(group.description, "Selected channels")
-        self.assertEqual(group.image_url, DEFAULT_AVATAR_GROUP)
+        self.assertEqual(
+            group.image_url, f"http://testserver{DEFAULT_AVATAR_GROUP}"
+        )
         data = response.json()
         self.assertEqual(data["component"], "Channels")
         self.assertEqual(data["url"], url)

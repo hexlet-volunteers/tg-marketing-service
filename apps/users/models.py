@@ -3,8 +3,11 @@ from typing import Any
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models, transaction
+from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.crypto import get_random_string
+
+from apps.users.validators import MAX_IMAGE_URL_LENGTH, validate_http_url
 
 from .constants import BIO_MAXLENGTH, ROLE_MAXLENGTH
 
@@ -14,7 +17,11 @@ class User(AbstractUser):
     anonymized_at = models.DateTimeField(null=True, blank=True, editable=False)
     retention_basis = models.TextField(blank=True, editable=False)
     avatar_image = models.CharField(
-        verbose_name="url изображения профиля", blank=True, null=True
+        max_length=MAX_IMAGE_URL_LENGTH,
+        validators=[validate_http_url],
+        verbose_name="url изображения профиля",
+        blank=True,
+        null=True,
     )
     role = models.CharField(max_length=ROLE_MAXLENGTH)
     bio = models.CharField(
@@ -31,6 +38,11 @@ class User(AbstractUser):
         permissions = [
             ("can_add_channel", "Может добавлять каналы"),
             ("can_apply_partnership", "Может подавать заявку на партнерство"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                Lower("email"), name="users_email_ci_unique"
+            ),
         ]
 
     def __str__(self) -> str:

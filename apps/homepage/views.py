@@ -12,6 +12,12 @@ class DashboardView(View):
     """
     Inertia view для дашборда авторизованного пользователя.
 
+    Помимо реального `DashboardDTO` (stats/channels/ai_insights/...) отдаются
+    FE-пропсы страницы (channel/kpis/growthData/posts), собранные из БД.
+    Поля, которых нет в моделях, но которые нужны FE, дополняются из
+    `mocks/`. Если строк в БД нет, секция остаётся пустой
+    (см. docs/inertia-contract.md).
+
     Пример Inertia payload для фронтенда:
 
     {
@@ -75,6 +81,40 @@ class DashboardView(View):
                 "Добавить канал",
                 "Экспорт данных",
                 "Настройки"
+            ],
+            "channel": {
+                "id": 1,
+                "name": "Tech News RU",
+                "username": "@technewsru",
+                "type": "channel",
+                "subscribers": 125000,
+                "category": "Технологии",
+                "verified": true,
+                "country": "Россия",
+                "imageUrl": "",
+                "er": 8.3,
+                "growth30d": 3.2
+            },
+            "kpis": [
+                {
+                    "label": "Подписчики",
+                    "value": 142340,
+                    "delta": 2480,
+                    "percentDelta": 1.8,
+                    "positive": true
+                }
+            ],
+            "growthData": [
+                {"date": "01.06", "подписчики": 134200}
+            ],
+            "posts": [
+                {
+                    "title": "Обзор нового iPhone 16 Pro",
+                    "views": 52100,
+                    "reactions": 890,
+                    "forwards": 234,
+                    "er": 31.2
+                }
             ]
         },
         "url": "/dashboard/"
@@ -87,6 +127,7 @@ class DashboardView(View):
     - growth: процентный рост подписчиков за последний период
     - days_left: дней до конца текущего периода подписки (Subscription)
     - is_auto: признак автоматической/ручной коллекции
+    - channel/kpis/growthData/posts: данные БД + моки для отсутствующих полей
     """
 
     def get(
@@ -101,5 +142,8 @@ class DashboardView(View):
         return inertia_render(
             request,
             "Dashboard",
-            props={**dto.model_dump(mode="json")},
+            props={
+                **dto.model_dump(mode="json"),
+                **service.build_page_props(),
+            },
         )

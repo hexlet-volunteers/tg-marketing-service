@@ -1,10 +1,8 @@
 import asyncio
 import logging
-import random
-import time
 
 from asgiref.sync import sync_to_async
-from celery import shared_task
+from celery import chord, group, shared_task
 from django.db import DatabaseError, IntegrityError
 from django.utils import timezone
 from telethon import TelegramClient
@@ -13,6 +11,9 @@ from telethon.sessions import StringSession
 from apps.parser.models import ChannelStats, Post, TelegramChannel
 from apps.parser.parser import tg_parser
 from apps.parser.services.analysis import PostAnalysisService
+from apps.parser.services.metrics import (
+    update_channels_citation_indices,
+)
 from apps.parser.types import (
     ParsedChannelData,
     normalize_channel_data,
@@ -22,7 +23,7 @@ from apps.parser.utils import get_telegram_credentials
 log = logging.getLogger(__name__)
 
 
-@shared_task
+@shared_task(rate_limit="5/m")
 def parse_channel(channel_id: int) -> None:
     """Celery task for channel parse"""
     try:
@@ -131,24 +132,16 @@ def save_channel_stats(
 
 @shared_task
 def parse_all_channels() -> None:
-    """Task for Celery: parse all channels from database"""
-    channels = TelegramChannel.objects.all()
+    channels = list(TelegramChannel.objects.all())
     if not channels:
-        log.warning("There are no channels")
         return
 
-    for channel in channels:
-        # start task for parsing
-        parse_channel.delay(channel.channel_id)  # type: ignore[attr-defined]
-        # add pause between parsing, 15s + random value
-        pause = 15 + random.uniform(0, 5)  # noqa: S311  # pacing jitter
-        log.info(
-            f"Started task for channel {channel.channel_id}, "
-            f"next one in {pause:.2f} s"
-            f"Started task for channel {channel.channel_id}, "
-            f"next one in {pause:.2f} s"
-        )
-        time.sleep(pause)
+    # Создаем  группу задач
+    job = group(parse_channel.si(channel.channel_id) for channel in channels)  # type: ignore
+
+    chord(job)(update_citation_indices_task.si())  # type: ignore
+
+    log.info(f"Workflow started: {len(channels)}")
 
 
 @shared_task
@@ -164,4 +157,20 @@ def run_post_analysis_task(post_id: int):
     except Exception as e:
         log.error(
             f"Error during analysis for post {post_id}: {e}", exc_info=True
+        )
+
+
+@shared_task
+def update_citation_indices_task() -> None:
+    """
+    Задача для пересчета индексов цитируемости всех каналов.
+    Выполняется в фоне, чтобы не нагружать процесс парсинга.
+    """
+    log.info("Starting global citation index recalculation...")
+    try:
+        update_channels_citation_indices()
+        log.info("Citation index recalculation completed successfully.")
+    except Exception as e:
+        log.error(
+            f"Error during citation index recalculation: {e}", exc_info=True
         )

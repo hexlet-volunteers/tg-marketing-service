@@ -134,15 +134,25 @@ class ModerationService:
 
     @classmethod
     def _find_duplicate(
-        cls, channel: TelegramChannel, username: str | None
+        cls,
+        channel: TelegramChannel | None,
+        username: str | None,
     ) -> TelegramChannel | None:
         if not username:
             return None
-        return (
-            TelegramChannel.objects.filter(username__iexact=username)
-            .exclude(pk=channel.pk)
-            .first()
+
+        normalized_username = username.strip().lstrip("@")
+        if not normalized_username or normalized_username == "-":
+            return None
+
+        channels = TelegramChannel.objects.filter(
+            username__iexact=normalized_username
         )
+
+        if channel is not None and channel.pk is not None:
+            channels = channels.exclude(pk=channel.pk)
+
+        return channels.first()
 
     @staticmethod
     def _mark_duplicate(
