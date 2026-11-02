@@ -4,11 +4,17 @@ from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
 from django.contrib.messages import add_message
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
-from django.http import HttpRequest, HttpResponseBase, HttpResponseRedirect
-from django.shortcuts import redirect
+from django.http import (
+    HttpRequest,
+    HttpResponseBase,
+    HttpResponseForbidden,
+    HttpResponseRedirect,
+)
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from guardian.utils import get_anonymous_user
 
+from apps.group_channels.models import Group
 from apps.users.constants import UserRole
 
 
@@ -36,6 +42,33 @@ class CheckingUserRolesMixin:
             return True
         else:
             return False
+
+
+class GroupOwnerRequiredMixin:
+    """
+    Разрешает dispatch только владельцу группы из URL-параметра ``slug``.
+
+    ВАЖНО: должен идти в MRO ПОСЛЕ миксина, отсекающего анонимов
+    (``UserAuthenticationCheckMixin``), чтобы:
+      * аноним получал redirect на логин, а не 403;
+      * существование группы не проверялось для неаутентифицированных
+        (иначе ``get_object_or_404`` утечёт 404 vs 403).
+
+    После успешной проверки у вью доступен ``self.group``.
+    """
+
+    group: Group
+
+    def dispatch(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> HttpResponseBase:
+        self.group = get_object_or_404(Group, slug=kwargs["slug"])
+        if self.group.owner != request.user:
+            return HttpResponseForbidden("Недостаточно прав")
+        return cast(
+            HttpResponseBase,
+            super().dispatch(request, *args, **kwargs),  # type: ignore[misc]
+        )
 
 
 class UserAuthenticationCheckMixin(CheckingUserRolesMixin):

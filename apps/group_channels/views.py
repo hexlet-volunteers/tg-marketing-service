@@ -1,8 +1,7 @@
 from typing import Any
 
 from django.conf import settings
-from django.contrib.auth.mixins import UserPassesTestMixin
-from django.http import HttpRequest, HttpResponse, HttpResponseForbidden
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.generic.base import View
 from inertia import render as inertia_render
@@ -21,7 +20,7 @@ from apps.group_channels.services.collections_catalog_service import (
     CollectionsCatalogService,
 )
 from apps.parser.models import TelegramChannel
-from config.mixins import UserAuthenticationCheckMixin
+from config.mixins import GroupOwnerRequiredMixin, UserAuthenticationCheckMixin
 from config.renderers import render_inertia_from_dto
 
 # константа для дефолтной аватарки
@@ -63,15 +62,13 @@ class CreateGroupView(UserAuthenticationCheckMixin, View):
         )
 
 
-class UpdateGroupView(UserAuthenticationCheckMixin, View):
+class UpdateGroupView(
+    UserAuthenticationCheckMixin, GroupOwnerRequiredMixin, View
+):
     def post(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
-        slug = kwargs["slug"]
-        group = get_object_or_404(Group, slug=slug)
-        if group.owner != request.user:
-            return HttpResponseForbidden("Недостаточно прав")
-        form = UpdateGroupForm(request.POST, instance=group)
+        form = UpdateGroupForm(request.POST, instance=self.group)
 
         if form.is_valid():
             form.save()
@@ -94,15 +91,13 @@ class UpdateGroupView(UserAuthenticationCheckMixin, View):
         )
 
 
-class DeleteGroupView(UserAuthenticationCheckMixin, View):
+class DeleteGroupView(
+    UserAuthenticationCheckMixin, GroupOwnerRequiredMixin, View
+):
     def post(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
-        slug = kwargs["slug"]
-        group = get_object_or_404(Group, slug=slug)
-        if group.owner != request.user:
-            return HttpResponseForbidden("Недостаточно прав")
-        group.delete()
+        self.group.delete()
         return inertia_render(
             request,
             "Profile",
@@ -181,13 +176,9 @@ class GroupDetailView(View):
         )
 
 
-class AddChannelsView(UserAuthenticationCheckMixin, UserPassesTestMixin, View):
-    # Кажеться это лишнее, так как реализована аутентификайия
-    # с использованием django-guardian
-    def test_func(self) -> bool:
-        self.group = get_object_or_404(Group, slug=self.kwargs["slug"])
-        return self.group.owner == self.request.user
-
+class AddChannelsView(
+    UserAuthenticationCheckMixin, GroupOwnerRequiredMixin, View
+):
     # На стороне фронта нет компонента groep_detaile,
     # бронируем название компонента GroupDetail
     def post(self, request: HttpRequest, slug: str) -> HttpResponse:
