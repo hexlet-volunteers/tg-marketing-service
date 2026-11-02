@@ -1,5 +1,5 @@
 import { Anchor, Avatar, Badge, Box, Group, SimpleGrid, Stack, Text, Title } from '@mantine/core';
-import { useNavigate } from 'react-router-dom';
+import { router } from '@inertiajs/react';
 
 /**
  * Данные для секций футера.
@@ -44,11 +44,10 @@ const data = [
  * и нижнюю строку с копирайтом и бейджем-ссылкой на пример страницы 404.
  * 
  * Обработчик клика по ссылкам вызывает preventDefault.
- * Затем идет переход через navigate только для внутренних маршрутов (начинающихся с /).
+ * Затем идет переход через router.visit только для внутренних маршрутов (начинающихся с /).
  * Это предотвращает переход по ссылкам-заглушкам (#).
  */
 export function Footer() {
-  const navigate = useNavigate();
   const groups = data.map((group) => {
     const links = group.links.map((link, index) => (
       <Anchor
@@ -59,7 +58,7 @@ export function Footer() {
         onClick={(event) => {
           event.preventDefault();
           if (link.link.startsWith('/')) {
-            navigate(link.link);
+            router.visit(link.link);
           }
         }}
       >
@@ -101,7 +100,7 @@ export function Footer() {
         <Text size="sm" c="dimmed">
           © 2026 tgpulse · Прототип
         </Text>
-        <Badge variant="light" onClick={() => navigate('/nonexistent')} style={{ cursor: 'pointer' }}>
+        <Badge variant="light" onClick={() => router.visit('/nonexistent')} style={{ cursor: 'pointer' }}>
           Пример страницы 404 →
         </Badge>
       </Group>

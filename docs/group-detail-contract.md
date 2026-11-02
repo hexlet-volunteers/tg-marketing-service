@@ -2,6 +2,11 @@
 
 ## GET `/collections/<slug>/`
 
+Также доступен URL `/group/<slug>/` (`group_channels:group_detail`).
+Страница по ID использует отдельный путь `/collections/id/<int:pk>/`
+и DTO-контракт `Collection`. Поэтому существующие ссылки по slug,
+включая числовые slug, сохраняют прежнее поведение.
+
 Публичный endpoint детальной страницы подборки.
 
 Endpoint возвращает Inertia-страницу с компонентом `GroupDetail`.
