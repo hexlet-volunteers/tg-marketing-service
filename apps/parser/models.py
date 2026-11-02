@@ -99,6 +99,16 @@ class TelegramChannel(models.Model):
         """Получение последней статистики канала"""
         return self.channelstats_set.order_by("-parsed_at").first()
 
+    def get_growth30d(self) -> float:
+        last_stat = self.last_stat()
+        if (
+            not last_stat
+            or not last_stat.daily_growth
+            or not self.participants_count
+        ):
+            return 0.0
+        return float(last_stat.daily_growth) / self.participants_count * 100
+
     def __str__(self) -> str:
         return f"{self.channel_id} канал {self.title}"
 

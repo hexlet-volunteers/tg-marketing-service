@@ -20,7 +20,7 @@ def detail_url():
     """Функция построения URL детальной страницы подборки."""
 
     def factory(slug):
-        return reverse("collection_detail", kwargs={"slug": slug})
+        return reverse("group_channels:group_detail", kwargs={"slug": slug})
 
     return factory
 

@@ -107,6 +107,7 @@ make install   # uv sync
 
 ```sh
 make migrate         # makemigrations + migrate
+make seed-demo       # демо-данные из mocks/ (только DEBUG); см. docs/demo_data.md
 make dev             # dev-сервер Django → http://127.0.0.1:8000
 ```
 

@@ -1,6 +1,6 @@
 # Inertia shared props
 
-Каждый Inertia-ответ проекта содержит канонический набор общих props. Они формируются в `config.middleware.InertiaMiddleware` и являются единственным источником состояния авторизации, CSRF-токена и flash-сообщений для фронтенда.
+Каждый Inertia-ответ проекта содержит канонический набор общих props. Они формируются в `config.middleware.SharedInertiaPropsMiddleware` и являются единственным источником состояния авторизации, CSRF-токена и flash-сообщений для фронтенда.
 
 ## Контракт
 
@@ -42,7 +42,7 @@
 
 ### csrfToken
 
-Токен CSRF для текущей сессии. Единственное место его формирования — `config.middleware.InertiaMiddleware`. Не дублировать вручную во views.
+Токен CSRF для текущей сессии. Единственное место его формирования — `config.middleware.SharedInertiaPropsMiddleware`. Не дублировать вручную во views.
 
 ### flash
 
@@ -64,7 +64,7 @@ Middleware извлекает его через `request.session.pop("flash", No
 
 ## Правило расширения
 
-Смежные задачи, которым нужно добавить новое общее поле (например, `show_upgrade_banner`), **не создают собственный `share()`**. Они расширяют `config.middleware.InertiaMiddleware`:
+Смежные задачи, которым нужно добавить новое общее поле (например, `show_upgrade_banner`), **не создают собственный `share()`**. Они расширяют `config.middleware.SharedInertiaPropsMiddleware`:
 
 ```python
 # config/middleware.py

@@ -117,7 +117,13 @@ class EmailLoginFlowTest(InertiaAuthTestCase):
                 for errors in props["form"]["errors"].values():
                     self.assertIsInstance(errors, list)
                     self.assertTrue(
-                        all(isinstance(error, str) for error in errors)
+                        all(isinstance(error, dict) for error in errors)
+                    )
+                    self.assertTrue(
+                        all(
+                            {"message", "code"} <= set(error)
+                            for error in errors
+                        )
                     )
                 self.assertNotIn(SESSION_KEY, self.client.session)
 
@@ -170,9 +176,7 @@ class EmailLoginFlowTest(InertiaAuthTestCase):
                     response, target, fetch_redirect_response=False
                 )
                 self.assertEqual(get_user(self.client).pk, self.user.pk)
-                props = self.assert_page(
-                    self.client.get(target), "UserProfilePage"
-                )
+                props = self.assert_page(self.client.get(target), "Profile")
                 self.assertEqual(props["auth"]["id"], self.user.pk)
                 self.assertIn("success", props["flash"])
 
