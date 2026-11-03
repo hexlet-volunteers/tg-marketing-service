@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
@@ -11,12 +12,14 @@ from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.test import RequestFactory
 from django.test.utils import override_settings
+from django.utils import timezone
 
 from apps.admin.moderation.models import ModerationRequest
-from apps.parser.models import TelegramChannel
+from apps.parser.models import ChannelStats, TelegramChannel
 from apps.parser.tasks import parse_channel
 from apps.parser.utils import get_telegram_credentials
 from apps.parser.views import ParserView
+from apps.users.models import User
 
 TELEGRAM_ENV_VARS = [
     "TELEGRAM_API_ID",
@@ -175,17 +178,25 @@ def test_parser_view_does_not_parse_existing_channel(
 
 
 @pytest.mark.django_db
-def test_parser_view_notifies_about_existing_channel() -> None:
-    TelegramChannel.objects.create(
+def test_parser_view_uses_saved_data_during_cooldown() -> None:
+    channel = TelegramChannel.objects.create(
         channel_id=123456789,
         title="Existing Channel",
         username="example_channel",
         participants_count=100,
     )
 
+    original_parsed_at = channel.parsed_at
+
     view = ParserView()
     request = RequestFactory().post("/parser/")
     view.setup(request)
+    user = User.objects.create_user(
+        username="cooldown_test_user",
+        email="cooldown_test_user@example.com",
+        password="test-password",
+    )
+    request.user = user
 
     request.session = {}  # type: ignore
     setattr(request, "_messages", FallbackStorage(request))
@@ -202,12 +213,22 @@ def test_parser_view_notifies_about_existing_channel() -> None:
 
     assert form.is_valid(), form.errors
 
-    with patch("apps.parser.views.async_to_sync") as mock_async_to_sync:
+    with patch.object(view, "async_tg_parser") as mock_parser:
         response = view.form_valid(form)
 
-    mock_async_to_sync.assert_not_called()
+    assert not form.errors, form.errors
+    mock_parser.assert_not_called()
 
-    assert response.status_code == 302
+    assert response.status_code in (200, 302)
+
+    moderation_request = ModerationRequest.objects.get()
+
+    assert moderation_request.channel_by == channel
+    assert moderation_request.status == "pending"
+
+    channel.refresh_from_db()
+    assert channel.parsed_at == original_parsed_at
+    assert channel.channelstats_set.count() == 0
 
 
 @pytest.mark.django_db
@@ -403,14 +424,13 @@ def test_parser_view_limits_sixth_submission() -> None:
 
         with (
             patch.object(
-                view, 
-                "form_valid", 
+                view,
+                "form_valid",
                 return_value=None,
             ) as valid_mock,
-
             patch.object(
-                view, 
-                "form_invalid", 
+                view,
+                "form_invalid",
                 return_value=None,
             ) as invalid_mock,
         ):
@@ -430,3 +450,69 @@ def test_parser_view_limits_sixth_submission() -> None:
             )
 
     cache.clear()
+
+
+@pytest.mark.django_db
+def test_parser_view_parses_channel_after_cooldown() -> None:
+    channel = TelegramChannel.objects.create(
+        channel_id=123456789,
+        title="Existing Channel",
+        username="example_channel",
+        participants_count=100,
+    )
+    TelegramChannel.objects.filter(pk=channel.pk).update(
+        parsed_at=timezone.now() - timedelta(hours=25)
+    )
+
+    parsed_data = {
+        "title": "Updated Channel",
+        "channel_id": 123456789,
+        "username": "example_channel",
+        "verified": False,
+        "creation_date": None,
+        "last_messages": [],
+        "average_views": 150,
+        "participants_count": 150,
+        "description": "Updated description",
+        "pinned_messages": [],
+    }
+
+    view = ParserView()
+    request = RequestFactory().post("/parser/")
+    view.setup(request)
+
+    user = User.objects.create_user(
+        username="cooldown_expired_user",
+        email="cooldown_expired_user@example.com",
+        password="test-password",
+    )
+    request.user = user
+    request.session = {}  # type: ignore
+    setattr(request, "_messages", FallbackStorage(request))
+
+    form = view.get_form_class()(
+        data={
+            "channel_identifier": "@Example_Channel",
+            "category": "Технологии",
+            "country": "RU",
+            "language": "ru",
+            "limit": 10,
+        }
+    )
+    assert form.is_valid(), form.errors
+
+    with patch.object(
+        view,
+        "async_tg_parser",
+        return_value=parsed_data,
+    ) as mock_parser:
+        view.form_valid(form)
+
+    mock_parser.assert_called_once_with("example_channel", 10)
+    assert not form.errors, form.errors
+
+    channel.refresh_from_db()
+    assert channel.title == "Updated Channel"
+    assert channel.participants_count == 150
+    assert channel.parsed_at > timezone.now() - timedelta(minutes=1)
+    assert ChannelStats.objects.filter(channel=channel).count() == 1
