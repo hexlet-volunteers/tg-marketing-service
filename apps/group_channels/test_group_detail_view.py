@@ -15,12 +15,12 @@ def catalog_url():
     return reverse("collections_catalog")
 
 
-@pytest.fixture
-def detail_url():
+@pytest.fixture(params=["collection_detail", "group_channels:group_detail"])
+def detail_url(request):
     """Функция построения URL детальной страницы подборки."""
 
     def factory(slug):
-        return reverse("collection_detail", kwargs={"slug": slug})
+        return reverse(request.param, kwargs={"slug": slug})
 
     return factory
 

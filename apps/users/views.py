@@ -272,7 +272,7 @@ class LoginView(View):
                             "email": request.POST.get("email", ""),
                             "password": "",
                         },
-                        "errors": form.errors,
+                        "errors": form.errors.get_json_data(),
                     },
                     "next": self._get_next_url(request),
                 },
@@ -283,7 +283,7 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
     """
     Account page view.
 
-    component: UserProfilePage
+    component: Profile
     props: user, subscription, notifications, usage_stats, user_role
     url: /auth/profile/
     """
@@ -342,7 +342,7 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
     ) -> InertiaResponse:
         user = cast(User, request.user)
         props = self._build_base_props(request, user)
-        return inertia_render(request, "UserProfilePage", props=props)
+        return inertia_render(request, "Profile", props=props)
 
     def post(
         self,
@@ -402,7 +402,7 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
                     "bio": request.POST.get("bio", ""),
                     "avatar_image": request.POST.get("avatar_image", ""),
                 }
-                return inertia_render(request, "UserProfilePage", props=props)
+                return inertia_render(request, "Profile", props=props)
 
         return redirect(reverse("users:user_cabinet"))
 
@@ -533,7 +533,7 @@ class UserUpdate(UserAuthenticationCheckMixin, View):
         'avatar_image': .......,
     }
     нформацию об ошибке:
-    "errors": form.errors
+    "errors": form.errors.get_json_data()
 
     """
 
@@ -598,7 +598,7 @@ class UserUpdate(UserAuthenticationCheckMixin, View):
         return inertia_render(
             request,
             "UpdateUserProfile",
-            props={"form": data, "errors": form.errors},
+            props={"form": data, "errors": form.errors.get_json_data()},
         )
 
 
@@ -678,7 +678,7 @@ class RestorePasswordRequestView(View):
             "RestorePasswordRequest",
             props={
                 "email": request.POST.get("email", ""),
-                "errors": form.errors,
+                "errors": form.errors.get_json_data(),
             },
         )
 
@@ -812,6 +812,6 @@ class RestorePasswordView(View):
                 "new_password2": "",
                 "uid": uid,
                 "token": token,
-                "errors": form.errors,
+                "errors": form.errors.get_json_data(),
             },
         )

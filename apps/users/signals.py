@@ -1,11 +1,13 @@
 import logging
 from typing import Any
 
+from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-from apps.parser.models import TelegramChannel
+from apps.parser.models import ChannelModerator
+from apps.users.constants import UserRole
 from apps.users.models import PartnerProfile, User
 from apps.users.roles import Role, UserRoleHistory
 
@@ -23,15 +25,10 @@ def assign_role_partner(
     created: bool,
     **kwargs: Any,
 ) -> None:
-    try:
-        if created:
-            user = instance
-            if not user.role:
-                user.role = "user"
-                user.save(update_fields=["role"])
-
-    except Role.DoesNotExist:
-        log.error("Роль 'moderated_channels' не найдена в базе")
+    """Назначает роль обычного пользователя при регистрации."""
+    if created and not instance.role:
+        instance.role = UserRole.USER
+        instance.save(update_fields=["role"])
 
 
 """Отлавливаем событие при изменении статуса партнера на Активный"""
@@ -51,9 +48,8 @@ def assign_role_channel_moderator(
     if instance.status == PartnerProfile.STATUS_CHOICES[0][0]:
         user = instance.user
 
-        if user.role not in {"admin", "partner"}:
-            user.role = "partner"
-
+        if user.role not in {UserRole.ADMIN, UserRole.PARTNER}:
+            user.role = UserRole.PARTNER
             user.save(update_fields=["role"])
 
 
@@ -61,48 +57,48 @@ def assign_role_channel_moderator(
 """присваеиваем роль - Moderator_channels"""
 
 
-@receiver(post_save, sender=TelegramChannel)
+@receiver(post_save, sender=ChannelModerator)
 def assign_role_moderator_channel(
-    sender: type[TelegramChannel],
-    instance: TelegramChannel,
+    sender: type[ChannelModerator],
+    instance: ChannelModerator,
     created: bool,
     **kwargs: Any,
 ) -> None:
-    if not created:
-        return  # только для нового канала
+    """Назначает владельцу канала роль модератора."""
+    if not instance.is_owner:
+        return
 
-    try:
-        owner_relation = instance.moderators.filter(is_owner=True).first()
-        if not owner_relation:
-            return  # владелец не найден
+    user = instance.user
 
-        user = owner_relation.user
-        moderator_role = Role._default_manager.get(code="moderated_channels")
+    # Партнёр, модератор и админ сохраняют свою роль
+    if user.role in (
+        UserRole.CHANNEL_MODERATOR,
+        UserRole.PARTNER,
+        UserRole.ADMIN,
+    ):
+        return
 
-        # Проверяем текущую роль пользователя
-        if user.role in ["moderated_channels", "partner"]:
-            return  # уже модератор или партнер
+    with transaction.atomic():
+        # Получаем роль или создаём её, если она ещё не зарегистрирована.
+        moderator_role, _ = Role.objects.get_or_create(
+            code=UserRole.CHANNEL_MODERATOR,
+            defaults={"name": "Модератор канала"},
+        )
 
-        # Закрываем старую роль в истории
-        old_role_obj = Role._default_manager.filter(code=user.role).first()
-        if old_role_obj:
-            UserRoleHistory.objects.create(
-                user=user,
-                role=old_role_obj,
-                end_date=timezone.now(),
-                reason="Назначена роль модератора канала",
-            )
+        # Закрываем все активные записи истории прежних ролей.
+        UserRoleHistory.objects.filter(
+            user=user,
+            end_date__isnull=True,
+        ).update(
+            end_date=timezone.now(),
+            reason="Назначена роль модератора канала",
+        )
 
-        # Назначаем новую роль
         user.role = moderator_role.code
         user.save(update_fields=["role"])
 
-        # Создаем запись в истории
         UserRoleHistory.objects.create(
             user=user,
             role=moderator_role,
             reason="Назначена роль модератора канала",
         )
-
-    except Role.DoesNotExist:
-        log.error("Роль 'moderated_channels' не найдена в базе")
