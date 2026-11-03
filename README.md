@@ -1,4 +1,4 @@
-# Telegram Marketing Service.    .
+# Telegram Marketing Service
 
 **SPA-веб-приложение** для сбора, сравнения и анализа Telegram-каналов: парсит каналы, копит статистику (подписчики, просмотры, динамика роста), объединяет их в тематические подборки и даёт пользователям аналитику и AI-инсайты.
 
@@ -29,7 +29,7 @@
 ### Бэкенд
 
 - **Python 3.12**, менеджер зависимостей **uv**
-- **Django 5.2**
+- **Django 6**
 - **PostgreSQL** (в проде) / **SQLite** (локально) — через `dj-database-url`
 - **Celery + Redis** — фоновые задачи и планировщик (Celery Beat), мониторинг через **Flower**
 - **Telethon** — парсинг Telegram
@@ -42,9 +42,10 @@
 ### Инфраструктура
 
 - **Docker** — контейнеризация
-- **GitHub Actions** — CI (тесты)
+- **GitHub Actions** — CI (lint, типы, тесты)
 - **pytest** + **pytest-django** — тесты
 - **Ruff** — линтер
+- **mypy** + **django-stubs** — проверка типов
 
 ## Возможности
 
@@ -60,10 +61,15 @@
 ```
 .
 ├── apps/
-│   ├── users/           # пользователи, роли, партнёрские профили
-│   ├── parser/          # Telegram-каналы, парсинг, статистика, AI-инсайты
+│   ├── admin/           # админка модерации каналов
+│   ├── ai/              # клиент LLM и разбор AI-инсайтов
+│   ├── billing/         # тарифы и подписки
+│   ├── blog/            # статьи блога
 │   ├── group_channels/  # подборки каналов
-│   └── homepage/        # главная страница, дашборд
+│   ├── homepage/        # главная страница, дашборд
+│   ├── legal/           # тексты правовых документов
+│   ├── parser/          # Telegram-каналы, статистика, AI-инсайты
+│   └── users/           # пользователи, роли, партнёрские профили
 ├── config/              # настройки Django, Celery, URL-маршруты
 ├── frontend/            # React + Mantine SPA
 ├── templates/           # серверные шаблоны Django
@@ -100,7 +106,8 @@ make install   # uv sync
 ### 2. Бэкенд (через Make)
 
 ```sh
-make migrate         # применить миграции БД
+make migrate         # makemigrations + migrate
+make seed-demo       # демо-данные из mocks/ (только DEBUG); см. docs/demo_data.md
 make dev             # dev-сервер Django → http://127.0.0.1:8000
 ```
 
@@ -108,10 +115,10 @@ make dev             # dev-сервер Django → http://127.0.0.1:8000
 
 ```sh
 make collectstatic          # собрать статические файлы
-make prod-run               # Gunicorn; порт: make prod-run PORT=8080
+make prod-run               # Gunicorn
 ```
 
-Порт dev-сервера задаётся переменной `PORT` в [`Makefile`](Makefile). Настройки — в [`config/settings.py`](config/settings.py).
+Порт прод-сервера задаётся переменной `PORT` в [`Makefile`](Makefile) (`make prod-run PORT=8080`). Настройки — в [`config/settings.py`](config/settings.py).
 
 ### 3. Фоновые задачи (Redis + Celery)
 
@@ -190,14 +197,15 @@ make prod-run
 ## Тесты и линтер
 
 ```sh
-make test       # pytest
-make lint       # ruff
-make lint-fix   # ruff check --fix
+make test        # pytest
+make lint        # ruff
+make lint-fix    # ruff check --fix
+make typecheck   # mypy
 ```
 
 ### Pre-commit
 
-Pre-commit автоматически проверяет код перед каждым коммитом (ruff lint + format). Установите hooks один раз:
+Pre-commit автоматически проверяет код перед каждым коммитом (ruff lint + format, mypy). Установите hooks один раз:
 
 ```sh
 uv run pre-commit install
@@ -205,15 +213,15 @@ uv run pre-commit install
 
 Подробнее об использовании и обходе ошибок — в [`PRE-COMMIT.md`](PRE-COMMIT.md).
 
-## Полезные команды Make 
+## Полезные команды Make
 
 | Команда | Действие |
 |---------|----------|
 | `make install` | Установка зависимостей (`uv sync`) |
-| `make migrate` | Миграции БД |
+| `make migrate` | Миграции БД (`makemigrations` + `migrate`) |
 | `make dev` | Dev-сервер Django |
 | `make prod-run` | Прод-сервер (Gunicorn) |
 | `make collectstatic` | Сбор статических файлов |
 | `make s` | Генерация Telegram-сессии |
 | `make redis` / `make celery` / `make celery-beat` / `make flower` | Фоновые задачи |
-| `make test` / `make lint` / `make lint-fix` | Тесты и линтер |
+| `make test` / `make lint` / `make lint-fix` / `make typecheck` | Тесты, линтер и проверка типов |

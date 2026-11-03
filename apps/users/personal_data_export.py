@@ -9,7 +9,7 @@ from apps.users.consents import serialize_user_consent_history
 from apps.users.data_subject_requests import serialize_subject_request
 from apps.users.models import PartnerProfile, User
 
-EXPORT_FORMAT_VERSION = "1.0"
+EXPORT_FORMAT_VERSION = "1.1"
 
 
 def _isoformat(value: datetime | None) -> str | None:

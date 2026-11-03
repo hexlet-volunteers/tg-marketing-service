@@ -4,6 +4,8 @@ from django.http import HttpRequest, HttpResponse
 from django.middleware.csrf import get_token
 from inertia.share import share
 
+from apps.users.constants import UserRole
+
 
 class SharedInertiaPropsMiddleware:
     """Канонический слой общих Inertia-props.
@@ -12,11 +14,12 @@ class SharedInertiaPropsMiddleware:
     """
 
     VALID_ROLES = {
-        "guest",
-        "user",
-        "partner",
-        "admin",
-        "channel_moderator",
+        UserRole.GUEST,
+        UserRole.USER,
+        UserRole.PARTNER,
+        UserRole.STAFF,
+        UserRole.ADMIN,
+        UserRole.CHANNEL_MODERATOR,
     }
 
     def __init__(
@@ -26,18 +29,18 @@ class SharedInertiaPropsMiddleware:
 
     def _get_role(self, request: HttpRequest) -> str:
         if not request.user.is_authenticated:
-            return "guest"
+            return UserRole.GUEST
 
         # Канонический источник — request.role (устанавливается RoleMiddleware).
         role = getattr(request, "role", None)
         if role is None:
             role = getattr(request.user, "role", None)
 
-        normalized_role = str(role).strip().lower() if role else "user"
+        normalized_role = str(role).strip().lower() if role else UserRole.USER
         if normalized_role in self.VALID_ROLES:
             return normalized_role
 
-        return "user"
+        return UserRole.USER
 
     def _is_admin(self, request: HttpRequest) -> bool:
         if not request.user.is_authenticated:
@@ -78,7 +81,11 @@ class SharedInertiaPropsMiddleware:
         # Flash не должен теряться на промежуточных редиректах:
         # если ответ — redirect, возвращаем flash в сессию,
         # чтобы следующий запрос мог его извлечь.
-        if flash is not None and 300 <= response.status_code < 400:
+        if (
+            flash is not None
+            and 300 <= response.status_code < 400
+            and "flash" not in request.session
+        ):
             request.session["flash"] = flash
 
         return response

@@ -8,7 +8,7 @@ Endpoint доступен только администраторам через
 
 ```json
 {
-  "component": "AdminModeration",
+  "component": "Admin",
   "props": {
     "pendingRequests": [],
     "pendingCount": 0,

@@ -20,9 +20,11 @@ def load_fixture(name: str):
 
 @pytest.fixture
 async def channel(db):
-    return await TelegramChannel.objects.acreate(
-        channel_id=12345, title="Test Channel", username="testchannel"
+    channel, created = await TelegramChannel.objects.aget_or_create(
+        channel_id=12345,
+        defaults={"title": "Test Channel", "username": "testchannel"},
     )
+    return channel
 
 
 @pytest.fixture
@@ -105,7 +107,10 @@ class TestPostsParser:
 
         # 3. ЗАПУСК
         await parser.parse_posts(
-            channel_entity=mock_channel_entity, channel_model=channel, limit=1
+            channel_entity=mock_channel_entity,
+            channel_model=channel,
+            pinned_ids=set(),
+            limit=1,
         )
 
         # 4. ПРОВЕРКИ
@@ -116,7 +121,9 @@ class TestPostsParser:
         assert post.text == current_text
         assert post.views == data["views"]
 
-        expected_mentions = [m.replace("@", "") for m in data["mentions"]]
+        expected_mentions = [
+            m.replace("@", "").casefold() for m in data["mentions"]
+        ]
 
         # То, что реально записалось в базу
         actual_mentions = post.mentions
@@ -128,3 +135,215 @@ class TestPostsParser:
             post=post, emoji=reaction_data["emoji"]
         )
         assert reaction.count == reaction_data["count"]
+
+    @pytest.mark.asyncio
+    async def test_parse_posts_media_and_pinned(
+        self, channel, mock_client, parser
+    ):
+        """
+        Тест на:
+        1. Корректное определение media_type (на примере Photo).
+        2. Корректное определение is_pinned на основе pinned_messages канала.
+        """
+
+        # 1. ПОДГОТОВКА ДАННЫХ
+        message_id = 999
+        pinned_id = 999
+
+        channel.pinned_messages = [pinned_id]
+        await channel.asave()
+
+        mock_message = MagicMock()
+        mock_message.id = message_id
+        mock_message.service = False
+        mock_message.text = "Media and pinned test"
+        mock_message.date = datetime.now(timezone.utc)
+        mock_message.views = 50
+        mock_message.forwards = 5
+        mock_message.replies = MagicMock(replies=2)
+        mock_message.fwd_from = None
+        mock_message.entities = []
+
+        mock_media = MagicMock(spec=["photo"])
+
+        mock_message.media = mock_media
+        mock_message.reactions = MagicMock(results=[])
+
+        mock_client.get_messages.return_value = [mock_message]
+        mock_channel_entity = MagicMock(username="testchannel")
+
+        # 2. ЗАПУСК
+        await parser.parse_posts(
+            channel_entity=mock_channel_entity,
+            channel_model=channel,
+            pinned_ids={pinned_id},
+            limit=1,
+        )
+
+        # 3. ПРОВЕРКИ
+        post = await Post.objects.aget(telegram_message_id=message_id)
+
+        assert post.media_type == "photo"
+        assert post.is_pinned is True
+
+    @pytest.mark.asyncio
+    async def test_parse_posts_media_video_as_document(
+        self, channel, mock_client, parser
+    ):
+        """
+        Дополнительный тест: видео, переданное как документ с нужным MIME,
+        правильно распознается как video.
+        """
+        message_id = 888
+        mock_message = MagicMock()
+        mock_message.id = message_id
+        mock_message.service = False
+        mock_message.text = "Video as document"
+        mock_message.date = datetime.now(timezone.utc)
+        mock_message.views = 0
+        mock_message.forwards = 0
+        mock_message.replies = MagicMock(replies=0)
+        mock_message.fwd_from = None
+        mock_message.entities = []
+        mock_message.reactions = MagicMock(results=[])
+
+        mock_document = MagicMock()
+        mock_document.mime_type = "video/mp4"
+
+        mock_media = MagicMock(spec=["document"])
+        mock_media.document = mock_document
+
+        mock_message.media = mock_media
+        mock_client.get_messages.return_value = [mock_message]
+        mock_channel_entity = MagicMock(username="testchannel")
+
+        await parser.parse_posts(
+            channel_entity=mock_channel_entity,
+            channel_model=channel,
+            pinned_ids=set(),
+            limit=1,
+        )
+
+        post = await Post.objects.aget(telegram_message_id=message_id)
+        assert post.media_type == "video"
+
+    @pytest.mark.asyncio
+    async def test_parse_posts_non_pinned_no_media(
+        self, channel, mock_client, parser
+    ):
+        """
+        Тест на обычное сообщение без медиа и без закрепа.
+        """
+        mock_message = MagicMock()
+        mock_message.id = 1000
+        mock_message.service = False
+        mock_message.text = "Plain text"
+        mock_message.date = datetime.now(timezone.utc)
+        mock_message.views = 0
+        mock_message.forwards = 0
+        mock_message.replies = MagicMock(replies=0)
+        mock_message.fwd_from = None
+        mock_message.entities = []
+        mock_message.media = None
+        mock_message.reactions = MagicMock(results=[])
+
+        channel.pinned_messages = [1, 2, 3]
+        await channel.asave()
+
+        mock_client.get_messages.return_value = [mock_message]
+        mock_channel_entity = MagicMock(username="testchannel")
+
+        await parser.parse_posts(
+            channel_entity=mock_channel_entity,
+            channel_model=channel,
+            pinned_ids=set(),
+            limit=1,
+        )
+
+        post = await Post.objects.aget(telegram_message_id=1000)
+
+        assert post.media_type == "none"
+        assert post.is_pinned is False
+
+    @pytest.mark.asyncio
+    async def test_parse_posts_complex_reactions(
+        self, channel, mock_client, parser
+    ):
+        """
+        Тест на:
+        1. Стабильные ключи для CustomEmoji (c:<hash>) и Paid (paid).
+        2. Суммирование реакций с одинаковым ключом.
+        3. Обработку двух кастомных и одной платной реакции.
+        """
+        from telethon.tl.types import ReactionCustomEmoji, ReactionPaid
+
+        # 1. ПОДГОТОВКА ДАННЫХ
+        mock_message = MagicMock()
+        mock_message.id = 777
+        mock_message.service = False
+        mock_message.text = "Complex reactions test"
+        mock_message.date = datetime.now(timezone.utc)
+        mock_message.views = 100
+        mock_message.forwards = 0
+        mock_message.replies = MagicMock(replies=0)
+        mock_message.fwd_from = None
+        mock_message.entities = []
+
+        r1 = MagicMock()
+        r1.reaction = ReactionCustomEmoji(document_id=101)
+        r1.count = 5
+
+        r2 = MagicMock()
+        r2.reaction = ReactionCustomEmoji(document_id=101)
+        r2.count = 3
+
+        r3 = MagicMock()
+        r3.reaction = ReactionCustomEmoji(document_id=202)
+        r3.count = 10
+
+        r4 = MagicMock()
+        r4.reaction = ReactionPaid()
+        r4.count = 2
+
+        mock_reactions_container = MagicMock()
+        mock_reactions_container.results = [r1, r2, r3, r4]
+        mock_message.reactions = mock_reactions_container
+
+        mock_client.get_messages.return_value = [mock_message]
+        mock_channel_entity = MagicMock(username="testchannel")
+
+        # 2. ЗАПУСК
+        await parser.parse_posts(
+            channel_entity=mock_channel_entity,
+            channel_model=channel,
+            pinned_ids=set(),
+            limit=1,
+        )
+
+        # 3. ПРОВЕРКИ
+        post = await Post.objects.aget(telegram_message_id=777)
+        reactions = [r async for r in PostReaction.objects.filter(post=post)]
+
+        assert len(reactions) == 3
+
+        summed_reaction = next(
+            (
+                r
+                for r in reactions
+                if r.emoji.startswith("c:") and len(r.emoji) == 10
+            ),
+            None,
+        )
+        assert summed_reaction is not None
+        assert summed_reaction.count == 8
+
+        other_custom = next(
+            (r for r in reactions if r.emoji != summed_reaction.emoji), None
+        )
+        assert other_custom.emoji.startswith("c:")
+        assert other_custom.count == 10
+
+        # Проверка платной реакции
+        paid_reaction = next((r for r in reactions if r.emoji == "paid"), None)
+        assert paid_reaction is not None
+        assert paid_reaction.count == 2

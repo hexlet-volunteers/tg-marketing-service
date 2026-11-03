@@ -10,10 +10,10 @@ from apps.blog.services.mappers import to_article_card
 class BlogArticleDetailService:
     """
     Собирает данные для страницы статьи блога
-    (Inertia 'BlogArticle', /blog/<slug>/).
+    (Inertia 'BlogPost', /blog/<slug>/).
 
-    Отдаётся только опубликованная статья (is_published=True);
-    для отсутствующей или неопубликованной вью отвечает 404.
+    Отдаётся только опубликованная статья; для отсутствующей или
+    неопубликованной вью отвечает 404.
     """
 
     CTA_LABEL = "Разобрать канал"
