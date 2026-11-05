@@ -22,9 +22,9 @@ class ChannelParseForm(forms.Form):
 
         if not username:
             raise forms.ValidationError(
-               "Введите корректный username Telegram-канала "
+                "Введите корректный username Telegram-канала "
                 "(от 5 до 32 символов: латинские буквы, цифры и _)."
-          )
+            )
 
         return username
 

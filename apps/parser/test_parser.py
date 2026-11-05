@@ -562,8 +562,7 @@ def test_parser_view_rejects_submission_when_pending_limit_reached() -> None:
     assert ModerationRequest.objects.filter(submitted_by=user).count() == 10
     assert (
         "У вас уже максимальное количество необработанных заявок. "
-        "Дождитесь рассмотрения предыдущих заявок."
-        in form.non_field_errors()
+        "Дождитесь рассмотрения предыдущих заявок." in form.non_field_errors()
     )
     mock_parser.assert_not_called()
 
@@ -634,8 +633,7 @@ def test_parser_view_counts_only_current_users_pending_requests() -> None:
     mock_parser.assert_called_once_with("new_channel", 10)
     assert ModerationRequest.objects.filter(submitted_by=user).count() == 1
     assert (
-        ModerationRequest.objects.filter(submitted_by=other_user).count() 
-        == 10
+        ModerationRequest.objects.filter(submitted_by=other_user).count() == 10
     )
 
 
@@ -698,7 +696,10 @@ def test_parser_view_allows_submission_below_pending_limit() -> None:
 
     assert response.status_code == 302
     mock_parser.assert_called_once_with("new_channel", 10)
-    assert ModerationRequest.objects.filter(
-        submitted_by=user,
-        status="pending",
-    ).count() == 10
+    assert (
+        ModerationRequest.objects.filter(
+            submitted_by=user,
+            status="pending",
+        ).count()
+        == 10
+    )

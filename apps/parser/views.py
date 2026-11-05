@@ -156,12 +156,12 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
     ) -> HttpResponse:
         usage = get_usage(
             request,
-        group="parser_channel_submission",
-        key="user",
-        rate=settings.PARSER_RATE_LIMIT,
-        method="POST",
-        increment=True,
-            )
+            group="parser_channel_submission",
+            key="user",
+            rate=settings.PARSER_RATE_LIMIT,
+            method="POST",
+            increment=True,
+        )
         if usage and usage["should_limit"]:
             form = self.get_form()
             form.add_error(
