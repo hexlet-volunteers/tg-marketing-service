@@ -88,6 +88,55 @@ make install   # uv sync
 
 Скопируйте [`.env.example`](.env.example) в `.env` и заполните значения.
 
+### 0a. Запуск через Docker Compose (issues #381, #382)
+
+Раньше локальный стейк требовал 5 терминалов (Django, Redis, Celery worker, Celery beat, Flower) и ещё парочку для фронтенда. Теперь всё поднимается одной командой ([`compose.yml`](compose.yml)):
+
+```sh
+docker compose up
+```
+
+Compose поднимает уже сконфигурированные между собой сервисы:
+
+| Сервис | Порт | Что это |
+| --- | --- | --- |
+| `web` | [localhost:8000](http://localhost:8000) | Django: миграции + collectstatic + runserver |
+| `frontend` | [localhost:5173](http://localhost:5173) | Vite dev-сервер (HMR), django-vite смотрит сюда |
+| `redis` | 6379 (только внутри сети) | broker для Celery |
+| `celery-worker` | — | воркер с `CELERY_BROKER_URL=redis://redis:6379/0` |
+| `celery-beat` | — | планировщик `CELERY_BEAT_SCHEDULE` |
+| `flower` | [localhost:5555](http://localhost:5555) | мониторинг задач |
+
+Все сервисы используют переменные из `.env` (`env_file`), поэтому `.env` должен существовать ещё до `docker compose up`. Код монтируется с хоста, так что правки подхватываются без пересборки; зависимости (`uv`-venv и `node_modules`) живут в named-томах, а не в локальных директориях. SQLite-база — файл `db.sqlite3` в корне репозитория, данные переживают перезапуск.
+
+Миграции применяются автоматически при старте `web`; для ручного прогона и django-команд:
+
+```sh
+docker compose exec web uv run python manage.py migrate
+docker compose exec web uv run python manage.py seed_demo   # демо-данные (только DEBUG)
+```
+
+Для генерации Telegram-сессии в контейнере (интерактивная команда):
+
+```sh
+docker compose exec web uv run python manage.py start_telegram_session
+```
+
+Полученную строку пропишите в `.env` как `TELEGRAM_SESSION_STRING` и перезапустите сервисы парсера:
+
+```sh
+docker compose restart celery-worker celery-beat
+```
+
+Полезные команды:
+
+```sh
+docker compose build          # пересобрать образы после смены зависимостей
+docker compose logs -f web    # логи отдельного сервиса
+docker compose down           # остановить стек (данные остаются)
+docker compose down -v        # остановить и снести тома зависимостей
+```
+
 ### 1. Telegram
 
 Настройка Telegram нужна только для парсинга данных; запуск проекта и тестов работает без неё.
