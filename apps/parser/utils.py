@@ -1,10 +1,9 @@
+import re
 from typing import Literal, overload
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-
-import re
-from urllib.parse import urlsplit
 
 
 @overload

@@ -12,8 +12,8 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import DetailView, FormView, ListView, View
-from inertia import render as inertia_render
 from django_ratelimit.core import get_usage
+from inertia import render as inertia_render
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
