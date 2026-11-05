@@ -39,8 +39,12 @@ AI_TIMEOUT_SECONDS: int = int(os.getenv("AI_TIMEOUT_SECONDS", 30))
 AI_MAX_TOKENS: int = int(os.getenv("AI_MAX_TOKENS", 1024))
 
 # Celery settings
-CELERY_BROKER_URL = "redis://localhost:6379/0"  # Redis like messages brocker
-CELERY_RESULT_BACKEND = "redis://localhost:6379/0"  # tasks results
+# Broker и result backend настраиваются через env (docker compose
+# подставляет redis://redis:6379/0), дефолт — локальный Redis.
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.getenv(
+    "CELERY_RESULT_BACKEND", "redis://localhost:6379/0"
+)
 CELERY_ACCEPT_CONTENT = ["json"]  # tasks data format
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
@@ -245,7 +249,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+# В контейнерах compose статика собирается в /tmp (env STATIC_ROOT),
+# чтобы контейнер не оставлял root-файлы в репозитории.
+STATIC_ROOT = os.getenv("STATIC_ROOT") or os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [str(BASE_DIR / "frontend" / "static")]
 
 # Default primary key field type
