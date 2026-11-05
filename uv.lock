@@ -29,20 +29,21 @@ wheels = [
 
 [[package]]
 name = "anthropic"
-version = "1.11.0"
+version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
     { name = "docstring-parser" },
     { name = "httpx2" },
     { name = "jiter" },
+    { name = "opentelemetry-api" },
     { name = "pydantic" },
     { name = "sniffio" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ad/12/9a6ffa397b172adb040008d934a1dfd85d0e4cefc77489416db294ffc880/anthropic-1.11.0.tar.gz", hash = "sha256:3906fabac7ad7b5b46c6186040398fc7826885c77ce34e4dd7849de16fc8d0f8", size = 1390390, upload-time = "2026-09-30T22:58:21.098Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3e/ba/4c91947e0d0062d66d371db371597287153f7685fbed512d3294d0cde3c7/anthropic-2.3.0.tar.gz", hash = "sha256:edfdea1e3fa7b3ce25df1511953408b2f03bfa61eb6f6268f766101a9e18ad53", size = 1869656, upload-time = "2026-10-23T23:18:47.649Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ab/6f/20edcd2956cac68042b1bcdd13ab3311447519f86b26929ff268dc74c650/anthropic-1.11.0-py3-none-any.whl", hash = "sha256:52f97b2c485cca7ac66058374f5073a3febb7e6849b16989c145d602a3efee21", size = 1681654, upload-time = "2026-09-30T22:58:22.925Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/29/eb3558ab6bf252a07ac41c76ac5b0ea24a0aa0c23f87a40aaf31a5f8dba4/anthropic-2.3.0-py3-none-any.whl", hash = "sha256:aa6a3984f9276f307933d42dc6f58b6efc821a5ecafbc8d1bb5993a066767622", size = 2216980, upload-time = "2026-10-23T23:18:45.779Z" },
 ]
 
 [[package]]
@@ -978,6 +979,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/24/bf/d1bda4f6168e0b2e9e5958945e01910052158313224ada5ce1fb2e1113b8/nodeenv-1.10.0.tar.gz", hash = "sha256:996c191ad80897d076bdfba80a41994c2b47c68e224c542b48feba42ba00f8bb", size = 55611, upload-time = "2025-12-20T14:08:54.006Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/88/b2/d0896bdcdc8d28a7fc5717c305f1a861c26e18c05047949fb371034d98bd/nodeenv-1.10.0-py2.py3-none-any.whl", hash = "sha256:5bb13e3eed2923615535339b3c620e76779af4cb4c6a90deccc9e36b274d3827", size = 23438, upload-time = "2025-12-20T14:08:52.782Z" },
+]
+
+[[package]]
+name = "opentelemetry-api"
+version = "1.45.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/19/14/cf3a6b6448849656e1e5f4e2101f3988dc6789724050096aba1bc5ccf592/opentelemetry_api-1.45.2.tar.gz", hash = "sha256:d7b0008e21e5fd61cbe7a7f34ca3b6905a78ab677d9bc395e299359c75cda6b4", size = 73277, upload-time = "2026-10-29T17:29:37.888Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a9/2d/610db864d7513158cebb8f36cc88e67e73bd6c7aa1905ef18d89e1281c81/opentelemetry_api-1.45.2-py3-none-any.whl", hash = "sha256:2cbd737377e710ee740d261c94e93fa0f08e6d037c18f17513cc0a2d94479a34", size = 60335, upload-time = "2026-10-29T17:29:06.955Z" },
 ]
 
 [[package]]
