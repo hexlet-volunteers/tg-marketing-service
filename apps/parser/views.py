@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import DetailView, FormView, ListView, View
-from django_ratelimit.core import get_usage
+from django_ratelimit.core import get_usage  # type: ignore[import-untyped]
 from inertia import render as inertia_render
 from telethon import TelegramClient
 from telethon.sessions import StringSession
@@ -180,8 +180,10 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
         country = form.cleaned_data["country"]
         category = form.cleaned_data["category"]
 
+        user = cast(User, self.request.user)
+
         pending_count = ModerationRequest.objects.filter(
-            submitted_by=self.request.user,
+            submitted_by=user,
             status="pending",
         ).count()
 
@@ -205,7 +207,7 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
             f"- {identifier} лимит - {limit}"
         )
         try:
-            if use_saved_data:
+            if use_saved_data and existing_channel is not None:
                 saved_data = existing_channel.get_data()
                 saved_data["channel_id"] = saved_data.pop("id")
                 channel_data = ChannelDataForSave(
@@ -232,7 +234,7 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
             )
 
             # Saving data
-            if use_saved_data:
+            if use_saved_data and existing_channel is not None:
                 channel = existing_channel
                 created = False
             else:
@@ -240,7 +242,7 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
                 self.save_stats(channel, channel_data)
 
             ModerationRequest.objects.create(
-                submitted_by=cast(User, self.request.user),
+                submitted_by=user,
                 channel_identifier=identifier,
                 channel_by=channel,
                 category=category,

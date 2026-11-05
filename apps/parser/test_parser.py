@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.messages.storage.fallback import FallbackStorage
+from django.contrib.sessions.backends.db import SessionStore
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.test import RequestFactory
@@ -365,7 +366,7 @@ def test_parser_view_does_not_parse_invalid_channel() -> None:
     view = ParserView()
     request = RequestFactory().post("/parser/")
     request.user = user
-    request.session = {}
+    request.session = SessionStore()
     setattr(request, "_messages", FallbackStorage(request))
     view.setup(request)
 
@@ -540,7 +541,7 @@ def test_parser_view_rejects_submission_when_pending_limit_reached() -> None:
     view = ParserView()
     request = RequestFactory().post("/parser/")
     request.user = user
-    request.session = {}
+    request.session = SessionStore()
     setattr(request, "_messages", FallbackStorage(request))
     view.setup(request)
 
@@ -594,7 +595,7 @@ def test_parser_view_counts_only_current_users_pending_requests() -> None:
     view = ParserView()
     request = RequestFactory().post("/parser/")
     request.user = user
-    request.session = {}
+    request.session = SessionStore()
     setattr(request, "_messages", FallbackStorage(request))
     view.setup(request)
 
@@ -659,7 +660,7 @@ def test_parser_view_allows_submission_below_pending_limit() -> None:
     view = ParserView()
     request = RequestFactory().post("/parser/")
     request.user = user
-    request.session = {}
+    request.session = SessionStore()
     setattr(request, "_messages", FallbackStorage(request))
     view.setup(request)
 
