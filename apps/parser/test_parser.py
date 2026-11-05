@@ -516,3 +516,189 @@ def test_parser_view_parses_channel_after_cooldown() -> None:
     assert channel.participants_count == 150
     assert channel.parsed_at > timezone.now() - timedelta(minutes=1)
     assert ChannelStats.objects.filter(channel=channel).count() == 1
+
+
+@pytest.mark.django_db
+@override_settings(PARSER_MAX_PENDING_REQUESTS=10)
+def test_parser_view_rejects_submission_when_pending_limit_reached() -> None:
+    user = User.objects.create_user(
+        username="queue-limit-user",
+        email="queue-limit@example.com",
+        password="password",
+    )
+
+    for index in range(10):
+        ModerationRequest.objects.create(
+            submitted_by=user,
+            channel_identifier=f"channel_{index}",
+            category="Технологии",
+            country="RU",
+            language="ru",
+            status="pending",
+        )
+
+    view = ParserView()
+    request = RequestFactory().post("/parser/")
+    request.user = user
+    request.session = {}
+    setattr(request, "_messages", FallbackStorage(request))
+    view.setup(request)
+
+    form = view.get_form_class()(
+        data={
+            "channel_identifier": "@new_channel",
+            "category": "Технологии",
+            "country": "RU",
+            "language": "ru",
+            "limit": 10,
+        }
+    )
+    assert form.is_valid(), form.errors
+
+    with patch.object(view, "async_tg_parser") as mock_parser:
+        response = view.form_valid(form)
+
+    assert response.status_code == 200
+    assert ModerationRequest.objects.filter(submitted_by=user).count() == 10
+    assert (
+        "У вас уже максимальное количество необработанных заявок. "
+        "Дождитесь рассмотрения предыдущих заявок."
+        in form.non_field_errors()
+    )
+    mock_parser.assert_not_called()
+
+
+@pytest.mark.django_db
+@override_settings(PARSER_MAX_PENDING_REQUESTS=10)
+def test_parser_view_counts_only_current_users_pending_requests() -> None:
+    user = User.objects.create_user(
+        username="queue-user",
+        email="queue-user@example.com",
+        password="password",
+    )
+    other_user = User.objects.create_user(
+        username="other-queue-user",
+        email="other-queue-user@example.com",
+        password="password",
+    )
+
+    for index in range(10):
+        ModerationRequest.objects.create(
+            submitted_by=other_user,
+            channel_identifier=f"other_channel_{index}",
+            category="Технологии",
+            country="RU",
+            language="ru",
+            status="pending",
+        )
+
+    view = ParserView()
+    request = RequestFactory().post("/parser/")
+    request.user = user
+    request.session = {}
+    setattr(request, "_messages", FallbackStorage(request))
+    view.setup(request)
+
+    form = view.get_form_class()(
+        data={
+            "channel_identifier": "@new_channel",
+            "category": "Технологии",
+            "country": "RU",
+            "language": "ru",
+            "limit": 10,
+        }
+    )
+    assert form.is_valid(), form.errors
+
+    parsed_data = {
+        "title": "New Channel",
+        "channel_id": 987654321,
+        "username": "new_channel",
+        "verified": False,
+        "creation_date": None,
+        "last_messages": [],
+        "average_views": 0,
+        "participants_count": 100,
+        "description": "New channel",
+        "pinned_messages": [],
+    }
+
+    with patch.object(
+        view,
+        "async_tg_parser",
+        return_value=parsed_data,
+    ) as mock_parser:
+        response = view.form_valid(form)
+
+    assert response.status_code == 302
+    mock_parser.assert_called_once_with("new_channel", 10)
+    assert ModerationRequest.objects.filter(submitted_by=user).count() == 1
+    assert (
+        ModerationRequest.objects.filter(submitted_by=other_user).count() 
+        == 10
+    )
+
+
+@pytest.mark.django_db
+@override_settings(PARSER_MAX_PENDING_REQUESTS=10)
+def test_parser_view_allows_submission_below_pending_limit() -> None:
+    user = User.objects.create_user(
+        username="queue-below-limit-user",
+        email="queue-below-limit@example.com",
+        password="password",
+    )
+
+    for index in range(9):
+        ModerationRequest.objects.create(
+            submitted_by=user,
+            channel_identifier=f"channel_{index}",
+            category="Технологии",
+            country="RU",
+            language="ru",
+            status="pending",
+        )
+
+    view = ParserView()
+    request = RequestFactory().post("/parser/")
+    request.user = user
+    request.session = {}
+    setattr(request, "_messages", FallbackStorage(request))
+    view.setup(request)
+
+    form = view.get_form_class()(
+        data={
+            "channel_identifier": "@new_channel",
+            "category": "Технологии",
+            "country": "RU",
+            "language": "ru",
+            "limit": 10,
+        }
+    )
+    assert form.is_valid(), form.errors
+
+    parsed_data = {
+        "title": "New Channel",
+        "channel_id": 987654321,
+        "username": "new_channel",
+        "verified": False,
+        "creation_date": None,
+        "last_messages": [],
+        "average_views": 0,
+        "participants_count": 100,
+        "description": "New channel",
+        "pinned_messages": [],
+    }
+
+    with patch.object(
+        view,
+        "async_tg_parser",
+        return_value=parsed_data,
+    ) as mock_parser:
+        response = view.form_valid(form)
+
+    assert response.status_code == 302
+    mock_parser.assert_called_once_with("new_channel", 10)
+    assert ModerationRequest.objects.filter(
+        submitted_by=user,
+        status="pending",
+    ).count() == 10

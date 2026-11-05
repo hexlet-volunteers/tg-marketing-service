@@ -144,9 +144,9 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
         )
 
     def post(
-        self, 
-        request: HttpRequest, 
-        *args: Any, 
+        self,
+        request: HttpRequest,
+        *args: Any,
         **kwargs: Any,
     ) -> HttpResponse:
         usage = get_usage(
@@ -174,6 +174,19 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
         language = form.cleaned_data["language"]
         country = form.cleaned_data["country"]
         category = form.cleaned_data["category"]
+
+        pending_count = ModerationRequest.objects.filter(
+            submitted_by=self.request.user,
+            status="pending",
+        ).count()
+
+        if pending_count >= settings.PARSER_MAX_PENDING_REQUESTS:
+            form.add_error(
+                None,
+                "У вас уже максимальное количество необработанных заявок. "
+                "Дождитесь рассмотрения предыдущих заявок.",
+            )
+            return self.form_invalid(form)
 
         existing_channel = self.find_existing_channel(identifier)
 
