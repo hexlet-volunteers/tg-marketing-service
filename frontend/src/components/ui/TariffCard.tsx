@@ -23,9 +23,9 @@ interface TariffCardProps {
 }
 
 const tariffStyles: Record<TariffType, { border: string; buttonColour: string; buttonLabel: string }> = {
-  free: { border: "1px solid #e9ecef", buttonColour: "#868e96", buttonLabel: "Текущий план" },
-  pro: { border: "2px solid #229ED9", buttonColour: "#229ED9", buttonLabel: "Перейти на Pro" },
-  agency: { border: "1px solid #e9ecef", buttonColour: "#101216", buttonLabel: "Перейти на Agency" },
+  free: { border: "1px solid var(--mantine-color-muted-2)", buttonColour: "muted.5", buttonLabel: "Текущий план" },
+  pro: { border: "2px solid var(--mantine-color-tgblue-5)", buttonColour: "tgblue.5", buttonLabel: "Перейти на Pro" },
+  agency: { border: "1px solid var(--mantine-color-muted-2)", buttonColour: "primary.9", buttonLabel: "Перейти на Agency" },
 };
 
 export default function TariffCard(props: TariffCardProps) {
@@ -33,22 +33,20 @@ export default function TariffCard(props: TariffCardProps) {
 
   return (
     <Paper
-      withBorder
-      radius="lg"
       p="lg"
       style={{ display: "flex", minWidth: 0, border: appearence.border }}
     >
       <Stack gap={5} style={{ flex: 1 }}>
-        <Title order={3} fz={14} fw={800}>{props.name}</Title>
+        <Title order={3} size="h4" fw={800}>{props.name}</Title>
         <div>
           <Text fz={22} fw={800}>{props.price}</Text>
-          <Text fz={11} c="#868e96">{props.period}</Text>
+          <Text fz={11} c="muted.5">{props.period}</Text>
         </div>
         <List
           fz={11.5}
-          c="#868e96"
+          c="muted.5"
           spacing="sm"
-          icon={<Text fz={11.5} c="green">✓</Text>}
+          icon={<Text fz={11.5} c="tggreen.5">✓</Text>}
         >
           {props.features.map((feature) => (
             <List.Item key={feature}>{feature}</List.Item>

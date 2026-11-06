@@ -1,5 +1,5 @@
 import React from 'react';
-import { Paper, Stack, Text, Progress, Button } from '@mantine/core';
+import { Paper, Stack, Text, Title, Progress, Button } from '@mantine/core';
 import TariffUpgrade from '../modals/TariffUpgrade';
 
 /**
@@ -30,14 +30,14 @@ const UpgradeBanner: React.FC/*<UpgradeBannerProps>*/ = (/*{ show_upgrade_banner
   /*if (show_upgrade_banner === true) {*/
     return (
       <>
-        <Paper withBorder radius={11} bg="#E7F5FB">
+        <Paper bg="tgblue.0">
           <Stack gap={0} p={14}>
-            <Text fz={12} fw={700} c="#1B87BC" mb={4}>Тариф Free</Text>
-            <Text fz={11.5} mb={10} c="#868e96">
+            <Title order={4} fz={12} c="tgblue.6" mb={4}>Тариф Free</Title>
+            <Text fz={11.5} mb={10} c="muted.5">
               3 из 5 AI-разборов в этом месяце
             </Text>
-            <Progress value={60} h={6} radius="xl" mb={11} bg="#d3e9f5" c="#229ED9"/>
-            <Button fullWidth fz={12} fw={700} radius="md" bg="#229ED9" onClick={openModal}>
+            <Progress value={60} h={6} radius="xl" mb={11} bg="tgblue.1" color="tgblue.5"/>
+            <Button fullWidth fz={12} fw={700} radius="md" color="tgblue.5" onClick={openModal}>
               Улучшить тариф
             </Button>
           </Stack>

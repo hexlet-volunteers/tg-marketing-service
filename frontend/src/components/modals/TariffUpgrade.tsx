@@ -33,11 +33,12 @@ const TariffUpgrade: React.FC<TariffUpgradeProps> = ({ isVisible, onClose }) => 
       centered
       size="xl"
       radius="lg"
+      shadow="modal"
     >
       <Modal.Overlay />
 
       <Modal.Content>
-        <Modal.Header style={{ borderBottom: '1px solid #f1f3f5' }}>
+        <Modal.Header style={{ borderBottom: '1px solid var(--mantine-color-muted-1)' }}>
           <Group gap="xs">
               <Avatar color="tgblue" radius="md">t</Avatar>
               <Text size="sm" fw={700}>tgpulse</Text>
