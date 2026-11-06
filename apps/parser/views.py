@@ -1,7 +1,9 @@
 import logging
+from datetime import timedelta
 from typing import Any, cast
 
 from asgiref.sync import async_to_sync
+from django.conf import settings
 from django.contrib import messages
 from django.db.models import Q, QuerySet
 from django.http import HttpRequest, HttpResponse, JsonResponse
@@ -10,6 +12,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import DetailView, FormView, ListView, View
+from django_ratelimit.core import get_usage  # type: ignore[import-untyped]
 from inertia import render as inertia_render
 from telethon import TelegramClient
 from telethon.sessions import StringSession
@@ -39,6 +42,12 @@ from config.renderers import render_inertia_from_dto
 from mocks.parser import MOCK_COMPARE_METRICS
 
 log = logging.getLogger(__name__)
+
+
+def is_channel_in_cooldown(channel: TelegramChannel) -> bool:
+    """Проверяет, был ли канал запаршен в пределах кулдауна."""
+    cooldown = timedelta(hours=settings.PARSER_COOLDOWN_HOURS)
+    return timezone.now() - channel.parsed_at < cooldown
 
 
 class ParserView(UserAuthenticationCheckMixin, FormView):
@@ -139,6 +148,30 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
             f"- participants: {current_count} growth: {daily_growth}"
         )
 
+    def post(
+        self,
+        request: HttpRequest,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
+        usage = get_usage(
+            request,
+            group="parser_channel_submission",
+            key="user",
+            rate=settings.PARSER_RATE_LIMIT,
+            method="POST",
+            increment=True,
+        )
+        if usage and usage["should_limit"]:
+            form = self.get_form()
+            form.add_error(
+                None,
+                "Вы отправили слишком много запросов. Попробуйте позже.",
+            )
+            return self.form_invalid(form)
+
+        return super().post(request, *args, **kwargs)
+
     def form_valid(self, form: ChannelParseForm) -> HttpResponse:
         """Обработка формы"""
         identifier = form.cleaned_data["channel_identifier"]
@@ -147,28 +180,50 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
         country = form.cleaned_data["country"]
         category = form.cleaned_data["category"]
 
+        user = cast(User, self.request.user)
+
+        pending_count = ModerationRequest.objects.filter(
+            submitted_by=user,
+            status="pending",
+        ).count()
+
+        if pending_count >= settings.PARSER_MAX_PENDING_REQUESTS:
+            form.add_error(
+                None,
+                "У вас уже максимальное количество необработанных заявок. "
+                "Дождитесь рассмотрения предыдущих заявок.",
+            )
+            return self.form_invalid(form)
+
         existing_channel = self.find_existing_channel(identifier)
 
-        if existing_channel:
-            self.request.session["flash"] = {
-                "error": f"Канал {existing_channel.title} уже в каталоге"
-            }
-            return super().form_valid(form)
+        use_saved_data = (
+            existing_channel is not None
+            and is_channel_in_cooldown(existing_channel)
+        )
 
         log.info(
             f"Начинаем обработку данных для канала; "
             f"- {identifier} лимит - {limit}"
         )
         try:
-            # Start async parsing function
-            async_parser = async_to_sync(self.async_tg_parser)
-            parsed_data = async_parser(identifier, limit)
-            if parsed_data is None:
-                form.add_error(None, "Не удалось получить данные канала")
-                return self.form_invalid(form)
-            channel_data = ChannelDataForSave(
-                **normalize_channel_data(parsed_data)
-            )
+            if use_saved_data and existing_channel is not None:
+                saved_data = existing_channel.get_data()
+                saved_data["channel_id"] = saved_data.pop("id")
+                channel_data = ChannelDataForSave(
+                    **normalize_channel_data(saved_data)
+                )
+            else:
+                async_parser = async_to_sync(self.async_tg_parser)
+                parsed_data = async_parser(identifier, limit)
+
+                if parsed_data is None:
+                    form.add_error(None, "Не удалось получить данные канала")
+                    return self.form_invalid(form)
+
+                channel_data = ChannelDataForSave(
+                    **normalize_channel_data(parsed_data)
+                )
             channel_data.update(
                 {"language": language, "country": country, "category": category}
             )
@@ -179,11 +234,15 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
             )
 
             # Saving data
-            channel, created = self.save_channel(channel_data)
-            self.save_stats(channel, channel_data)
+            if use_saved_data and existing_channel is not None:
+                channel = existing_channel
+                created = False
+            else:
+                channel, created = self.save_channel(channel_data)
+                self.save_stats(channel, channel_data)
 
             ModerationRequest.objects.create(
-                submitted_by=cast(User, self.request.user),
+                submitted_by=user,
                 channel_identifier=identifier,
                 channel_by=channel,
                 category=category,

@@ -1,5 +1,7 @@
 from django import forms
 
+from apps.parser.utils import normalize_channel_username
+
 
 class ChannelParseForm(forms.Form):
     channel_identifier = forms.CharField(
@@ -13,6 +15,18 @@ class ChannelParseForm(forms.Form):
             }
         ),
     )
+
+    def clean_channel_identifier(self) -> str:
+        value = self.cleaned_data["channel_identifier"]
+        username = normalize_channel_username(value)
+
+        if not username:
+            raise forms.ValidationError(
+                "Введите корректный username Telegram-канала "
+                "(от 5 до 32 символов: латинские буквы, цифры и _)."
+            )
+
+        return username
 
     category = forms.ChoiceField(
         required=True,
