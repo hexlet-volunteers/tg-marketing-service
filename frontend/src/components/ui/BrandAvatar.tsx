@@ -1,5 +1,6 @@
 import { Avatar, Flex } from "@mantine/core";
 import React from "react";
+import { avatarGradients } from '@/shared/const/avatarGradients';
 
 /** Пропсы для компонента аватара бренда */
 interface BrandAvatarProps {
@@ -24,7 +25,7 @@ export const BrandAvatar: React.FC<BrandAvatarProps> = ({
    size={size}
    radius="xl"
    variant="gradient"
-   gradient={{ from: "tgblue", to: "tgpurple", deg: 135 }}
+   gradient={{ ...avatarGradients.default }}
   >
    <Flex align="center" justify="center" lh={1}>
     {initial}
