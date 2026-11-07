@@ -23,5 +23,5 @@ export interface Tariff {
 }
 
 export interface TariffsBlockProps {
-  tariffs?: Tariff[];
+  tariffs: Tariff[];
 }

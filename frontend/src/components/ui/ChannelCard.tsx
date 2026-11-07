@@ -3,6 +3,7 @@ import { Text, Avatar, Badge, Card, Group, Box } from '@mantine/core';
 import { IconCheck } from '@tabler/icons-react';
 import type { Channel } from '@/types/channel';
 import { formatNumberShort } from '@/utils/formatNumberShort';
+import { avatarGradients } from '@/shared/const/avatarGradients';
 
 interface ChannelCardProps {
   channel: Channel;
@@ -15,16 +16,6 @@ const initials = (name: string) =>
     .slice(0, 2)
     .join('')
     .toUpperCase();
-
-const gradients: Record<string, [string, string]> = {
-  'Технологии': ['#229ED9', '#6741d9'],
-  'Криптовалюты': ['#f76707', '#e8590c'],
-  'Маркетинг': ['#12b886', '#0ca678'],
-  'Психология': ['#f783ac', '#e64980'],
-  'Бизнес': ['#229ED9', '#12b886'],
-  'Спорт': ['#f76707', '#229ED9'],
-  'Книги': ['#6741d9', '#f783ac'],
-};
 
 const ChannelCard: React.FC<ChannelCardProps> = ({ channel }) => {
   const {
@@ -39,8 +30,6 @@ const ChannelCard: React.FC<ChannelCardProps> = ({ channel }) => {
     growth30d,
   } = channel;
 
-  const [from, to] = gradients[category] ?? ['#229ED9', '#6741d9'];
-
   return (
     <Card
       padding="md"
@@ -52,7 +41,7 @@ const ChannelCard: React.FC<ChannelCardProps> = ({ channel }) => {
           size={46}
           radius={12}
           variant="gradient"
-          gradient={{ from, to, deg: 135 }}
+          gradient={{ ...avatarGradients[category] || avatarGradients.default }}
           src={imageUrl || undefined}
         >
           {initials(name)}
