@@ -1,9 +1,9 @@
 import math
 from typing import Dict, Optional, Tuple
 
-from django.db.models import Count, F
+from django.db.models import Count, F, Sum
 
-from apps.parser.models import Post, TelegramChannel
+from apps.parser.models import Post, PostReaction, TelegramChannel
 
 
 def engagement_rate(interactions: int, views: int) -> float:
@@ -157,3 +157,37 @@ def update_channels_citation_indices() -> None:
         m_count = mention_map.get(channel.channel_id, 0)
 
         _calculate_and_save_index(channel, r_count, m_count)
+
+
+def reactions_breakdown(channel: TelegramChannel, top_n: int = 6) -> dict:
+    reactions_qs = (
+        PostReaction.objects.filter(post__channel=channel)
+        .values("emoji")
+        .annotate(total_count=Sum("count"))
+        .order_by("-total_count")
+    )
+
+    if not reactions_qs:
+        return {"details": [], "others_percent": 0.0}
+
+    grand_total = sum(item["total_count"] for item in reactions_qs)
+    if grand_total == 0:
+        return {"details": [], "others_percent": 0.0}
+
+    details = []
+    sum_top_percent = 0.0
+
+    for i, item in enumerate(reactions_qs):
+        if i >= top_n:
+            break
+
+        count = item["total_count"]
+        percent = round((count / grand_total * 100), 2)
+        details.append(
+            {"emoji": item["emoji"], "count": count, "percent": percent}
+        )
+        sum_top_percent += percent
+
+    others_percent = round(max(0, 100.0 - sum_top_percent), 2)
+
+    return {"details": details, "others_percent": others_percent}
