@@ -106,6 +106,21 @@ class BlogArticleFormTests(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data["tags"], [])
 
+    def test_missing_read_time_defaults_to_five(self) -> None:
+        data = self.data()
+        data.pop("read_time")
+
+        form = BlogArticleForm(data)
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["read_time"], 5)
+
+    def test_explicit_read_time_is_kept(self) -> None:
+        form = BlogArticleForm(self.data(read_time=12))
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["read_time"], 12)
+
     def test_author_is_not_editable(self) -> None:
         form = BlogArticleForm(self.data())
 

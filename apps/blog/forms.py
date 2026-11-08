@@ -20,6 +20,7 @@ class BlogArticleForm(forms.ModelForm):
     """Форма редактора статьи: валидирует поля, доступные в админке."""
 
     tags = forms.JSONField(required=False)
+    read_time = forms.IntegerField(required=False, min_value=0)
 
     class Meta:
         model = BlogArticle
@@ -32,3 +33,7 @@ class BlogArticleForm(forms.ModelForm):
         ):
             raise forms.ValidationError("Теги должны быть списком строк.")
         return [tag.strip() for tag in tags if tag.strip()]
+
+    def clean_read_time(self) -> int:
+        read_time = self.cleaned_data.get("read_time")
+        return 5 if read_time is None else read_time

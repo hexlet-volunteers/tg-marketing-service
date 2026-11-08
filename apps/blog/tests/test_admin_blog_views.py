@@ -165,16 +165,19 @@ class AdminBlogViewTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertFalse(BlogArticle.objects.exists())
 
-    def test_create_invalid_returns_errors_and_saves_nothing(self) -> None:
+    def test_create_invalid_redirects_with_errors_and_saves_nothing(
+        self,
+    ) -> None:
         self.client.force_login(self.admin)
 
         response = self.post_json(self.article_payload(title="", slug=""))
 
-        self.assertEqual(response.status_code, 200)
-        errors = response.json()["props"]["errors"]
+        self.assertEqual(response.status_code, 302)
+        errors = self.get_inertia().json()["props"]["errors"]
         self.assertIn("title", errors)
         self.assertIn("slug", errors)
         self.assertFalse(BlogArticle.objects.exists())
+        self.assertEqual(self.get_inertia().json()["props"]["errors"], {})
 
 
 class AdminBlogArticleViewTests(TestCase):
@@ -240,6 +243,15 @@ class AdminBlogArticleViewTests(TestCase):
             role=role,
         )
 
+    def get_inertia(self, user: User | None = None) -> Any:
+        if user is not None:
+            self.client.force_login(user)
+        return self.client.get(
+            reverse("admin_blog:list"),
+            HTTP_ACCEPT="application/json",
+            HTTP_X_INERTIA="true",
+        )
+
     def test_reverse_article_url(self) -> None:
         self.assertEqual(
             self.article_url(),
@@ -282,11 +294,14 @@ class AdminBlogArticleViewTests(TestCase):
         self.assertFalse(self.article.is_published)
         self.assertEqual(self.article.published_at, published_at)
 
-    def test_patch_invalid_returns_errors_and_keeps_data(self) -> None:
+    def test_patch_invalid_redirects_with_errors_and_keeps_data(
+        self,
+    ) -> None:
         response = self.patch_json({"title": ""}, user=self.admin)
 
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("title", response.json()["props"]["errors"])
+        self.assertEqual(response.status_code, 303)
+        errors = self.get_inertia().json()["props"]["errors"]
+        self.assertIn("title", errors)
         self.article.refresh_from_db()
         self.assertEqual(self.article.title, "Исходная статья")
 

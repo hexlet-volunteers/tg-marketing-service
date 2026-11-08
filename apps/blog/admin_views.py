@@ -13,6 +13,8 @@ from apps.users.models import User
 from config.mixins import AdminRequiredMixin
 from config.renderers import render_inertia_from_dto
 
+FORM_ERRORS_SESSION_KEY = "admin_blog_form_errors"
+
 
 def _request_data(request: HttpRequest) -> dict[str, Any]:
     """Данные редактора из JSON-тела или обычного POST."""
@@ -25,16 +27,12 @@ def _request_data(request: HttpRequest) -> dict[str, Any]:
     return request.POST.dict()
 
 
-def _render_errors(
+def _redirect_with_errors(
     request: HttpRequest, form: BlogArticleForm
-) -> InertiaResponse:
-    return render_inertia_from_dto(
-        request,
-        "AdminBlog",
-        props=AdminBlogService.build_dto(
-            errors=form.errors.get_json_data(),
-        ),
-    )
+) -> HttpResponse:
+    """Ошибки формы переживают redirect и отдаются на списке один раз."""
+    request.session[FORM_ERRORS_SESSION_KEY] = form.errors.get_json_data()
+    return redirect("admin_blog:list")
 
 
 class AdminBlogView(AdminRequiredMixin, View):
@@ -43,10 +41,11 @@ class AdminBlogView(AdminRequiredMixin, View):
     def get(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> InertiaResponse:
+        errors = request.session.pop(FORM_ERRORS_SESSION_KEY, None) or {}
         return render_inertia_from_dto(
             request,
             "AdminBlog",
-            props=AdminBlogService.build_dto(),
+            props=AdminBlogService.build_dto(errors=errors),
         )
 
     def post(
@@ -54,7 +53,7 @@ class AdminBlogView(AdminRequiredMixin, View):
     ) -> HttpResponse:
         form = BlogArticleForm(_request_data(request))
         if not form.is_valid():
-            return _render_errors(request, form)
+            return _redirect_with_errors(request, form)
 
         article = form.save(commit=False)
         article.author = cast(User, request.user)
@@ -79,7 +78,7 @@ class AdminBlogArticleView(AdminRequiredMixin, View):
 
         form = BlogArticleForm(data, instance=article)
         if not form.is_valid():
-            return _render_errors(request, form)
+            return _redirect_with_errors(request, form)
 
         form.save()
         request.session["flash"] = {"success": "Статья обновлена"}
