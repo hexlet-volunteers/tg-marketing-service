@@ -14,6 +14,8 @@ import TariffCard from '../ui/TariffCard';
  * 
  * Значение billingPeriod в качестве одного из пропсов передаётся в компонент TariffCard для отображения цены и периода оплаты.
  * 
+ * Функция handleClose закрывает модальное окно и сбрасывает billingPeriod в значение по умолчанию (monthly).
+ * 
  * Три возможные варианта тарифа (Free, Pro и Agency) отображаются через компонент TariffCard
  * с соответствующими данными в качестве пропсов (name, price, period, features, type).
  * 
@@ -32,6 +34,11 @@ interface TariffUpgradeProps {
 
 const TariffUpgrade: React.FC<TariffUpgradeProps> = ({ isVisible, onClose }) => {
   const [billingPeriod, setBillingPeriod] = React.useState('monthly');
+
+  const handleClose = () => {
+    setBillingPeriod('monthly')
+    onClose();
+  };
 
   const segmentedControlData: { label: string; value: string }[] = [
     { label: 'Помесячно', value: 'monthly' },
@@ -78,7 +85,7 @@ const TariffUpgrade: React.FC<TariffUpgradeProps> = ({ isVisible, onClose }) => 
   return (
     <Modal.Root
       opened={isVisible}
-      onClose={onClose}
+      onClose={handleClose}
       centered
       size="xl"
       radius="lg"
