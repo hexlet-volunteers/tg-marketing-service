@@ -15,6 +15,8 @@ import TariffUpgrade from '../modals/TariffUpgrade';
  * 
  * Пропсы модального окна (isVisible, onClose) заданы через UseState,
  * как и функция открытия модального окна.
+ * 
+ * Константы bannerTitle, bannerText и buttonText задают текстовое содержимое баннера.
  */
 
 // interface UpgradeBannerProps {
@@ -27,18 +29,22 @@ const UpgradeBanner: React.FC/*<UpgradeBannerProps>*/ = (/*{ show_upgrade_banner
   const openModal = () => setShowModal(true);
   const closeModal = () => setShowModal(false);
 
+  const bannerTitle: string = "Тариф Free";
+  const bannerText: string = "3 из 5 AI-разборов в этом месяце";
+  const buttonText: string = "Улучшить тариф";
+
   /*if (show_upgrade_banner === true) {*/
     return (
       <>
         <Paper bg="tgblue.0">
-          <Stack gap={0} p={14}>
-            <Title order={4} fz={12} c="tgblue.6" mb={4}>Тариф Free</Title>
-            <Text fz={11.5} mb={10} c="muted.5">
-              3 из 5 AI-разборов в этом месяце
+          <Stack gap={0} p="md">
+            <Title order={4} fz="xs" c="tgblue.6" mb={4}>{bannerTitle}</Title>
+            <Text fz="xs" mb="xs" c="muted.5">
+              {bannerText}
             </Text>
-            <Progress value={60} h={6} radius="xl" mb={11} bg="tgblue.1" color="tgblue.5"/>
-            <Button fullWidth fz={12} fw={700} radius="md" color="tgblue.5" onClick={openModal}>
-              Улучшить тариф
+            <Progress value={60} h={6} radius="xl" mb="xs" bg="tgblue.1" color="tgblue.5"/>
+            <Button fullWidth fz="xs" fw="bold" radius="md" color="tgblue.5" onClick={openModal}>
+              {buttonText}
             </Button>
           </Stack>
         </Paper>
