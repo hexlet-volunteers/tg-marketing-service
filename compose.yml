@@ -1,0 +1,132 @@
+# Локальный стек разработки одним подъемом (issue #381).
+#
+#   docker compose up
+#
+# поднимает: redis, web (Django runserver :8000), celery-worker,
+# celery-beat, flower (:5555) и frontend (Vite dev-сервер :5173).
+# Все сервисы берут переменные из .env (см. .env.example).
+# Полный сброс вместе с volume'ами зависимостей: docker compose down -v.
+
+name: tg-marketing-dev
+
+services:
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      # Можно переопределить в .env: compose подхватит переменные оттуда.
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+      # Статику собираем в /tmp, чтобы контейнер не оставлял
+      # root-файлы в репозитории.
+      STATIC_ROOT: /tmp/staticfiles
+    command: >-
+      sh -c "uv run python manage.py migrate
+      && uv run python manage.py collectstatic --noinput
+      && exec uv run python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      # Код монтируем с хоста (правки без пересборки образа),
+      # venv берем из образа, чтобы не конфликтовать с локальным.
+      - .:/app
+      - backend_venv:/app/.venv
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import socket; socket.create_connection(('127.0.0.1', 8000), timeout=3)",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+    command: sh -c "exec uv run celery -A config worker --loglevel=info"
+    volumes:
+      - .:/app
+      - backend_venv:/app/.venv
+    depends_on:
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+    # --schedule в /tmp: иначе beat пишет root-файл celerybeat-schedule
+    # в репозиторий.
+    command: >-
+      sh -c "exec uv run celery -A config beat --loglevel=info
+      --schedule=/tmp/celerybeat-schedule"
+    volumes:
+      - .:/app
+      - backend_venv:/app/.venv
+    depends_on:
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+    command: sh -c "exec uv run celery -A config flower --port=5555"
+    volumes:
+      - .:/app
+      - backend_venv:/app/.venv
+    ports:
+      - "127.0.0.1:5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    command: sh -c "exec npm run dev"
+    volumes:
+      # Код с хоста, node_modules — из образа (иначе mount затирает их
+      # локальной установленной копией).
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "127.0.0.1:5173:5173"
+
+volumes:
+  backend_venv:
+  frontend_node_modules:
