@@ -4,9 +4,9 @@ import { Button, List, Paper, Stack, Text, Title } from '@mantine/core';
  * Компонент карточки тарифа.
  *
  * Получает данные для отображения через пропсы: 
- * название тарифа (name), цена (price), период оплаты (period), особенности (features), тип (type).
+ * название тарифа (name), цена (price), период оплаты (period), особенности (features), тип (type) и текст кнопки (buttonLabel).
  * 
- * Тип тарифа задает оформление карточки (appearance) и текст кнопки (buttonLabel)
+ * Тип тарифа задает оформление карточки (appearance)
  * через заранее созданные типом TariffType и набор стилей tariffStyles.
  * 
  * Позже будет добавлена возможность перехода на выбранный тариф при нажатии кнопки соответствующей карточки.
@@ -19,13 +19,14 @@ interface TariffCardProps {
   price: string;
   period: string;
   features: string[];
+  buttonLabel: string;
   type: TariffType;
 }
 
-const tariffStyles: Record<TariffType, { border: string; buttonColour: string; buttonLabel: string }> = {
-  free: { border: "1px solid var(--mantine-color-muted-2)", buttonColour: "muted.5", buttonLabel: "Текущий план" },
-  pro: { border: "2px solid var(--mantine-color-tgblue-5)", buttonColour: "tgblue.5", buttonLabel: "Перейти на Pro" },
-  agency: { border: "1px solid var(--mantine-color-muted-2)", buttonColour: "primary.9", buttonLabel: "Перейти на Agency" },
+const tariffStyles: Record<TariffType, { border: string; buttonColour: string }> = {
+  free: { border: "1px solid var(--mantine-color-muted-2)", buttonColour: "muted.5" },
+  pro: { border: "2px solid var(--mantine-color-tgblue-5)", buttonColour: "tgblue.5" },
+  agency: { border: "1px solid var(--mantine-color-muted-2)", buttonColour: "primary.9" },
 };
 
 export default function TariffCard(props: TariffCardProps) {
@@ -36,24 +37,24 @@ export default function TariffCard(props: TariffCardProps) {
       p="lg"
       style={{ display: "flex", minWidth: 0, border: appearence.border }}
     >
-      <Stack gap={5} style={{ flex: 1 }}>
-        <Title order={3} size="h4" fw={800}>{props.name}</Title>
+      <Stack gap="xs" style={{ flex: 1 }}>
+        <Title order={3} size="h4" fw="bold">{props.name}</Title>
         <div>
-          <Text fz={22} fw={800}>{props.price}</Text>
-          <Text fz={11} c="muted.5">{props.period}</Text>
+          <Text fz="xl" fw="bold">{props.price}</Text>
+          <Text fz="xs" c="muted.5">{props.period}</Text>
         </div>
         <List
-          fz={11.5}
+          fz="xs"
           c="muted.5"
           spacing="sm"
-          icon={<Text fz={11.5} c="tggreen.5">✓</Text>}
+          icon={<Text fz="xs" c="tggreen.5">✓</Text>}
         >
           {props.features.map((feature) => (
             <List.Item key={feature}>{feature}</List.Item>
           ))}
         </List>
-        <Button mt="auto" fullWidth fz={12} fw={700} radius="md" color={appearence.buttonColour}>
-          {appearence.buttonLabel}
+        <Button mt="auto" fullWidth fz="xs" fw="bold" radius="md" color={appearence.buttonColour}>
+          {props.buttonLabel}
         </Button>
       </Stack>
     </Paper>
