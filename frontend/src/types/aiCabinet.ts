@@ -28,6 +28,28 @@ interface Competitor {
 
 type HeatMapData = Record<string, Record<number, number>>
 
+interface AskAIAboutChannelProps {
+ quickQuestions: string[];
+}
+
+interface BestTimeToPostProps {
+ daysOfWeek: string[];
+ hours: number[];
+ heatMapData: HeatMapData;
+}
+
+interface CompetitorsProps {
+ competitors: Competitor[];
+}
+
+interface WeeklyInsightsProps {
+    insights: Insight[];
+}
+
+interface WhatToWriteAboutProps {
+ ideas: Idea[];
+}
+
 interface AiCabinetPageProps {
   ideas: IdeaData[];
   insights: InsightData[];
@@ -35,4 +57,4 @@ interface AiCabinetPageProps {
   heatMapData: HeatMapData;
 }
 
-export type { IdeaData, Idea, Competitor, InsightData, Insight, HeatMapData, AiCabinetPageProps }
+export type { IdeaData, Idea, Competitor, InsightData, Insight, HeatMapData, AskAIAboutChannelProps, BestTimeToPostProps, CompetitorsProps, WeeklyInsightsProps, WhatToWriteAboutProps, AiCabinetPageProps }
