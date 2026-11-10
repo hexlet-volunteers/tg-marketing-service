@@ -15,17 +15,30 @@ import BestTimeToPost from "@/components/AICabinet/BestTimeToPost";
 import WeeklyInsights from "@/components/AICabinet/WeeklyInsights";
 import AskAIAboutChannel from "@/components/AICabinet/AskAIAboutChannel";
 
-
 import type { AiCabinetPageProps } from "@/types/aiCabinet";
 import { makeIdeas, makeInsights } from "@/utils/makeIdeasAndInsights";
 
 import staticData from "@/shared/const/AICabinetPageStaticData";
 
+/**
+ * Страница «AI-кабинет автора».
+ *
+ * Отображает аналитический дашборд с инструментами на базе искусственного интеллекта:
+ * - Секцию «О чём написать на этой неделе» с генерацией идей и прогнозом охватов (WhatToWriteAboutThisWeek).
+ * - Тепловую карту активности аудитории по часам и дням недели для выбора времени публикаций (BestTimeToPost).
+ * - Модуль мониторинга и сравнения метрик с каналами-конкурентами (Competitors).
+ * - Блок еженедельных инсайтов, трендов и предупреждений с цветовой индикацией (WeeklyInsights).
+ * - Интерактивный чат с AI-ассистентом для запросов по статистике канала с готовыми пресетами вопросов (AskAIAboutChannel).
+ */
 const AICabinet = ({
- ideas: ideasData,
- insights: insightsData,
- competitors,
- heatMapData,
+  /** Данные с идеями для постов, поступающие с бэкенда */
+  ideas: ideasData,
+  /** Данные еженедельных инсайтов и трендов */
+  insights: insightsData,
+  /** Список каналов-конкурентов для сравнительного анализа */
+  competitors,
+  /** Матрица активности пользователей для построения тепловой карты */
+  heatMapData,
 }: AiCabinetPageProps) => {
  const { quickQuestions, daysOfWeek, hours } = staticData;
 
@@ -47,7 +60,6 @@ const AICabinet = ({
 
    <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg">
     <Stack gap="lg">
-
      <WhatToWriteAboutThisWeek ideas={ideas} />
 
      <BestTimeToPost
@@ -57,15 +69,12 @@ const AICabinet = ({
      />
      
      <Competitors competitors={competitors} />
-
     </Stack>
 
     <Stack gap="lg">
-
      <WeeklyInsights insights={insights} />
 
      <AskAIAboutChannel quickQuestions={quickQuestions} />
-
     </Stack>
    </SimpleGrid>
   </Container>
