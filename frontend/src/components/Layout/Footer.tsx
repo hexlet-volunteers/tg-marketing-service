@@ -5,7 +5,7 @@ import { router } from '@inertiajs/react';
  * Данные для секций футера.
  *
  * Содержит три группы ссылок: «Продукт», «Компания» и «Правовое».
- * Для группы «Правовое» указаны маршруты на страницу {@link LegalPage}
+ * Для группы «Правовое» указаны маршруты на страницу {@link Legal}
  * с соответствующим query-параметром `tab`.
  */
 const data = [
@@ -30,9 +30,9 @@ const data = [
   {
     title: 'Правовое',
     links: [
-      { label: 'Конфиденциальность', link: '/legal?tab=privacy' },
-      { label: 'Соглашение', link: '/legal?tab=terms' },
-      { label: 'Публичная оферта', link: '/legal?tab=offer' },
+      { label: 'Конфиденциальность', link: '/legal/?tab=privacy' },
+      { label: 'Соглашение', link: '/legal/?tab=agreement' },
+      { label: 'Публичная оферта', link: '/legal/?tab=offer' },
     ],
   },
 ];
