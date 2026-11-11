@@ -5,11 +5,39 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import React from 'react';
 import type { LegalPageProps } from '@/types/legal';
+import { router, usePage } from '@inertiajs/react';
+
+/**
+ * Данные для вкладок правовой информации.
+ * Используются в компоненте SegmentedControl для отображения вкладок,
+ * а также для определения, какая вкладка должна быть активной в соответствии с query-параметром `tab`.
+ */
+
+const legalLabelsData: { label: string; value: string }[] = [
+  { label: "Конфиденциальность", value: "privacy" },
+  { label: "Соглашение", value: "agreement" },
+  { label: "Оферта", value: "offer" },
+];
+
+/**
+ * Страница правовой информации.
+ *
+ * Отображает содержимое одной из вкладок (конфиденциальность, соглашение, оферта)
+ * в соответствии с query-переметром tab.
+ * 
+ * Если query-параметр tab отсутствует или не соответствует ни одной из вкладок,
+ * то по умолчанию отображается вкладка «Конфиденциальность».
+ *
+ * Содержимое вкладок передаётся через пропсы documents, которые формируются на сервере.
+ */
 
 const LegalPage = ({ documents }: LegalPageProps) => {
-  const [tab, setTab] = React.useState('privacy');
+  const { url } = usePage();
+  const params = new URL(url, window.location.origin).searchParams;
+  const requestedTab: string | null = params.get('tab');
+  const tab: string = (legalLabelsData.find(({ value }) => value === requestedTab))?.value ?? "privacy";
+
 
   return (
     <Container>
@@ -17,13 +45,9 @@ const LegalPage = ({ documents }: LegalPageProps) => {
         Правовая информация
       </Title>
       <SegmentedControl
-        data={[
-          { label: 'Конфиденциальность', value: 'privacy' },
-          { label: 'Соглашение', value: 'agreement' },
-          { label: 'Оферта', value: 'offer' },
-        ]}
+        data={legalLabelsData}
         value={tab}
-        onChange={(v) => setTab(v as string)}
+        onChange={(v) => router.visit(`/legal/?tab=${v}`)}
         mb="lg"
         fullWidth
       />
@@ -32,8 +56,9 @@ const LegalPage = ({ documents }: LegalPageProps) => {
           const content = documents[tab];
           return (
             <>
-              <Title order={3} mb="md">{content.title}</Title>
-              <Text size="sm" c="dimmed">{content.text}</Text>
+              <Title fz={19} fw={800} mb={4}>{content.title}</Title>
+              <Text fz={12} mb={18} c="dimmed">{`Обновлено: ${content.updated_at} · демонстрационный документ`}</Text>
+              <Text fz={14} mb={16}>{content.text}</Text>
             </>
           );
         })()}
