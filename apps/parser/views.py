@@ -45,9 +45,18 @@ log = logging.getLogger(__name__)
 
 
 def is_channel_in_cooldown(channel: TelegramChannel) -> bool:
-    """Проверяет, был ли канал запаршен в пределах кулдауна."""
+    """Проверяет, был ли канал успешно запаршен в пределах кулдауна."""
+    last_stats = (
+        ChannelStats.objects.filter(channel=channel)
+        .order_by("-parsed_at")
+        .first()
+    )
+
+    if last_stats is None:
+        return False
+
     cooldown = timedelta(hours=settings.PARSER_COOLDOWN_HOURS)
-    return timezone.now() - channel.parsed_at < cooldown
+    return timezone.now() - last_stats.parsed_at < cooldown
 
 
 class ParserView(UserAuthenticationCheckMixin, FormView):

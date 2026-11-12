@@ -187,6 +187,12 @@ def test_parser_view_uses_saved_data_during_cooldown() -> None:
         participants_count=100,
     )
 
+    ChannelStats.objects.create(
+        channel=channel,
+        participants_count=100,
+        daily_growth=0,
+    )
+
     original_parsed_at = channel.parsed_at
 
     view = ParserView()
@@ -229,7 +235,7 @@ def test_parser_view_uses_saved_data_during_cooldown() -> None:
 
     channel.refresh_from_db()
     assert channel.parsed_at == original_parsed_at
-    assert channel.channelstats_set.count() == 0
+    assert channel.channelstats_set.count() == 1
 
 
 @pytest.mark.django_db
