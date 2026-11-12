@@ -2,14 +2,13 @@ import logging
 from typing import Any, cast
 
 from asgiref.sync import async_to_sync
-from django.contrib import messages
 from django.db.models import Q, QuerySet
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils import timezone
-from django.views.generic import DetailView, FormView, ListView, View
+from django.views.generic import FormView, ListView, View
 from inertia import render as inertia_render
 from telethon import TelegramClient
 from telethon.sessions import StringSession
@@ -24,6 +23,11 @@ from apps.parser.models import ChannelStats, Post, TelegramChannel
 from apps.parser.parser import tg_parser
 from apps.parser.serializers import PostSerializer
 from apps.parser.services.channel_cards import build_channel_card
+from apps.parser.services.channel_dashboard import (
+    build_channel_dashboard,
+    parse_dashboard_period,
+)
+from apps.parser.services.channel_parse import build_parser_props
 from apps.parser.types import (
     ChannelDataForSave,
     ParsedChannelResult,
@@ -42,9 +46,45 @@ log = logging.getLogger(__name__)
 
 
 class ParserView(UserAuthenticationCheckMixin, FormView):
+    """Форма добавления канала через парсинг (Inertia: ``Parser``).
+
+    component: Parser
+    props (``ParserPropsDTO``):
+        form: значения полей и ошибки ``ChannelParseForm``.
+            На GET — initial-значения, на невалидном POST — эхо
+            введённых значений и ``form.errors.get_json_data()``.
+        options: справочники формы — ``categories`` и границы
+            ``limit`` (``limit_min``/``limit_max``/``limit_initial``).
+    url: ``/parser/``
+        GET — форма добавления; POST — парсинг канала, при успехе
+        redirect на ``parser:list``, при ошибках — повторный рендер
+        компонента со статусом 200.
+
+    Props собирает ``apps/parser/services/channel_parse.py``.
+    Доступна только авторизованным пользователям (миксин).
+    """
+
     form_class = ChannelParseForm
-    template_name = "parser/parse_channel.html"
     success_url = reverse_lazy("parser:list")
+
+    def get(
+        self,
+        request: HttpRequest,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
+        return render_inertia_from_dto(
+            request,
+            "Parser",
+            props=build_parser_props(self.get_form()),
+        )
+
+    def form_invalid(self, form: ChannelParseForm) -> HttpResponse:
+        return render_inertia_from_dto(
+            self.request,
+            "Parser",
+            props=build_parser_props(form),
+        )
 
     def get_telegram_client(self) -> TelegramClient:
         """Get Telegram client for parser work"""
@@ -198,7 +238,7 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
                 if created
                 else f"Channel updated: {channel.title}"
             )
-            messages.success(self.request, message)
+            self.request.session["flash"] = {"success": message}
 
             return super().form_valid(form)
 
@@ -231,10 +271,48 @@ class ParserListView(ListView):
         )
 
 
-class ParserDetailView(DetailView):
-    model = TelegramChannel
-    template_name = "parser/channel_detail.html"
-    context_object_name = "channel"
+class ParserDetailView(View):
+    """Дашборд канала (Inertia: ``ChannelDashboard``).
+
+    component: ChannelDashboard
+    props:
+        header (ChannelHeaderDTO): title/username/avatar/category/
+            country/verified; avatar — атрибут канала, сейчас null
+            (в модели нет поля изображения).
+        period (int): 7 | 30 | 90, по умолчанию 30.
+        kpis (list[KpiDTO]): подписчики, средний охват, ER и индекс
+            цитирования с дельтой к предыдущему окну.
+        growth (list[GrowthPointDTO]): ``{date, subscribers}`` по дням
+            периода, пропуски переносятся вперёд.
+        ai_advice (list[AiAdviceDTO]): AIInsight текущего пользователя
+            по каналу (анонимам — пусто).
+        latest_posts (list[LatestPostDTO]): последние посты из
+            ``last_messages`` со ссылкой на пост.
+    url: ``GET /parser/<pk>/?period=7|30|90``.
+
+    Доступны только публичные каналы (``is_public=True``): страница
+    открывается из каталога, непубличные — зона модерации.
+    ``csrfToken`` приходит из ``SharedInertiaPropsMiddleware``.
+    """
+
+    def get(
+        self,
+        request: HttpRequest,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
+        channel = get_object_or_404(
+            TelegramChannel, pk=kwargs["pk"], is_public=True
+        )
+        period = parse_dashboard_period(request.GET.get("period"))
+        user = request.user if request.user.is_authenticated else None
+        dto = build_channel_dashboard(channel, period, user=user)
+
+        return render_inertia_from_dto(
+            request,
+            "ChannelDashboard",
+            props=dto,
+        )
 
 
 class ChannelLookupView(View):
