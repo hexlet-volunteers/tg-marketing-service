@@ -154,6 +154,8 @@ FE, `✅ БД + mock` — данные из БД, а поля, которых н
 | `FormRegistration` | `/auth/create/` | `UserRegister` | ✅ `FormRegistration.tsx` | ✅ |
 | `GroupDetail` | `/group/<slug>/` | `GroupDetailView`, `AddChannelsView` | 🆕 `GroupDetail.tsx` | ✅ |
 | `ChannelAnalytics` | `/parser/list` | `ParserListView` | 🆕 `ChannelAnalytics.tsx` | ✅ |
+| `ChannelDashboard` | `/parser/<pk>/` | `ParserDetailView` | 🆕 `ChannelDashboard.tsx` | ✅ |
+| `Parser` | `/parser/` | `ParserView` | 🆕 `Parser.tsx` | ✅ |
 | `AdminChannels` | `/admin/channels/` | `AdminChannelsView` | 🆕 `AdminChannels.tsx` | ✅ |
 | `UpdateUserProfile` | `/auth/<username>/update/` | `UserUpdate` | 🆕 `UpdateUserProfile.tsx` | ✅ |
 | `RestorePasswordRequest` | `/auth/restore-password/` | `RestorePasswordRequestView` | 🆕 `RestorePasswordRequest.tsx` | ✅ |
@@ -1045,6 +1047,104 @@ Props — `ModerationDTO`.
 `country`/`language` — nullable; `pinned_messages:[{text:str, id:int|null}]`;
 `last_messages:[{post_id:int, post_text:str|null, post_views:int|null}]`.
 
+## ChannelDashboard — `/parser/<pk>/`
+
+Дашборд одного канала — страница, куда ведёт клик по карточке каталога.
+Props — `ChannelDashboardDTO`
+(`apps/parser/dto/channel_dashboard_dto.py`), собираются сервисом
+`apps/parser/services/channel_dashboard.py`. Доступны только публичные
+каналы (`is_public=True`); непубличный `pk` отдаёт 404.
+
+```json
+{
+  "component": "ChannelDashboard",
+  "props": {
+    "header": {
+      "title": "Tech News RU",
+      "username": "@technewsru",
+      "avatar": null,
+      "category": "Технологии",
+      "country": "Россия",
+      "verified": true
+    },
+    "period": 30,
+    "kpis": [
+      { "key": "subs", "label": "Подписчики", "value": 125000, "delta": 2480, "percentDelta": 1.8, "positive": true },
+      { "key": "reach", "label": "Ср. охват", "value": 12500, "delta": 120, "percentDelta": 0.97, "positive": true },
+      { "key": "er", "label": "ER", "value": 8.3, "delta": 0.5, "percentDelta": 6.41, "positive": true },
+      { "key": "citation", "label": "Индекс цитирования", "value": 2.5, "delta": 0, "percentDelta": 0, "positive": true }
+    ],
+    "growth": [
+      { "date": "2026-11-01", "subscribers": 122520 }
+    ],
+    "ai_advice": [
+      { "id": 1, "text": "Публикуйте посты в среду в 19:00", "type": "recommendation", "created_at": "2026-11-10T10:00:00+00:00" }
+    ],
+    "latest_posts": [
+      { "id": 100500, "title": "Текст поста", "views": 15200, "url": "https://t.me/technewsru/100500" }
+    ]
+  },
+  "url": "/parser/1/?period=30"
+}
+```
+
+| prop | тип | обяз. | источник |
+|------|-----|-------|----------|
+| `header.title` | `str` | да | `TelegramChannel.title` |
+| `header.username` | `str \| null` | да | `@username`; пустое значение или sentinel `-` — `null` |
+| `header.avatar` | `str \| null` | да | аватар канала; в `TelegramChannel` поля пока нет — `null`, FE рисует градиент с инициалами |
+| `header.category` / `header.country` | `str \| null` | да | `TelegramChannel` |
+| `header.verified` | `bool` | да | `TelegramChannel.is_verified` |
+| `period` | `int` | да | `?period=7\|30\|90`, по умолчанию 30; иное значение — 30 |
+| `kpis[].key` | `str` | да | `subs` / `reach` / `er` / `citation` |
+| `kpis[].value` | `float` | да | подписчики — последний `participants_count` за окно (fallback — канал); охват — средние `views` постов за окно (fallback — `average_views`); ER — `(reactions+comments+forwards)/views * 100` за окно; цитирование — `citation_index` |
+| `kpis[].delta` | `float` | да | дельта к предыдущему окну той же длины; без базы — 0 |
+| `kpis[].percentDelta` | `float` | да | относительная дельта в %, alias `delta_pct` |
+| `kpis[].positive` | `bool` | да | `delta >= 0` |
+| `growth[]` | `list` | да | `{date, subscribers}` по дням окна (ISO-дата), пропуски переносятся вперёд; если статистики до окна нет — ряд начинается с первой известной точки, без статистики вообще — `[]` |
+| `ai_advice[]` | `list` | да | до 5 последних `AIInsight` канала для текущего пользователя; анонимам и чужим — `[]` |
+| `latest_posts[]` | `list` | да | до 10 записей `last_messages` (по убыванию `post_id`); `title` обрезан до 300 символов; `url` — t.me-пермалинк (`null` без username) |
+
+`csrfToken` в props не дублируется — его шарит
+[`SharedInertiaPropsMiddleware`](./inertia-shared-props.md).
+
+## Parser — `/parser/`
+
+Форма добавления канала через парсинг. Защищённый экран.
+`ParserView` больше не использует Django-шаблон `parse_channel.html`.
+Props — `ParserPropsDTO` (`apps/parser/dto/channel_parse_dto.py`),
+собираются сервисом `apps/parser/services/channel_parse.py`.
+
+```json
+{
+  "component": "Parser",
+  "props": {
+    "form": {
+      "data": {
+        "channel_identifier": "",
+        "category": "",
+        "country": "",
+        "language": "",
+        "limit": 10
+      },
+      "errors": {}
+    },
+    "options": {
+      "categories": ["Выберите категорию...", "Новости и СМИ"],
+      "limit_min": 1,
+      "limit_max": 20,
+      "limit_initial": 10
+    }
+  },
+  "url": "/parser/"
+}
+```
+
+- `GET` — initial-значения полей.
+- Невалидный `POST` — статус 200, эхо введённых значений и
+  `form.errors.get_json_data()` в формате `{field: [{message, code}]}`.
+- Валидный `POST` — парсинг канала и redirect на `/parser/list`.
+
 ## GroupDetail — `/group/<slug>/`
 
 Детальная страница группы; используется групповыми формами. Защищённый экран.
@@ -1240,7 +1340,8 @@ Props каждого экрана описываются Pydantic-DTO, а не �
 (`PostPagePropsDTO`), `Blog` (`BlogListDTO`), `BlogPost`
 (`ArticleDetailDTO`), `Admin` (`ModerationDTO`), `Channels`
 (`ChannelsCatalogDTO`), `Compare` (`CompareDTO`), `AICabinet`
-(`AICabinetDTO`), `Collection` (`CollectionDetailDTO`).
+(`AICabinetDTO`), `Collection` (`CollectionDetailDTO`), `Parser`
+(`ParserPropsDTO`).
 
 Ещё собирают props словарями (кандидаты на перевод на DTO в рамках #197):
 `apps/users/views.py` (`LoginView`, `UserRegister`, `UserCabinetView`,
@@ -1274,7 +1375,8 @@ Props каждого экрана описываются Pydantic-DTO, а не �
    ветке glob-резолвер и канонические `component` уже согласованы.
 2. Создать отсутствующие страницы `GroupDetail.tsx`,
    `ChannelAnalytics.tsx`, `AdminChannels.tsx`, `UpdateUserProfile.tsx`,
-   `RestorePasswordRequest.tsx`, `RestorePassword.tsx`.
+   `RestorePasswordRequest.tsx`, `RestorePassword.tsx`,
+   `ChannelDashboard.tsx`, `Parser.tsx`.
 3. Убрать дублирование общих props: `csrfToken` из `PostPagePropsDTO` /
    `PostDetailView`, `role` из `UserCabinetView` (`user_role`, `user.role`).
 4. `Channels`, `Compare`, `Collection`, `Collections`, `Dashboard`,

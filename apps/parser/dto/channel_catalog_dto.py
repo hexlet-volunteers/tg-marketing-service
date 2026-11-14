@@ -11,6 +11,7 @@ class ChannelCardDTO(BaseModel):
     """
 
     id: int
+    pk: int
     name: str
     username: Optional[str] = None
     type: str
