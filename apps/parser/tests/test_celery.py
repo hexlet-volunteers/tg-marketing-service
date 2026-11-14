@@ -1,7 +1,7 @@
 from datetime import timedelta
 from unittest.mock import MagicMock, patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 import apps.parser.tasks as tasks
@@ -9,6 +9,14 @@ from apps.parser.models import Post, PostAnalysis, TelegramChannel
 from apps.parser.services.analysis import PostAnalysisService
 
 
+@override_settings(
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "test-cache",
+        }
+    }
+)
 class ParserRegressionTests(TestCase):
     def setUp(self):
         self.channel = TelegramChannel.objects.create(

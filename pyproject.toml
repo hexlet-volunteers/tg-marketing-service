@@ -27,6 +27,7 @@ dependencies = [
     "pydantic>=2.13.4",
     "anthropic>=0.117.0",
     "pytest-asyncio>=1.4.0",
+    "django-ratelimit>=4.1.0",
 ]
 
 
