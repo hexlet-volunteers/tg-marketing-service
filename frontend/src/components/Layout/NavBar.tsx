@@ -1,4 +1,4 @@
-import { Button, NavLink, Paper, Progress, ScrollArea, Stack, Text, ThemeIcon } from '@mantine/core';
+import { NavLink, ScrollArea, Stack, ThemeIcon } from '@mantine/core';
 import {
   IconArrowsExchange,
   IconBooks,
@@ -10,6 +10,7 @@ import {
   IconUser,
 } from '@tabler/icons-react';
 import { router, usePage } from '@inertiajs/react';
+import UpgradeBanner from '../ui/UpgradeBanner';
 
 const menu = [
   { label: 'Главная', path: '/', icon: IconHome },
@@ -26,6 +27,16 @@ const menu = [
 interface NavBarProps {
   onClose?: () => void;
 }
+
+/**
+ * Навигационная панель сайта.
+ * 
+ * Отображает навигационное меню с ссылками на страницы сайта,
+ * а также баннер обновления тарифа.
+ * 
+ * Баннер вынесен в отдельный компонент.
+ * Позже планируется добавить возможность скрывать баннер для пользователей с тарифом Pro и Agency.
+ */
 
 export function NavBar({ onClose }: NavBarProps) {
   const { url } = usePage();
@@ -63,18 +74,7 @@ export function NavBar({ onClose }: NavBarProps) {
         </Stack>
       </ScrollArea>
 
-      <Paper withBorder radius="lg">
-        <Stack gap="xs" p="sm">
-          <Text fw={700}>Тариф Free</Text>
-          <Text size="sm" c="dimmed">
-            3 из 15 AI-разборов в этом месяце
-          </Text>
-          <Progress value={20} radius="xl" />
-          <Button fullWidth radius="md">
-            Улучшить тариф
-          </Button>
-        </Stack>
-      </Paper>
+      <UpgradeBanner />
 
 
     </Stack>
