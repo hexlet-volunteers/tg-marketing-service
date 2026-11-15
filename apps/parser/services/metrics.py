@@ -1,7 +1,8 @@
 import math
 from typing import Dict, Optional, Tuple
 
-from django.db.models import Count, F, Sum
+from django.db.models import Avg, Count, F, Sum
+from django.db.models.functions import ExtractHour, ExtractWeekDay
 
 from apps.parser.models import Post, PostReaction, TelegramChannel
 
@@ -191,3 +192,63 @@ def reactions_breakdown(channel: TelegramChannel, top_n: int = 6) -> dict:
     others_percent = round(max(0, 100.0 - sum_top_percent), 2)
 
     return {"details": details, "others_percent": others_percent}
+
+
+def posting_heatmap(channel: TelegramChannel) -> list[dict]:
+    """
+    Рассчитывает распределение постов по дням недели и часам (с 09:00 до 20:00).
+
+    Расчет использует настройки часового пояса базы данных (settings.TIME_ZONE)
+    для извлечения дня недели и часа из поля published_at.
+
+    Возвращает:
+        Список из 84 словарей, содержащих:
+        - weekday: день недели (1-7)
+        - hour: час (9-20)
+        - avg_reach: среднее количество просмотров
+        - post_count: количество постов в данной ячейке
+    """
+
+    stats = (
+        channel.posts.annotate(
+            weekday=ExtractWeekDay("published_at"),
+            hour=ExtractHour("published_at"),
+        )
+        .filter(hour__gte=9, hour__lte=20)
+        .values("weekday", "hour")
+        .annotate(avg_reach=Avg("views"), post_count=Count("id"))
+        .order_by("weekday", "hour")
+    )
+
+    print(f"\nDEBUG: DB Stats: {list(stats)}")
+
+    stats_map = {}
+    for s in stats:
+        stats_map[(s["weekday"], s["hour"])] = {
+            "avg_reach": round(float(s["avg_reach"]), 2),
+            "post_count": s["post_count"],
+        }
+
+    heatmap = []
+    for wd in range(1, 8):
+        for hr in range(9, 21):
+            cell = stats_map.get((wd, hr))
+            if cell:
+                heatmap.append(
+                    {
+                        "weekday": wd,
+                        "hour": hr,
+                        "avg_reach": cell["avg_reach"],
+                        "post_count": cell["post_count"],
+                    }
+                )
+            else:
+                heatmap.append(
+                    {
+                        "weekday": wd,
+                        "hour": hr,
+                        "avg_reach": 0.0,
+                        "post_count": 0,
+                    }
+                )
+    return heatmap

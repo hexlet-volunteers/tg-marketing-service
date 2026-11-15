@@ -1,9 +1,11 @@
 # tests/test_post_metrics.py
+import datetime
+
 from django.test import TestCase
 from django.utils import timezone
 
 from apps.parser.models import Post, PostReaction, TelegramChannel
-from apps.parser.services.metrics import reactions_breakdown
+from apps.parser.services.metrics import posting_heatmap, reactions_breakdown
 
 
 class PostMetricsTest(TestCase):
@@ -153,3 +155,156 @@ class PostMetricsTest(TestCase):
             + result["others_percent"]
         )
         self.assertAlmostEqual(total_percent, 100.0, places=1)
+
+
+class PostingHeatmapTest(TestCase):
+    def setUp(self):
+        self.channel = TelegramChannel.objects.create(
+            channel_id=123,
+            title="Heatmap Test Channel",
+            username="heatmap_test",
+        )
+
+    def test_heatmap_full_structure(self):
+        result = posting_heatmap(self.channel)
+        self.assertEqual(len(result), 84)
+        self.assertEqual(
+            result[0],
+            {"weekday": 1, "hour": 9, "avg_reach": 0.0, "post_count": 0},
+        )
+        self.assertEqual(
+            result[-1],
+            {"weekday": 7, "hour": 20, "avg_reach": 0.0, "post_count": 0},
+        )
+
+    def test_heatmap_correct_calculations(self):
+        import datetime
+
+        from django.utils import timezone
+
+        # посты с фиксированным временем в UTC
+        p1_date = timezone.make_aware(
+            datetime.datetime(2024, 1, 1, 12, 0), datetime.timezone.utc
+        )
+        post1 = Post.objects.create(
+            channel=self.channel,
+            views=100,
+            published_at=p1_date,
+            telegram_message_id=101,
+        )
+        post2 = Post.objects.create(
+            channel=self.channel,
+            views=200,
+            published_at=p1_date,
+            telegram_message_id=102,
+        )
+
+        p2_date = timezone.make_aware(
+            datetime.datetime(2024, 1, 3, 12, 0), datetime.timezone.utc
+        )
+        post3 = Post.objects.create(
+            channel=self.channel,
+            views=500,
+            published_at=p2_date,
+            telegram_message_id=103,
+        )
+
+        post1.refresh_from_db()
+        post2.refresh_from_db()
+        post3.refresh_from_db()
+
+        from django.db.models.functions import ExtractHour, ExtractWeekDay
+
+        p1_data = (
+            Post.objects.filter(id=post1.id)
+            .annotate(
+                wd=ExtractWeekDay("published_at"),
+                hr=ExtractHour("published_at"),
+            )
+            .values("wd", "hr")
+            .first()
+        )
+
+        p2_data = (
+            Post.objects.filter(id=post3.id)
+            .annotate(
+                wd=ExtractWeekDay("published_at"),
+                hr=ExtractHour("published_at"),
+            )
+            .values("wd", "hr")
+            .first()
+        )
+
+        result = posting_heatmap(self.channel)
+
+        p1_cell = next(
+            (
+                item
+                for item in result
+                if item["weekday"] == p1_data["wd"]
+                and item["hour"] == p1_data["hr"]
+            ),
+            None,
+        )
+        p2_cell = next(
+            (
+                item
+                for item in result
+                if item["weekday"] == p2_data["wd"]
+                and item["hour"] == p2_data["hr"]
+            ),
+            None,
+        )
+
+        self.assertIsNotNone(
+            p1_cell,
+            f"Cell for weekday {p1_data['wd']} hour {p1_data['hr']} not found",
+        )
+        self.assertEqual(p1_cell["avg_reach"], 150.0)
+        self.assertEqual(p1_cell["post_count"], 2)
+
+        self.assertIsNotNone(
+            p2_cell,
+            f"Cell for weekday {p2_data['wd']} hour {p2_data['hr']} not found",
+        )
+        self.assertEqual(p2_cell["avg_reach"], 500.0)
+        self.assertEqual(p2_cell["post_count"], 1)
+
+    def test_heatmap_excludes_out_of_range_hours(self):
+        utc = datetime.timezone.utc
+        early_date = datetime.datetime(2026, 1, 1, 8, 0, tzinfo=utc)
+        Post.objects.create(
+            channel=self.channel,
+            views=1000,
+            published_at=early_date,
+            telegram_message_id=201,
+        )
+
+        late_date = datetime.datetime(2026, 1, 1, 21, 0, tzinfo=utc)
+        Post.objects.create(
+            channel=self.channel,
+            views=1000,
+            published_at=late_date,
+            telegram_message_id=202,
+        )
+
+        result = posting_heatmap(self.channel)
+
+        for cell in result:
+            self.assertNotEqual(cell["avg_reach"], 1000.0)
+
+    def test_heatmap_consistency_with_empty_data(self):
+        utc = datetime.timezone.utc
+        post_date = datetime.datetime(2026, 1, 1, 12, 0, tzinfo=utc)
+        Post.objects.create(
+            channel=self.channel,
+            views=100,
+            published_at=post_date,
+            telegram_message_id=301,
+        )
+
+        result = posting_heatmap(self.channel)
+        active_cells = [c for c in result if c["post_count"] > 0]
+        self.assertEqual(len(active_cells), 1)
+        empty_cells = [c for c in result if c["post_count"] == 0]
+        self.assertEqual(len(empty_cells), 83)
