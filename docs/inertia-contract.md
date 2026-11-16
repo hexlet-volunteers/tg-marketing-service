@@ -98,7 +98,8 @@ const pages = import.meta.glob("./pages/**/*.tsx");
 Компоненты, которые backend отдаёт, но страницы `pages/<Name>.tsx` ещё
 нет, — для них нужен файл страницы (в объединённой ветке их по-прежнему нет):
 `GroupDetail.tsx`, `ChannelAnalytics.tsx`, `AdminChannels.tsx`,
-`UpdateUserProfile.tsx`, `RestorePasswordRequest.tsx`, `RestorePassword.tsx`.
+`AdminBlog.tsx`, `UpdateUserProfile.tsx`, `RestorePasswordRequest.tsx`,
+`RestorePassword.tsx`.
 
 При возврате интеграционной ветки в upstream добавлен
 `pages/FormRegistration.tsx`: он экспортирует существующую форму, чтобы
@@ -155,6 +156,7 @@ FE, `✅ БД + mock` — данные из БД, а поля, которых н
 | `GroupDetail` | `/group/<slug>/` | `GroupDetailView`, `AddChannelsView` | 🆕 `GroupDetail.tsx` | ✅ |
 | `ChannelAnalytics` | `/parser/list` | `ParserListView` | 🆕 `ChannelAnalytics.tsx` | ✅ |
 | `AdminChannels` | `/admin/channels/` | `AdminChannelsView` | 🆕 `AdminChannels.tsx` | ✅ |
+| `AdminBlog` | `/admin/blog/` | `AdminBlogView`, `AdminBlogArticleView` | 🆕 `AdminBlog.tsx` | ✅ |
 | `UpdateUserProfile` | `/auth/<username>/update/` | `UserUpdate` | 🆕 `UpdateUserProfile.tsx` | ✅ |
 | `RestorePasswordRequest` | `/auth/restore-password/` | `RestorePasswordRequestView` | 🆕 `RestorePasswordRequest.tsx` | ✅ |
 | `RestorePassword` | `/auth/restore-password/<uidb64>/<token>/` | `RestorePasswordView` | 🆕 `RestorePassword.tsx` | ✅ |
@@ -1007,6 +1009,31 @@ Props — `ModerationDTO`.
 | `userRequests[].color` | — | **вычисляется на клиенте** (`addColorsToUsersRequests`) |
 | `pendingCount` | `pendingCount` | FE использует для бейджа вкладки |
 | — | `pendingRequests`, `pagination` | передаётся BE, **FE не потребляет** (для пагинации FE-тип придётся расширить) |
+
+## Admin blog — `/admin/blog/`
+
+CRUD статей блога. Только для администраторов (`AdminRequiredMixin`).
+
+- `GET` — список всех статей, включая черновики;
+- `POST` — создание статьи;
+- `PATCH` — частичное обновление;
+- `DELETE` — удаление.
+
+Props — `AdminBlogDTO` (`apps/blog/dto/admin_blog_dto.py`).
+Детальный контракт —
+[`admin_blog_contract.md`](./admin_blog_contract.md).
+
+```json
+{
+  "component": "AdminBlog",
+  "props": {
+    "articles": [],
+    "categories": [],
+    "errors": {}
+  },
+  "url": "/admin/blog/"
+}
+```
 
 ## ChannelAnalytics — `/parser/list`
 
