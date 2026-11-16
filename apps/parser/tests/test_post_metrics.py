@@ -88,68 +88,73 @@ class PostMetricsTest(TestCase):
             published_at=timezone.now(),
         )
 
+        self.channel.last_messages = [
+            {"telegram_message_id": 1},
+            {"telegram_message_id": 2},
+        ]
+        self.channel.save()
+
         PostReaction.objects.create(post=post1, emoji="👍", count=10)
         PostReaction.objects.create(post=post2, emoji="👍", count=20)
         PostReaction.objects.create(post=post2, emoji="❤️", count=5)
 
         result = reactions_breakdown(self.channel)
 
-        self.assertIn("details", result)
-        self.assertIn("others_percent", result)
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 2)
 
-        details = result["details"]
-        self.assertEqual(len(details), 2)
-        self.assertEqual(details[0]["emoji"], "👍")
-        self.assertEqual(details[0]["count"], 30)
-        self.assertEqual(details[1]["emoji"], "❤️")
-        self.assertEqual(details[1]["count"], 5)
+        self.assertEqual(result[0]["emoji"], "👍")
+        self.assertEqual(result[0]["count"], 30)
+        self.assertEqual(result[1]["emoji"], "❤️")
+        self.assertEqual(result[1]["count"], 5)
 
     def test_metrics_reactions_breakdown_top_n_limit(self):
-        """Проверка ограничения Top-N и наличия остатка."""
+        """Проверка ограничения Top-N и наличия элемента 'others'."""
         post = Post.objects.create(
             channel=self.channel,
             telegram_message_id=5,
             text="P5",
             published_at=timezone.now(),
         )
+        self.channel.last_messages = [{"telegram_message_id": 5}]
+        self.channel.save()
+
         PostReaction.objects.create(post=post, emoji="👍", count=100)
         PostReaction.objects.create(post=post, emoji="❤️", count=50)
         PostReaction.objects.create(post=post, emoji="🔥", count=10)
 
+        # top_n=2 значит: 👍 и ❤️ попадут в список, а 🔥 уйдет в 'others'
         result = reactions_breakdown(self.channel, top_n=2)
 
-        self.assertEqual(len(result["details"]), 2)
-        self.assertEqual(result["details"][0]["emoji"], "👍")
-        self.assertEqual(result["details"][1]["emoji"], "❤️")
-        self.assertGreater(result["others_percent"], 0)
+        self.assertEqual(len(result), 3)
+        self.assertEqual(result[0]["emoji"], "👍")
+        self.assertEqual(result[1]["emoji"], "❤️")
+        self.assertEqual(result[2]["emoji"], "others")
 
     def test_metrics_reactions_breakdown_empty_channel(self):
-        """Проверка возврата структуры с пустыми данными."""
-        Post.objects.create(
-            channel=self.channel,
-            telegram_message_id=6,
-            text="Empty",
-            published_at=timezone.now(),
-        )
+        """Проверка возврата пустого списка при отсутствии данных."""
+        self.channel.last_messages = []
+        self.channel.save()
+
         result = reactions_breakdown(self.channel)
-        self.assertEqual(result, {"details": [], "others_percent": 0.0})
+        self.assertEqual(result, [])
 
     def test_metrics_reactions_breakdown_percent_sum(self):
-        """Проверка, что сумма деталей и остатка всегда ~100%."""
+        """Проверка, что сумма процентов всех элементов списка равна 100%."""
         post = Post.objects.create(
             channel=self.channel,
             telegram_message_id=7,
             text="P7",
             published_at=timezone.now(),
         )
+        self.channel.last_messages = [{"telegram_message_id": 7}]
+        self.channel.save()
+
         PostReaction.objects.create(post=post, emoji="A", count=1)
         PostReaction.objects.create(post=post, emoji="B", count=1)
         PostReaction.objects.create(post=post, emoji="C", count=1)
 
         result = reactions_breakdown(self.channel, top_n=2)
 
-        total_percent = (
-            sum(r["percent"] for r in result["details"])
-            + result["others_percent"]
-        )
+        total_percent = sum(r["percent"] for r in result)
         self.assertAlmostEqual(total_percent, 100.0, places=1)

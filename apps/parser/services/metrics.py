@@ -159,23 +159,50 @@ def update_channels_citation_indices() -> None:
         _calculate_and_save_index(channel, r_count, m_count)
 
 
-def reactions_breakdown(channel: TelegramChannel, top_n: int = 6) -> dict:
+def reactions_breakdown(channel: TelegramChannel, top_n: int = 6) -> list[dict]:
+    """
+    Агрегирует post_reactions по last_messages
+    в виде списка [{emoji, count, percent}].
+    Отсортирован по убыванию количества.
+
+    Критерии:
+    - Возвращает список.
+    - При отсутствии данных возвращает [].
+    - Ограничение top_n.
+    - Сумма процентов ~100%.
+    """
+
+    last_msg_data = channel.last_messages or []
+    last_message_ids: list[int] = [
+        int(msg["telegram_message_id"] or msg["id"])
+        for msg in last_msg_data
+        if isinstance(msg, dict)
+        and (msg.get("telegram_message_id") or msg.get("id")) is not None
+    ]
+
+    if not last_message_ids:
+        return []
+
     reactions_qs = (
-        PostReaction.objects.filter(post__channel=channel)
+        PostReaction.objects.filter(
+            post__channel=channel,
+            post__telegram_message_id__in=last_message_ids,
+        )
         .values("emoji")
         .annotate(total_count=Sum("count"))
         .order_by("-total_count")
     )
 
     if not reactions_qs:
-        return {"details": [], "others_percent": 0.0}
+        return []
 
     grand_total = sum(item["total_count"] for item in reactions_qs)
     if grand_total == 0:
-        return {"details": [], "others_percent": 0.0}
+        return []
 
     details = []
-    sum_top_percent = 0.0
+    processed_count = 0
+    sum_percent = 0.0
 
     for i, item in enumerate(reactions_qs):
         if i >= top_n:
@@ -183,11 +210,27 @@ def reactions_breakdown(channel: TelegramChannel, top_n: int = 6) -> dict:
 
         count = item["total_count"]
         percent = round((count / grand_total * 100), 2)
+
         details.append(
             {"emoji": item["emoji"], "count": count, "percent": percent}
         )
-        sum_top_percent += percent
 
-    others_percent = round(max(0, 100.0 - sum_top_percent), 2)
+        sum_percent += percent
+        processed_count += count
 
-    return {"details": details, "others_percent": others_percent}
+    if len(reactions_qs) > top_n:
+        others_count = grand_total - processed_count
+
+        if others_count > 0:
+            # Вычисляем процент как остаток от 100, чтобы сумма была ровно 100.0
+            others_percent = round(100.0 - sum_percent, 2)
+
+            details.append(
+                {
+                    "emoji": "others",
+                    "count": others_count,
+                    "percent": max(0.0, others_percent),
+                }
+            )
+
+    return details
