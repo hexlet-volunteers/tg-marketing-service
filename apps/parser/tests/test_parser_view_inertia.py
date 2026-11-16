@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 from django.contrib.auth import get_user_model
 from django.test import Client
+from django.test.utils import override_settings
 from django.urls import reverse
 
 pytestmark = pytest.mark.django_db
@@ -41,6 +42,13 @@ def test_parser_view_renders_inertia_form(client: Client) -> None:
     assert props["options"]["limit_max"] == 20
 
 
+@override_settings(
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        }
+    },
+)
 def test_parser_view_invalid_post_echoes_values(client: Client) -> None:
     response = client.post(
         reverse("parser:parser"),
