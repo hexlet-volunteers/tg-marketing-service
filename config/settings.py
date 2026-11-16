@@ -26,6 +26,19 @@ from .logging import LOGGING
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://localhost:6379/1",
+    }
+}
+
+PARSER_RATE_LIMIT = os.getenv("PARSER_RATE_LIMIT", "5/hour")
+PARSER_COOLDOWN_HOURS = int(os.getenv("PARSER_COOLDOWN_HOURS", "24"))
+PARSER_MAX_PENDING_REQUESTS = int(
+    os.getenv("PARSER_MAX_PENDING_REQUESTS", "10")
+)
+
 # Telegram app settings
 TELEGRAM_API_ID: str | None = os.getenv("TELEGRAM_API_ID")
 TELEGRAM_API_HASH: str | None = os.getenv("TELEGRAM_API_HASH")

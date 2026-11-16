@@ -1,4 +1,6 @@
+import re
 from typing import Literal, overload
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -58,14 +60,29 @@ def get_telegram_credentials(
 
 
 def normalize_channel_username(username: str) -> str:
-    """Normalize a Telegram channel username for comparison."""
-    normalized = username.strip().lower()
+    """Normalize a Telegram channel username."""
+    value = username.strip()
 
-    if normalized.startswith("https://t.me/"):
-        normalized = normalized[len("https://t.me/") :]
-    elif normalized.startswith("http://t.me/"):
-        normalized = normalized[len("http://t.me/") :]
-    elif normalized.startswith("t.me/"):
-        normalized = normalized[len("t.me/") :]
+    if value.startswith("@"):
+        value = value[1:]
 
-    return normalized.lstrip("@")
+    elif value.lower().startswith(("http://", "https://")):
+        parsed_url = urlsplit(value)
+
+        if parsed_url.netloc.lower() != "t.me":
+            return ""
+
+        value = parsed_url.path.strip("/")
+
+    elif value.lower().startswith("t.me/"):
+        value = value[5:]
+
+    if value.startswith("s/"):
+        value = value[2:]
+
+    value = value.lower()
+
+    if not re.fullmatch(r"[a-z0-9_]{5,32}", value):
+        return ""
+
+    return value
