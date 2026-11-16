@@ -12,6 +12,21 @@ from apps.users.roles import Role, UserRoleHistory
 log = logging.getLogger(__name__)
 
 
+def _set_user_role(user: User, new_code: str, reason: str) -> None:
+    # сначала достаём новую роль: если её нет, ничего не успеем изменить
+    new_role = Role._default_manager.get(code=new_code)
+
+    # закрываем текущую запись истории (не создаём ещё одну закрытую)
+    UserRoleHistory.objects.filter(user=user, end_date__isnull=True).update(
+        end_date=timezone.now()
+    )
+
+    user.role = new_code
+    user.save(update_fields=["role"])
+
+    UserRoleHistory.objects.create(user=user, role=new_role, reason=reason)
+
+
 """Отлавливаем событие регистрации пользователя"""
 """присваеиваем роль - User"""
 
@@ -34,8 +49,7 @@ def assign_role_partner(
         log.error("Роль 'moderated_channels' не найдена в базе")
 
 
-"""Отлавливаем событие при изменении статуса партнера на Активный"""
-"""присваеиваем роль - Partner"""
+"""Синхронизируем роль пользователя со статусом партнёрского профиля"""
 
 
 @receiver(post_save, sender=PartnerProfile)
@@ -48,13 +62,22 @@ def assign_role_channel_moderator(
     if created:
         return
 
-    if instance.status == PartnerProfile.STATUS_CHOICES[0][0]:
-        user = instance.user
+    user = instance.user
 
-        if user.role != "partner":
-            user.role = "partner"
-
-            user.save(update_fields=["role"])
+    try:
+        if instance.status == "active":
+            if user.role != "partner":
+                _set_user_role(
+                    user, "partner", "Партнёрский профиль активирован"
+                    )
+        elif user.role == "partner":
+            _set_user_role(
+                user,
+                "user",
+                f"Партнёрский профиль: {instance.get_status_display()}",
+            )
+    except Role.DoesNotExist:
+        log.error("Роль для партнёрского перехода не найдена в базе")
 
 
 """Отлавливаем событие регистрации канала"""
