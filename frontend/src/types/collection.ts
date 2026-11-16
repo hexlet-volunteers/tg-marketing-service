@@ -1,10 +1,13 @@
 interface Collection {
   id: number;
-  title: string;
-  description: string;
-  author: string;
-  channels: number;
-  editorial?: boolean;
+  name: string;
+  slug: string;
+  description: string | null;
+  is_editorial: boolean;
+  curator: string | null;
+  channel_count: number;
+  cover: string;
+  gradient_key: string;
 }
 
 interface CollectionColor {
@@ -12,13 +15,38 @@ interface CollectionColor {
   gradient: string;
 }
 
-interface CollectionWithColor extends Collection, CollectionColor {
+interface CollectionWithColor {
+  id: number;
+  title: string;
+  description: string;
+  author: string;
+  channels: number;
+  editorial?: boolean;
+  color: string;
+  gradient: string;
   onClick?: () => void;
 }
 
+interface CollectionSection {
+  title: string;
+  collections: Collection[];
+  count: number;
+}
+
+interface CollectionsFilters {
+  q: string | null;
+  country: string | null;
+  category: string | null;
+  country_options: string[];
+  category_options: string[];
+}
+
 interface CollectionsPageProps {
-  collections: CollectionWithColor[]
+  featured: Collection[];
+  collections: Collection[];
+  sections: CollectionSection[];
+  filters: CollectionsFilters;
 }
 
 
-export type { Collection, CollectionColor, CollectionWithColor, CollectionsPageProps }
+export type { Collection, CollectionColor, CollectionWithColor, CollectionSection, CollectionsFilters, CollectionsPageProps }

@@ -23,7 +23,10 @@ interface MainCharactersOfChannelAndColor extends MainCharactersOfChannel {
 }
 
 interface CollectionPageProps {
-  channels: MainCharactersOfChannelAndColor[]
+  title: string;
+  description: string;
+  channel_count: number;
+  channels: MainCharactersOfChannelAndColor[];
 }
 
 interface Kpi {
@@ -39,15 +42,9 @@ interface GrowthSubscribersData {
   подписчики: number;
 }
 
-interface ChannelData {
-  kpis: Kpi[];
-  growthData: GrowthSubscribersData[];
-}
-
 interface MetricDef {
   key: string;
   label: string;
-  format: (v: number) => string;
 }
 
 interface ComparePageProps {
@@ -59,7 +56,6 @@ export type { Channel,
   ChannelsProps, 
   Kpi, 
   GrowthSubscribersData, 
-  ChannelData, 
   MetricDef, 
   ComparePageProps,
   MainCharactersOfChannel,

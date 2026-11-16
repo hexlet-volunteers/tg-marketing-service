@@ -33,11 +33,19 @@ class ModerationService:
         try:
             with transaction.atomic():
                 moderation_request = cls._get_pending(request_id)
-                channel = moderation_request.channel_by
+                channel_id = moderation_request.channel_by_id
+                channel = (
+                    TelegramChannel.objects.select_for_update()
+                    .filter(pk=channel_id)
+                    .first()
+                    if channel_id is not None
+                    else None
+                )
                 if channel is None:
                     raise ModerationError(
                         "Нельзя одобрить заявку без связанного канала"
                     )
+                moderation_request.channel_by = channel
 
                 username = channel.username
                 duplicate = cls._find_duplicate(channel, username)
@@ -49,8 +57,14 @@ class ModerationService:
                 channel.category = category
                 channel.is_verified = is_verified
                 channel.verified_at = resolved_at if is_verified else None
+                channel.is_public = True
                 channel.save(
-                    update_fields=["category", "is_verified", "verified_at"]
+                    update_fields=[
+                        "category",
+                        "is_verified",
+                        "verified_at",
+                        "is_public",
+                    ]
                 )
 
                 moderation_request.status = "approved"
@@ -109,7 +123,6 @@ class ModerationService:
     def _get_pending(request_id: int) -> ModerationRequest:
         moderation_request = (
             ModerationRequest.objects.select_for_update()
-            .select_related("channel_by")
             .filter(pk=request_id)
             .first()
         )
@@ -121,15 +134,25 @@ class ModerationService:
 
     @classmethod
     def _find_duplicate(
-        cls, channel: TelegramChannel, username: str | None
+        cls,
+        channel: TelegramChannel | None,
+        username: str | None,
     ) -> TelegramChannel | None:
         if not username:
             return None
-        return (
-            TelegramChannel.objects.filter(username__iexact=username)
-            .exclude(pk=channel.pk)
-            .first()
+
+        normalized_username = username.strip().lstrip("@")
+        if not normalized_username or normalized_username == "-":
+            return None
+
+        channels = TelegramChannel.objects.filter(
+            username__iexact=normalized_username
         )
+
+        if channel is not None and channel.pk is not None:
+            channels = channels.exclude(pk=channel.pk)
+
+        return channels.first()
 
     @staticmethod
     def _mark_duplicate(

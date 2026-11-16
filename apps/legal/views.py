@@ -2,35 +2,26 @@ from django.http import HttpRequest, HttpResponse
 from django.views.generic.base import View
 from inertia import render as inertia_render
 
-LEGAL_DOCUMENTS = {
-    "privacy": {
-        "title": "Политика конфиденциальности",
-        "updated_at": "2026-07-01",
-    },
-    "agreement": {
-        "title": "Пользовательское соглашение",
-        "updated_at": "2026-07-01",
-    },
-    "offer": {
-        "title": "Публичная оферта",
-        "updated_at": "2026-07-01",
-    },
-}
+from apps.legal.documents import LEGAL_DOCUMENTS
 
 
 class LegalView(View):
     """
-    Cтраница правовых документов сайта.
+    Public legal page. Only document metadata is returned; document texts
+    are static frontend content.
 
-    Публичная страница, доступна без авторизации.
-    Отдаёт только метаданные документов (заголовок, дата обновления).
-
-    Документация компонентов для InertiaJS:
+    InertiaJS component contract:
     [
         {
-            "component": "название компонента",
-            "props": { пропсы },
-            "url": "url"
+            "component": "Legal",
+            "props": {
+                "documents": {
+                    "privacy": {"title": str, "updated_at": str},
+                    "agreement": {"title": str, "updated_at": str},
+                    "offer": {"title": str, "updated_at": str}
+                }
+            },
+            "url": "/legal/"
         }
     ]
     """

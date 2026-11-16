@@ -5,6 +5,7 @@ from django.shortcuts import redirect
 from django.views.generic.base import View
 from inertia import render as inertia_render
 
+from apps.billing.models import Plan
 from apps.homepage.models import HomePageComponent
 
 
@@ -62,12 +63,38 @@ class IndexView(View):
                 }
             )
 
-        page_props = {"components": components_data}
+        page_props = {
+            "components": components_data,
+            "tariffs": [
+                plan.to_tariff_payload() for plan in Plan.objects.all()
+            ],
+            "stats": [
+                {"value": "2.4M", "label": "каналов в базе"},
+                {"value": "18 млрд", "label": "проанализ. постов"},
+                {"value": "120K", "label": "авторов"},
+            ],
+        }
 
         # коментируем до изменеий в UserRegister
         # page_props = {
         #    'components': components_data,
         # }
 
-        # Возвращаем Inertia Response с шаблоном 'Home' и данными компонентов
-        return inertia_render(request, "Home", props=page_props)
+        # Возвращаем Inertia Response с шаблоном 'Landing' и данными компонентов
+        return inertia_render(request, "Landing", props=page_props)
+
+
+class NotFoundView(View):
+    """Страница 404 (Inertia: NotFound).
+
+    Ловит все несопоставленные URL: напрямую в браузере страница
+    рендерится со статусом 404; клиентский router.visit на неизвестный
+    адрес покажет стандартную Inertia-ошибку.
+    """
+
+    def get(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> HttpResponse:
+        response = inertia_render(request, "NotFound")
+        response.status_code = 404
+        return response

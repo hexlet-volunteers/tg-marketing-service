@@ -19,11 +19,37 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
 
-from config.views import IndexView
+from apps.admin.moderation.views import AdminChannelsView
+from apps.group_channels.views import (
+    CollectionDetailView,
+    CollectionsCatalogView,
+    GroupDetailView,
+)
+from apps.parser.views import ChannelCatalogView, CompareView, PostPageView
+from config.views import IndexView, NotFoundView
 
 urlpatterns = [
     path("", IndexView.as_view(), name="main_index"),
+    path(
+        "collections/",
+        CollectionsCatalogView.as_view(),
+        name="collections_catalog",
+    ),
+    path(
+        "collections/id/<int:pk>/",
+        CollectionDetailView.as_view(),
+        name="collection_detail",
+    ),
+    path(
+        "collections/<slug:slug>/",
+        GroupDetailView.as_view(),
+        name="collection_detail",
+    ),
+    path("channels/", ChannelCatalogView.as_view(), name="channels_catalog"),
+    path("compare/", CompareView.as_view(), name="compare"),
+    path("post/", PostPageView.as_view(), name="post_page"),
     path("dashboard/", include("apps.homepage.urls")),
+    path("ai-cabinet/", include("apps.ai.urls")),
     path("auth/", include("apps.users.urls")),
     path("group/", include("apps.group_channels.urls")),
     path("blog/", include("apps.blog.urls")),
@@ -33,7 +59,13 @@ urlpatterns = [
         "admin/moderation/",
         include("apps.admin.moderation.urls"),
     ),
+    path("admin/blog/", include("apps.blog.admin_urls")),
     path("legal/", include("apps.legal.urls")),
+    path(
+        "admin/channels/",
+        AdminChannelsView.as_view(),
+        name="admin_channels",
+    ),
     path("admin/", admin.site.urls),
     path(
         "robots.txt",
@@ -41,5 +73,12 @@ urlpatterns = [
             template_name="robots.txt",
             content_type="text/plain",
         ),
+    ),
+    # Catch-all: только URL с завершающим слэшем, чтобы работал
+    # APPEND_SLASH-редирект для адресов без слэша.
+    path(
+        "<path:missing>/",
+        NotFoundView.as_view(),
+        name="not_found",
     ),
 ]

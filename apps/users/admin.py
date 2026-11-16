@@ -1,9 +1,17 @@
 from django.contrib import admin
+from django.db.models import QuerySet
 from django.http import HttpRequest
 from guardian.admin import GuardedModelAdmin
 
 from apps.parser.models import ChannelModerator
-from apps.users.models import PartnerProfile, User
+from apps.users.models import (
+    Consent,
+    ConsentWithdrawal,
+    DataSubjectRequestLog,
+    NotificationSettings,
+    PartnerProfile,
+    User,
+)
 
 
 class ChannelModeratorInline(admin.TabularInline):
@@ -85,14 +93,14 @@ class CustomUserAdmin(GuardedModelAdmin):
     )
 
     @admin.display(boolean=True, description="Партнер")
-    def is_partner(self, obj):
+    def is_partner(self, obj: User) -> bool:
         return (
             hasattr(obj, "partner_profile")
             and obj.partner_profile.status == "active"
         )
 
     @admin.display(boolean=True, description="Модератор канала")
-    def is_channel_moderator(self, obj):
+    def is_channel_moderator(self, obj: User) -> bool:
         return obj.moderated_channels.exists()
 
 
@@ -134,26 +142,166 @@ class PartnerProfileAdmin(GuardedModelAdmin):
     )
 
     @admin.display(description="Баланс")
-    def formatted_balance(self, obj):
+    def formatted_balance(self, obj: PartnerProfile) -> str:
         return f"{obj.balance:.2f}" if obj.balance else "0.00"
 
     @admin.display(description="Реквизиты")
-    def truncated_payment_details(self, obj):
+    def truncated_payment_details(self, obj: PartnerProfile) -> str:
         return obj.payment_details[:50] + "..." if obj.payment_details else ""
 
     @admin.action(description="Активировать выбранных партнеров")
-    def activate_selected(self, request, queryset):
+    def activate_selected(
+        self, request: HttpRequest, queryset: QuerySet[PartnerProfile]
+    ) -> None:
         updated = queryset.update(status="active")
         self.message_user(
             request, f"Активировано {updated} партнерских профилей"
         )
 
     @admin.action(description="Деактивировать выбранных партнеров")
-    def deactivate_selected(self, request, queryset):
+    def deactivate_selected(
+        self, request: HttpRequest, queryset: QuerySet[PartnerProfile]
+    ) -> None:
         updated = queryset.update(status="suspended")
         self.message_user(
             request, f"Деактивировано {updated} партнерских профилей"
         )
 
-    def get_queryset(self, request: HttpRequest):
+    def get_queryset(self, request: HttpRequest) -> QuerySet[PartnerProfile]:
         return super().get_queryset(request).select_related("user")  # type: ignore[no-untyped-call]
+
+
+@admin.register(NotificationSettings)
+class NotificationSettingsAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "weekly_reports",
+        "trend_notifications",
+        "new_features",
+    )
+    list_filter = (
+        "weekly_reports",
+        "trend_notifications",
+        "new_features",
+    )
+    search_fields = (
+        "user__username",
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+    )
+    raw_id_fields = ("user",)
+
+    def get_queryset(self, request: HttpRequest):
+        return super().get_queryset(request).select_related("user")
+
+
+@admin.register(DataSubjectRequestLog)
+class DataSubjectRequestLogAdmin(admin.ModelAdmin):
+    list_display = (
+        "subject_id_snapshot",
+        "request_type",
+        "http_method",
+        "status",
+        "requested_at",
+        "completed_at",
+        "due_at",
+        "responsible",
+    )
+    list_filter = ("request_type", "http_method", "status")
+    search_fields = ("subject_id_snapshot", "subject__email")
+    readonly_fields = (
+        "subject",
+        "subject_id_snapshot",
+        "request_type",
+        "http_method",
+        "status",
+        "requested_at",
+        "completed_at",
+        "due_at",
+        "original_due_at",
+        "result",
+        "responsible",
+        "extension_reason",
+        "extended_at",
+        "extension_notified_at",
+        "extension_notification_reference",
+    )
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+
+    def has_change_permission(
+        self,
+        request: HttpRequest,
+        obj: DataSubjectRequestLog | None = None,
+    ) -> bool:
+        return False
+
+    def has_delete_permission(
+        self,
+        request: HttpRequest,
+        obj: DataSubjectRequestLog | None = None,
+    ) -> bool:
+        return False
+
+
+@admin.register(Consent)
+class ConsentAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "document_type",
+        "version",
+        "source",
+        "ip",
+        "timestamp",
+    )
+    list_filter = ("document_type", "version", "source", "timestamp")
+    search_fields = ("user__email", "user__username", "ip", "user_agent")
+    readonly_fields = (
+        "user",
+        "document_type",
+        "version",
+        "timestamp",
+        "ip",
+        "user_agent",
+        "source",
+    )
+    raw_id_fields = ("user",)
+    date_hierarchy = "timestamp"
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+
+    def has_change_permission(
+        self,
+        request: HttpRequest,
+        obj: Consent | None = None,
+    ) -> bool:
+        return False
+
+    def has_delete_permission(
+        self,
+        request: HttpRequest,
+        obj: Consent | None = None,
+    ) -> bool:
+        return False
+
+
+@admin.register(ConsentWithdrawal)
+class ConsentWithdrawalAdmin(admin.ModelAdmin):
+    list_display = ("consent", "request_log", "withdrawn_at")
+    readonly_fields = ("consent", "request_log", "withdrawn_at")
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+
+    def has_change_permission(
+        self, request: HttpRequest, obj: ConsentWithdrawal | None = None
+    ) -> bool:
+        return False
+
+    def has_delete_permission(
+        self, request: HttpRequest, obj: ConsentWithdrawal | None = None
+    ) -> bool:
+        return False

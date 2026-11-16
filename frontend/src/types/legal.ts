@@ -1,10 +1,11 @@
 interface LegalItem {
     title: string;
     text: string;
+    updated_at?: string;
 }
 
 interface LegalPageProps {
-    legalContent: Record<string, LegalItem>;
+    documents: Record<string, LegalItem>;
 }
 
-export type { LegalItem, LegalPageProps }
+export type { LegalItem, LegalPageProps };

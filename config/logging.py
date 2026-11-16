@@ -78,7 +78,7 @@ LOGGING = {
         # логгер django
         "django": {
             "handlers": ["debug_console", "file", "error_file"],
-            "level": "INFO",
+            "level": LOG_LEVEL,
             "propagate": False,
         },
         # логгер приложения

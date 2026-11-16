@@ -17,6 +17,8 @@ from apps.users.models import User
 
 
 class BlogListServiceTest(TestCase):
+    """DB-путь (оставлен для prod-переключения позже)."""
+
     @classmethod
     def setUpTestData(cls):
         cls.featured = BlogArticle.objects.create(
@@ -73,6 +75,8 @@ class BlogListServiceTest(TestCase):
 
 
 class BlogArticleDetailServiceTest(TestCase):
+    """DB-путь (оставлен для prod-переключения позже)."""
+
     @classmethod
     def setUpTestData(cls):
         cls.author = User.objects.create_user(

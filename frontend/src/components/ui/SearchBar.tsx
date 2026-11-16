@@ -1,10 +1,8 @@
 import { Button, Flex, TextInput } from '@mantine/core';
 import { IconSearch } from '@tabler/icons-react';
-import { useNavigate } from 'react-router-dom';
+import { router } from '@inertiajs/react';
 
 export function SearchBar() {
-  const navigate = useNavigate();
-
   return (
     <Flex gap="sm">
       <TextInput
@@ -13,7 +11,7 @@ export function SearchBar() {
         placeholder="Поиск канала по @username, названию или теме..."
         leftSection={<IconSearch size={16} />}
       />
-      <Button radius="xl" color="tgpurple" style={{ flexShrink: 0 }} onClick={() => navigate('/ai-cabinet')}>AI-разбор</Button>
+      <Button radius="xl" color="tgpurple" style={{ flexShrink: 0 }} onClick={() => router.visit('/ai-cabinet/')}>AI-разбор</Button>
     </Flex>
 
   );

@@ -1,10 +1,12 @@
-export const avatarGradients = {
-  default: { from: 'tgblue', to: 'tgpurple', deg: 135 },
-  tech: { from: 'tgblue', to: 'tgpurple', deg: 135 },
-  crypto: { from: '#f76707', to: 'tgorange.6', deg: 135 },
-  marketing: { from: '#12b886', to: '#0ca678', deg: 135 },
-  psychology: { from: '#f783ac', to: '#e64980', deg: 135 },
-  business: { from: 'tgblue', to: '#12b886', deg: 135 },
-  sport: { from: '#f76707', to: 'tgblue', deg: 135 },
-  books: { from: 'tgpurple', to: '#f783ac', deg: 135 },
+import { type MantineGradient } from '@mantine/core';
+
+export const avatarGradients:  Record<string, MantineGradient> = {
+  default: { from: 'tgblue.5', to: 'tgpurple.5', deg: 135 },
+  Технологии: { from: 'tgblue.5', to: 'tgpurple.5', deg: 135 },
+  Криптовалюты: { from: 'tgorange.5', to: 'tgorange', deg: 135 },
+  Маркетинг: { from: 'tggreen.3', to: 'tggreen.4', deg: 135 },
+  Психология: { from: 'tgred.3', to: 'tgred.4', deg: 135 },
+  Бизнес: { from: 'tgblue.5', to: 'tgred.3', deg: 135 },
+  Спорт: { from: 'tgorange.5', to: 'tgblue.5', deg: 135 },
+  Книги: { from: 'tgpurple.5', to: 'tgred.3', deg: 135 },
 };

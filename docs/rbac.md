@@ -21,13 +21,13 @@ pip install django-guardian
 ```python
 INSTALLED_APPS = [
     # ...
-    'guardian',
+    "guardian",
     # ...
 ]
 
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',   # основной бэкенд аутентификации
-    'guardian.backends.ObjectPermissionBackend',   # object-level permissions
+    "django.contrib.auth.backends.ModelBackend",  # основной бэкенд аутентификации
+    "guardian.backends.ObjectPermissionBackend",  # object-level permissions
 ]
 
 # Опционально: возвращать 403 при отказе в доступе
@@ -39,10 +39,10 @@ Middleware для ролей и (при необходимости) object-level
 ```python
 MIDDLEWARE = [
     # ...
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
     # ...
-    'apps.users.middleware.RoleMiddleware',              # прокидывает роль в request
+    "apps.users.middleware.RoleMiddleware",  # прокидывает роль в request
     # 'guardian.middleware.ObjectPermissionMiddleware',  # включить для object-level прав
 ]
 ```
@@ -79,6 +79,9 @@ role = request.role
 | `user` | User |
 | `partner` | Partner |
 | `channel_moderator` | Channel Moderator |
+| `admin` | Admin |
+
+Роль `admin` создаётся сид-миграцией [`apps/users/migrations/0014_seed_admin_role.py`](../apps/users/migrations/0014_seed_admin_role.py).
 
 ## Ограничение доступа во вью
 
@@ -86,9 +89,14 @@ role = request.role
 
 - `UserAuthenticationCheckMixin` — требует авторизации;
 - `GuestRequiredMixin` — только для неавторизованных (гостей);
-- `UserRequiredMixin` — для любых авторизованных (`user`, `partner`, `channel_moderator`);
+- `UserRequiredMixin` — для любых авторизованных (`user`, `partner`, `channel_moderator`, `admin`);
 - `PartnerRequiredMixin` — только для активных партнёров;
-- `ChannelModeratorRequiredMixin` — только для модераторов каналов.
+- `ChannelModeratorRequiredMixin` — только для модераторов каналов;
+- `AdminRequiredMixin` — только для администраторов (`admin`). Закрывает админские маршруты (например, `/admin/moderation/`).
+
+Администратор определяется **только** ролью `admin`. Если суперюзеру нужен доступ к admin-маршрутам, просто назначаем роль `admin`.
+
+При отказе в доступе миксин показывает сообщение и возвращает **HTTP 403** — либо редирект, если задан `url_redirect` или в запросе есть `?next=`.
 
 Базовый класс `RoleRequiredMixin` позволяет описать собственную роль — переопределите `allowed_roles` (и при необходимости метод `_test_role`).
 

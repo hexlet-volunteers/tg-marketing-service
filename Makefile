@@ -43,3 +43,9 @@ install:
 
 typecheck:
 	uv run mypy .
+
+seed-demo:
+	uv run python manage.py seed_demo
+
+clear-demo:
+	uv run python manage.py clear_demo

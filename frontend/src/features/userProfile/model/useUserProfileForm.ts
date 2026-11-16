@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useForm, usePage } from '@inertiajs/react';
 import { mapServerErrors } from '../libr/mapServerErrors';
 import { validateProfile } from './validateProfile';
@@ -8,17 +8,14 @@ import { userProfileApi } from '../api';
 export const useUserProfileForm = () => {
   const { user, errors: serverErrors = {} } = usePage<UserProfileProps>().props;
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formErrors, setErrors] = useState<Record<string, string>>({});
+  const errors = { ...mapServerErrors(serverErrors), ...formErrors };
 
   const { data, setData, post, processing } = useForm<User>({
     first_name: user.first_name || '',
     email: user.email || '',
     company: user.company || '',
   });
-
-  useEffect(() => {
-    setErrors(mapServerErrors(serverErrors));
-  }, [serverErrors]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

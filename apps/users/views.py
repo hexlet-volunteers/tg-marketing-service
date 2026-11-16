@@ -1,18 +1,25 @@
+import json
 from typing import Any, cast
 
 from django.contrib import auth, messages
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.tokens import default_token_generator
+from django.db import transaction
 from django.http import (
     HttpRequest,
+    HttpResponse,
     HttpResponseRedirect,
+    JsonResponse,
 )
 from django.shortcuts import redirect
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
-from django.utils.http import urlsafe_base64_decode
+from django.utils.http import (
+    url_has_allowed_host_and_scheme,
+    urlsafe_base64_decode,
+)
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic.base import View
 from inertia import InertiaResponse
@@ -22,8 +29,17 @@ from apps.billing.services.subscription_service import (
     get_subscription,
     serialize_subscription,
 )
+from apps.users.account_deletion import request_account_deletion
+from apps.users.consents import record_consent, serialize_user_consent_history
+from apps.users.data_subject_requests import (
+    complete_subject_request,
+    create_subject_request,
+    fail_subject_request,
+    serialize_subject_request,
+)
 from apps.users.forms import (
     AvatarChange,
+    NotificationSettingsForm,
     RestorePasswordForm,
     RestorePasswordRequestForm,
     UserLoginForm,
@@ -31,11 +47,140 @@ from apps.users.forms import (
     UserUpdateForm,
 )
 from apps.users.middleware import RoleRequest
-from apps.users.models import User
+from apps.users.models import (
+    Consent,
+    DataSubjectRequestLog,
+    NotificationSettings,
+    User,
+)
+from apps.users.personal_data_export import build_personal_data_export
 from config.mixins import UserAuthenticationCheckMixin
 
 # константа с дефолтной=аватаркой для представления UserRegister
 DEFAULT_AVATAR_URL = static("users/default-avatar.svg")
+
+
+class PersonalDataExportView(UserAuthenticationCheckMixin, View):
+    """Download personal data belonging to the authenticated subject."""
+
+    request_type = DataSubjectRequestLog.RequestType.EXPORT
+
+    def get(
+        self,
+        request: HttpRequest,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
+        return self._export(request)
+
+    def post(
+        self,
+        request: HttpRequest,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
+        return self._export(request)
+
+    def _export(self, request: HttpRequest) -> HttpResponse:
+        user = cast(User, request.user)
+        request_log = create_subject_request(
+            user, self.request_type, cast(str, request.method)
+        )
+        exported_at = timezone.now()
+        try:
+            with transaction.atomic():
+                locked = User.objects.select_for_update().get(pk=user.pk)
+                if not locked.is_active or locked.anonymized_at is not None:
+                    raise ValueError("Account processing has stopped")
+                payload = build_personal_data_export(locked, exported_at)
+                content = json.dumps(payload, ensure_ascii=False, indent=2)
+                complete_subject_request(
+                    request_log, {"format_version": payload["format_version"]}
+                )
+        except Exception:
+            fail_subject_request(request_log)
+            return JsonResponse(
+                {"request_id": request_log.pk, "error": "export_failed"},
+                status=503,
+            )
+
+        filename = f"personal-data-{user.pk}-{exported_at:%Y-%m-%d}.json"
+        response = HttpResponse(
+            content,
+            content_type="application/json; charset=utf-8",
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response["Cache-Control"] = "no-store"
+        response["Pragma"] = "no-cache"
+        response["X-Content-Type-Options"] = "nosniff"
+        return response
+
+
+class PersonalDataAccessView(PersonalDataExportView):
+    request_type = DataSubjectRequestLog.RequestType.ACCESS
+
+
+class AccountDeletionView(UserAuthenticationCheckMixin, View):
+    withdraw_consent = False
+
+    def post(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> HttpResponse:
+        try:
+            request_log = request_account_deletion(
+                cast(User, request.user),
+                cast(str, request.method),
+                withdraw_consent=self.withdraw_consent,
+            )
+        except ValueError as error:
+            return JsonResponse({"error": str(error)}, status=409)
+        auth.logout(request)
+        response = JsonResponse(
+            serialize_subject_request(request_log),
+            status=200
+            if request_log.status == DataSubjectRequestLog.Status.COMPLETED
+            else 503,
+        )
+        response["Cache-Control"] = "no-store"
+        return response
+
+
+class ConsentWithdrawalView(AccountDeletionView):
+    withdraw_consent = True
+
+
+class DataSubjectRequestHistoryView(UserAuthenticationCheckMixin, View):
+    def get(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> HttpResponse:
+        logs = DataSubjectRequestLog.objects.filter(
+            subject=cast(User, request.user)
+        )
+        response = JsonResponse(
+            {"requests": [serialize_subject_request(log) for log in logs]}
+        )
+        response["Cache-Control"] = "no-store"
+        return response
+
+
+class ConsentHistoryView(UserAuthenticationCheckMixin, View):
+    """Return consent history for the authenticated subject."""
+
+    def get(
+        self,
+        request: HttpRequest,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
+        user = cast(User, request.user)
+        content = json.dumps(
+            {"consents": serialize_user_consent_history(user)},
+            ensure_ascii=False,
+        )
+        return HttpResponse(
+            content,
+            content_type="application/json; charset=utf-8",
+        )
 
 
 class LogoutView(UserAuthenticationCheckMixin, View):
@@ -60,18 +205,43 @@ class LogoutView(UserAuthenticationCheckMixin, View):
     name="post",
 )
 class LoginView(View):
+    """Email/password login at /auth/login/.
+
+    GET and invalid POST render the Inertia component Auth with:
+        form: {data: {email: str, password: ""}, errors: {field: [str]}}
+        next: str (validated return URL, or "")
+    GET has empty data/errors. Invalid POST preserves only the email.
+    Required/format errors use email/password; invalid credentials use email.
+
+    A valid POST creates a session, sets session["flash"]["success"], and
+    returns HTTP 302 to a safe next URL (POST takes precedence over GET),
+    falling back to homepage:dashboard. The destination GET supplies the
+    actual shared auth/role/flash props; no username payload is fabricated.
+    next allows only the current host and requires HTTPS on secure requests.
+    """
+
+    def _get_next_url(self, request: HttpRequest) -> str:
+        next_url = request.POST.get("next", request.GET.get("next", "")).strip()
+        if url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return next_url
+        return ""
+
     def get(
         self,
         request: HttpRequest,
         *args: Any,
         **kwargs: Any,
     ) -> InertiaResponse:
-        # возвращаем форму
         return inertia_render(
             request,
             "Auth",
             props={
-                "form": {"data": {"email": "", "password": ""}, "errors": {}}
+                "form": {"data": {"email": "", "password": ""}, "errors": {}},
+                "next": self._get_next_url(request),
             },
         )
 
@@ -80,29 +250,19 @@ class LoginView(View):
         request: HttpRequest,
         *args: Any,
         **kwargs: Any,
-    ) -> InertiaResponse:
+    ) -> InertiaResponse | HttpResponseRedirect:
         form = UserLoginForm(request, request.POST)
 
-        # валидируем данные
         if form.is_valid():
-            # сохраняем полученные данные в объект
             user = form.get_user()
-
-            # записываем пользователя в сессию
             login(request, user)
 
-            # возвращаем компонент и props
-            return inertia_render(
-                request,
-                "Home",
-                props={
-                    "flash": {"success": "Вы залогинены"},
-                    "user": {"username": request.POST.get("username")},
-                },
+            request.session["flash"] = {"success": "Вы залогинены"}
+            return HttpResponseRedirect(
+                self._get_next_url(request) or reverse("homepage:dashboard")
             )
 
         else:
-            # Ошибки валидации
             return inertia_render(
                 request,
                 "Auth",
@@ -112,8 +272,9 @@ class LoginView(View):
                             "email": request.POST.get("email", ""),
                             "password": "",
                         },
-                        "errors": form.errors,
-                    }
+                        "errors": form.errors.get_json_data(),
+                    },
+                    "next": self._get_next_url(request),
                 },
             )
 
@@ -122,7 +283,7 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
     """
     Account page view.
 
-    component: UserProfilePage
+    component: Profile
     props: user, subscription, notifications, usage_stats, user_role
     url: /auth/profile/
     """
@@ -145,6 +306,10 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
             "total_time": f"{total_hours:.0f} часов",
         }
 
+        notification_settings, _ = NotificationSettings.objects.get_or_create(
+            user=user
+        )
+
         return {
             "user": {
                 "id": user.id,
@@ -157,7 +322,14 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
                 "bio": user.bio,
             },
             "subscription": serialize_subscription(get_subscription(user)),
-            "notifications": None,
+            "notifications": {
+                "weekly_reports": notification_settings.weekly_reports,
+                "trend_notifications": (
+                    notification_settings.trend_notifications
+                ),
+                "limit_exceeded": False,
+                "new_features": notification_settings.new_features,
+            },
             "usage_stats": usage_stats,
             "user_role": cast(RoleRequest, request).role,
         }
@@ -170,7 +342,7 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
     ) -> InertiaResponse:
         user = cast(User, request.user)
         props = self._build_base_props(request, user)
-        return inertia_render(request, "UserProfilePage", props=props)
+        return inertia_render(request, "Profile", props=props)
 
     def post(
         self,
@@ -182,15 +354,33 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
         action = request.POST.get("action")
 
         if action == "notifications":
-            # Уведомления сейчас заглушки
-            messages.add_message(
-                request, messages.SUCCESS, "Настройки уведомлений сохранены"
+            notification_settings, _ = (
+                NotificationSettings.objects.get_or_create(user=user)
             )
-        else:
-            form = UserUpdateForm(data=request.POST, instance=user)
-            if form.is_valid():
+            notification_form = NotificationSettingsForm(
+                data=request.POST,
+                instance=notification_settings,
+            )
+
+            if notification_form.is_valid():
                 try:
-                    form.save()
+                    notification_form.save()
+                    request.session["flash"] = {
+                        "success": "Настройки уведомлений сохранены"
+                    }
+                except Exception:
+                    request.session["flash"] = {
+                        "error": "Не удалось сохранить настройки уведомлений."
+                    }
+            else:
+                request.session["flash"] = {
+                    "error": "Не удалось сохранить настройки уведомлений."
+                }
+        else:
+            profile_form = UserUpdateForm(data=request.POST, instance=user)
+            if profile_form.is_valid():
+                try:
+                    profile_form.save()
                     update_session_auth_hash(request, user)
                     messages.add_message(
                         request, messages.SUCCESS, "Профиль успешно изменен"
@@ -204,7 +394,7 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
                     return redirect(reverse("users:user_cabinet"))
             else:
                 props = self._build_base_props(request, user)
-                props["errors"] = form.errors.get_json_data()
+                props["errors"] = profile_form.errors.get_json_data()
                 props["values"] = {
                     "first_name": request.POST.get("first_name", ""),
                     "last_name": request.POST.get("last_name", ""),
@@ -212,7 +402,7 @@ class UserCabinetView(UserAuthenticationCheckMixin, View):
                     "bio": request.POST.get("bio", ""),
                     "avatar_image": request.POST.get("avatar_image", ""),
                 }
-                return inertia_render(request, "UserProfilePage", props=props)
+                return inertia_render(request, "Profile", props=props)
 
         return redirect(reverse("users:user_cabinet"))
 
@@ -230,6 +420,7 @@ class UserRegister(View):
         "email",
         "bio",
         "avatar_image",
+        "terms",
     )
 
     def _empty_form_data(self) -> dict[str, str]:
@@ -276,11 +467,20 @@ class UserRegister(View):
     ) -> InertiaResponse | HttpResponseRedirect:
         form = UserRegForm(data=request.POST)
         if form.is_valid():
-            user = form.save(commit=False)
-            user.role = "user"
-            if not user.avatar_image:
-                user.avatar_image = DEFAULT_AVATAR_URL
-            user.save()
+            with transaction.atomic():
+                user = form.save(commit=False)
+                user.role = "user"
+                if not user.avatar_image:
+                    user.avatar_image = request.build_absolute_uri(
+                        DEFAULT_AVATAR_URL
+                    )
+                user.save()
+                record_consent(
+                    user=user,
+                    document_type=Consent.DocumentType.PERSONAL_DATA,
+                    source=Consent.Source.EMAIL_REGISTRATION,
+                    request=request,
+                )
 
             request.session["flash"] = {
                 "success": "Пользователь успешно зарегистрирован"
@@ -333,7 +533,7 @@ class UserUpdate(UserAuthenticationCheckMixin, View):
         'avatar_image': .......,
     }
     нформацию об ошибке:
-    "errors": form.errors
+    "errors": form.errors.get_json_data()
 
     """
 
@@ -398,7 +598,7 @@ class UserUpdate(UserAuthenticationCheckMixin, View):
         return inertia_render(
             request,
             "UpdateUserProfile",
-            props={"form": data, "errors": form.errors},
+            props={"form": data, "errors": form.errors.get_json_data()},
         )
 
 
@@ -421,7 +621,7 @@ class AvatarChangeView(UserAuthenticationCheckMixin, View):
             avatar_form.save()
             request.session["flash"] = {"success": "Аватар успешно изменен"}
             return redirect(reverse("users:user_cabinet"))
-        avatar_error = avatar_form.errors.get("avatar_url")
+        avatar_error = avatar_form.errors.get("avatar_image")
         if avatar_error is not None:
             avatar_url = avatar_error.as_text()
             request.session["flash"] = {"error": f"{avatar_url[1:]}"}
@@ -478,7 +678,7 @@ class RestorePasswordRequestView(View):
             "RestorePasswordRequest",
             props={
                 "email": request.POST.get("email", ""),
-                "errors": form.errors,
+                "errors": form.errors.get_json_data(),
             },
         )
 
@@ -534,12 +734,12 @@ class RestorePasswordView(View):
 
         try:
             uid_decoded = urlsafe_base64_decode(uid).decode()
-        except TypeError:
+        except (TypeError, ValueError, UnicodeDecodeError):
             request.session["flash"] = {"error": "Некорректный id пользователя"}
             return redirect("users:login")
         try:
             user = User.objects.get(pk=uid_decoded)
-        except User.DoesNotExist:
+        except (User.DoesNotExist, ValueError, OverflowError):
             request.session["flash"] = {"error": "Пользователь не найден"}
             return redirect("users:login")
 
@@ -583,12 +783,12 @@ class RestorePasswordView(View):
 
         try:
             uid_decoded = urlsafe_base64_decode(uid).decode()
-        except TypeError:
+        except (TypeError, ValueError, UnicodeDecodeError):
             request.session["flash"] = {"error": "Некорректный id пользователя"}
             return redirect("users:login")
         try:
             user = User.objects.get(pk=uid_decoded)
-        except User.DoesNotExist:
+        except (User.DoesNotExist, ValueError, OverflowError):
             request.session["flash"] = {"error": "Пользователь не найден"}
             return redirect("users:login")
 
@@ -608,10 +808,10 @@ class RestorePasswordView(View):
             request,
             "RestorePassword",
             props={
-                "new_password1": request.POST.get("new_password1", ""),
-                "new_password2": request.POST.get("new_password2", ""),
+                "new_password1": "",
+                "new_password2": "",
                 "uid": uid,
                 "token": token,
-                "errors": form.errors,
+                "errors": form.errors.get_json_data(),
             },
         )

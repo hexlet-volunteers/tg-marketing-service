@@ -1,4 +1,4 @@
-# Telegram Marketing Service.
+# Telegram Marketing Service
 
 **SPA-веб-приложение** для сбора, сравнения и анализа Telegram-каналов: парсит каналы, копит статистику (подписчики, просмотры, динамика роста), объединяет их в тематические подборки и даёт пользователям аналитику и AI-инсайты.
 
@@ -29,7 +29,7 @@
 ### Бэкенд
 
 - **Python 3.12**, менеджер зависимостей **uv**
-- **Django 5.2**
+- **Django 6**
 - **PostgreSQL** (в проде) / **SQLite** (локально) — через `dj-database-url`
 - **Celery + Redis** — фоновые задачи и планировщик (Celery Beat), мониторинг через **Flower**
 - **Telethon** — парсинг Telegram
@@ -42,9 +42,10 @@
 ### Инфраструктура
 
 - **Docker** — контейнеризация
-- **GitHub Actions** — CI (тесты)
+- **GitHub Actions** — CI (lint, типы, тесты)
 - **pytest** + **pytest-django** — тесты
 - **Ruff** — линтер
+- **mypy** + **django-stubs** — проверка типов
 
 ## Возможности
 
@@ -60,10 +61,15 @@
 ```
 .
 ├── apps/
-│   ├── users/           # пользователи, роли, партнёрские профили
-│   ├── parser/          # Telegram-каналы, парсинг, статистика, AI-инсайты
+│   ├── admin/           # админка модерации каналов
+│   ├── ai/              # клиент LLM и разбор AI-инсайтов
+│   ├── billing/         # тарифы и подписки
+│   ├── blog/            # статьи блога
 │   ├── group_channels/  # подборки каналов
-│   └── homepage/        # главная страница, дашборд
+│   ├── homepage/        # главная страница, дашборд
+│   ├── legal/           # тексты правовых документов
+│   ├── parser/          # Telegram-каналы, статистика, AI-инсайты
+│   └── users/           # пользователи, роли, партнёрские профили
 ├── config/              # настройки Django, Celery, URL-маршруты
 ├── frontend/            # React + Mantine SPA
 ├── templates/           # серверные шаблоны Django
@@ -81,6 +87,55 @@ make install   # uv sync
 ```
 
 Скопируйте [`.env.example`](.env.example) в `.env` и заполните значения.
+
+### 0a. Запуск через Docker Compose (issues #381, #382)
+
+Раньше локальный стейк требовал 5 терминалов (Django, Redis, Celery worker, Celery beat, Flower) и ещё парочку для фронтенда. Теперь всё поднимается одной командой ([`compose.yml`](compose.yml)):
+
+```sh
+docker compose up
+```
+
+Compose поднимает уже сконфигурированные между собой сервисы:
+
+| Сервис | Порт | Что это |
+| --- | --- | --- |
+| `web` | [localhost:8000](http://localhost:8000) | Django: миграции + collectstatic + runserver |
+| `frontend` | [localhost:5173](http://localhost:5173) | Vite dev-сервер (HMR), django-vite смотрит сюда |
+| `redis` | 6379 (только внутри сети) | broker для Celery |
+| `celery-worker` | — | воркер с `CELERY_BROKER_URL=redis://redis:6379/0` |
+| `celery-beat` | — | планировщик `CELERY_BEAT_SCHEDULE` |
+| `flower` | [localhost:5555](http://localhost:5555) | мониторинг задач |
+
+Все сервисы используют переменные из `.env` (`env_file`), поэтому `.env` должен существовать ещё до `docker compose up`. Код монтируется с хоста, так что правки подхватываются без пересборки; зависимости (`uv`-venv и `node_modules`) живут в named-томах, а не в локальных директориях. SQLite-база — файл `db.sqlite3` в корне репозитория, данные переживают перезапуск.
+
+Миграции применяются автоматически при старте `web`; для ручного прогона и django-команд:
+
+```sh
+docker compose exec web uv run python manage.py migrate
+docker compose exec web uv run python manage.py seed_demo   # демо-данные (только DEBUG)
+```
+
+Для генерации Telegram-сессии в контейнере (интерактивная команда):
+
+```sh
+docker compose exec web uv run python manage.py start_telegram_session
+```
+
+Полученную строку пропишите в `.env` как `TELEGRAM_SESSION_STRING` и перезапустите сервисы парсера:
+
+```sh
+docker compose restart celery-worker celery-beat
+```
+
+Полезные команды:
+
+```sh
+docker compose build          # пересобрать образы после смены зависимостей
+docker compose logs -f web    # логи отдельного сервиса
+docker compose down           # остановить стек (данные остаются)
+docker compose down -v        # остановить и снести тома зависимостей
+```
 
 ### 1. Telegram
 
@@ -100,7 +155,8 @@ make install   # uv sync
 ### 2. Бэкенд (через Make)
 
 ```sh
-make migrate         # применить миграции БД
+make migrate         # makemigrations + migrate
+make seed-demo       # демо-данные из mocks/ (только DEBUG); см. docs/demo_data.md
 make dev             # dev-сервер Django → http://127.0.0.1:8000
 ```
 
@@ -108,10 +164,10 @@ make dev             # dev-сервер Django → http://127.0.0.1:8000
 
 ```sh
 make collectstatic          # собрать статические файлы
-make prod-run               # Gunicorn; порт: make prod-run PORT=8080
+make prod-run               # Gunicorn
 ```
 
-Порт dev-сервера задаётся переменной `PORT` в [`Makefile`](Makefile). Настройки — в [`config/settings.py`](config/settings.py).
+Порт прод-сервера задаётся переменной `PORT` в [`Makefile`](Makefile) (`make prod-run PORT=8080`). Настройки — в [`config/settings.py`](config/settings.py).
 
 ### 3. Фоновые задачи (Redis + Celery)
 
@@ -190,14 +246,15 @@ make prod-run
 ## Тесты и линтер
 
 ```sh
-make test       # pytest
-make lint       # ruff
-make lint-fix   # ruff check --fix
+make test        # pytest
+make lint        # ruff
+make lint-fix    # ruff check --fix
+make typecheck   # mypy
 ```
 
 ### Pre-commit
 
-Pre-commit автоматически проверяет код перед каждым коммитом (ruff lint + format). Установите hooks один раз:
+Pre-commit автоматически проверяет код перед каждым коммитом (ruff lint + format, mypy). Установите hooks один раз:
 
 ```sh
 uv run pre-commit install
@@ -205,15 +262,15 @@ uv run pre-commit install
 
 Подробнее об использовании и обходе ошибок — в [`PRE-COMMIT.md`](PRE-COMMIT.md).
 
-## Полезные команды Make 
+## Полезные команды Make
 
 | Команда | Действие |
 |---------|----------|
 | `make install` | Установка зависимостей (`uv sync`) |
-| `make migrate` | Миграции БД |
+| `make migrate` | Миграции БД (`makemigrations` + `migrate`) |
 | `make dev` | Dev-сервер Django |
 | `make prod-run` | Прод-сервер (Gunicorn) |
 | `make collectstatic` | Сбор статических файлов |
 | `make s` | Генерация Telegram-сессии |
 | `make redis` / `make celery` / `make celery-beat` / `make flower` | Фоновые задачи |
-| `make test` / `make lint` / `make lint-fix` | Тесты и линтер |
+| `make test` / `make lint` / `make lint-fix` / `make typecheck` | Тесты, линтер и проверка типов |

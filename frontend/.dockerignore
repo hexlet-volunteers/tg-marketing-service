@@ -1,0 +1,5 @@
+# Локальные зависимости и артефакты не должны попадать в образ.
+node_modules
+dist
+Dockerfile.dev
+.dockerignore

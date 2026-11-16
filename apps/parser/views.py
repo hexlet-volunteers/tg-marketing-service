@@ -1,34 +1,62 @@
 import logging
-from typing import Any
+from datetime import timedelta
+from typing import Any, cast
 
 from asgiref.sync import async_to_sync
+from django.conf import settings
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import DetailView, FormView, ListView, View
+from django_ratelimit.core import get_usage  # type: ignore[import-untyped]
+from inertia import render as inertia_render
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
+from apps.admin.moderation.models import ModerationRequest
+from apps.parser.dto.channel_catalog_dto import ChannelsCatalogDTO
 from apps.parser.dto.channel_dto import ChannelDTO, ChannelListDTO
+from apps.parser.dto.compare_dto import CompareDTO, CompareMetricDTO
 from apps.parser.dto.post_analysis_dto import PostDataDTO, PostPagePropsDTO
 from apps.parser.forms import ChannelParseForm
 from apps.parser.models import ChannelStats, Post, TelegramChannel
 from apps.parser.parser import tg_parser
 from apps.parser.serializers import PostSerializer
+from apps.parser.services.channel_cards import build_channel_card
 from apps.parser.types import (
     ChannelDataForSave,
     ParsedChannelResult,
     normalize_channel_data,
 )
-from apps.parser.utils import get_telegram_credentials
+from apps.parser.utils import (
+    get_telegram_credentials,
+    normalize_channel_username,
+)
+from apps.users.models import User
 from config.mixins import UserAuthenticationCheckMixin
 from config.renderers import render_inertia_from_dto
+from mocks.parser import MOCK_COMPARE_METRICS
 
 log = logging.getLogger(__name__)
+
+
+def is_channel_in_cooldown(channel: TelegramChannel) -> bool:
+    """Проверяет, был ли канал успешно запаршен в пределах кулдауна."""
+    last_stats = (
+        ChannelStats.objects.filter(channel=channel)
+        .order_by("-parsed_at")
+        .first()
+    )
+
+    if last_stats is None:
+        return False
+
+    cooldown = timedelta(hours=settings.PARSER_COOLDOWN_HOURS)
+    return timezone.now() - last_stats.parsed_at < cooldown
 
 
 class ParserView(UserAuthenticationCheckMixin, FormView):
@@ -46,6 +74,14 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
             api_id,
             api_hash,
         )
+
+    def find_existing_channel(
+        self, channel_identifier: str
+    ) -> TelegramChannel | None:
+        """Find an existing channel by normalized username."""
+        username = normalize_channel_username(channel_identifier)
+
+        return TelegramChannel.objects.filter(username__iexact=username).first()
 
     async def async_tg_parser(
         self, url: str, limit: int = 10
@@ -79,6 +115,8 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
         )
 
         if created:
+            channel.is_public = False
+            channel.save(update_fields=["is_public"])
             log.info(f"New channel created: {channel.title}")
         else:
             log.info(f"Channel updated: {channel.title}")
@@ -119,6 +157,30 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
             f"- participants: {current_count} growth: {daily_growth}"
         )
 
+    def post(
+        self,
+        request: HttpRequest,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
+        usage = get_usage(
+            request,
+            group="parser_channel_submission",
+            key="user",
+            rate=settings.PARSER_RATE_LIMIT,
+            method="POST",
+            increment=True,
+        )
+        if usage and usage["should_limit"]:
+            form = self.get_form()
+            form.add_error(
+                None,
+                "Вы отправили слишком много запросов. Попробуйте позже.",
+            )
+            return self.form_invalid(form)
+
+        return super().post(request, *args, **kwargs)
+
     def form_valid(self, form: ChannelParseForm) -> HttpResponse:
         """Обработка формы"""
         identifier = form.cleaned_data["channel_identifier"]
@@ -126,20 +188,51 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
         language = form.cleaned_data["language"]
         country = form.cleaned_data["country"]
         category = form.cleaned_data["category"]
+
+        user = cast(User, self.request.user)
+
+        pending_count = ModerationRequest.objects.filter(
+            submitted_by=user,
+            status="pending",
+        ).count()
+
+        if pending_count >= settings.PARSER_MAX_PENDING_REQUESTS:
+            form.add_error(
+                None,
+                "У вас уже максимальное количество необработанных заявок. "
+                "Дождитесь рассмотрения предыдущих заявок.",
+            )
+            return self.form_invalid(form)
+
+        existing_channel = self.find_existing_channel(identifier)
+
+        use_saved_data = (
+            existing_channel is not None
+            and is_channel_in_cooldown(existing_channel)
+        )
+
         log.info(
             f"Начинаем обработку данных для канала; "
             f"- {identifier} лимит - {limit}"
         )
         try:
-            # Start async parsing function
-            async_parser = async_to_sync(self.async_tg_parser)
-            parsed_data = async_parser(identifier, limit)
-            if parsed_data is None:
-                form.add_error(None, "Не удалось получить данные канала")
-                return self.form_invalid(form)
-            channel_data = ChannelDataForSave(
-                **normalize_channel_data(parsed_data)
-            )
+            if use_saved_data and existing_channel is not None:
+                saved_data = existing_channel.get_data()
+                saved_data["channel_id"] = saved_data.pop("id")
+                channel_data = ChannelDataForSave(
+                    **normalize_channel_data(saved_data)
+                )
+            else:
+                async_parser = async_to_sync(self.async_tg_parser)
+                parsed_data = async_parser(identifier, limit)
+
+                if parsed_data is None:
+                    form.add_error(None, "Не удалось получить данные канала")
+                    return self.form_invalid(form)
+
+                channel_data = ChannelDataForSave(
+                    **normalize_channel_data(parsed_data)
+                )
             channel_data.update(
                 {"language": language, "country": country, "category": category}
             )
@@ -150,8 +243,22 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
             )
 
             # Saving data
-            channel, created = self.save_channel(channel_data)
-            self.save_stats(channel, channel_data)
+            if use_saved_data and existing_channel is not None:
+                channel = existing_channel
+                created = False
+            else:
+                channel, created = self.save_channel(channel_data)
+                self.save_stats(channel, channel_data)
+
+            ModerationRequest.objects.create(
+                submitted_by=user,
+                channel_identifier=identifier,
+                channel_by=channel,
+                category=category,
+                country=country,
+                language=language,
+                status="pending",
+            )
 
             # Generating user message
             message = (
@@ -170,6 +277,9 @@ class ParserView(UserAuthenticationCheckMixin, FormView):
 
 class ParserListView(ListView):
     model = TelegramChannel
+
+    def get_queryset(self) -> QuerySet[TelegramChannel]:
+        return TelegramChannel.objects.filter(is_public=True)
 
     def get(
         self,
@@ -227,9 +337,9 @@ class ChannelLookupView(View):
         if not q:
             return JsonResponse([], safe=False)
 
-        channels = TelegramChannel.objects.filter(
+        channels = TelegramChannel.objects.filter(is_public=True).filter(
             Q(title__icontains=q) | Q(username__icontains=q)
-        ).order_by("-participants_count")[:10]
+        )
 
         result = list(
             channels.values(
@@ -238,7 +348,7 @@ class ChannelLookupView(View):
                 "username",
                 "participants_count",
                 "category",
-            )
+            )[:10]
         )
 
         return JsonResponse(result, safe=False)
@@ -257,7 +367,7 @@ class PostAIAnalysisView(View):
 
         return render_inertia_from_dto(
             request,
-            "PostPage",
+            "Post",
             props=props,
         )
 
@@ -265,7 +375,7 @@ class PostAIAnalysisView(View):
 class PostDetailView(View):
     """
     Отображает страницу детального разбора поста.
-    Component: PostPage
+    Component: Post
     Props:
         post (PostDataDTO): Полные данные поста (text, hashtags, метрики)
         channel (dict): Сводка по каналу, включающая основные параметры.
@@ -295,6 +405,133 @@ class PostDetailView(View):
 
         return render_inertia_from_dto(
             request,
-            "PostPage",
+            "Post",
             props=props,
         )
+
+
+class ChannelCatalogView(View):
+    """Каталог каналов (Inertia: Channels)."""
+
+    def get(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> HttpResponse:
+        channels = [
+            build_channel_card(ch)
+            for ch in TelegramChannel.objects.filter(is_public=True).order_by(
+                "-participants_count"
+            )
+        ]
+        dto = ChannelsCatalogDTO(channels=channels)
+
+        return render_inertia_from_dto(
+            request,
+            "Channels",
+            props=dto,
+        )
+
+
+class CompareView(View):
+    """Сравнение каналов (Inertia: Compare)."""
+
+    def get(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> HttpResponse:
+        channels_qs = TelegramChannel.objects.filter(is_public=True).order_by(
+            "-participants_count"
+        )[:5]
+        channels = [build_channel_card(ch) for ch in channels_qs]
+        dto = CompareDTO(
+            metrics=[CompareMetricDTO(**data) for data in MOCK_COMPARE_METRICS],
+            channels=channels,
+        )
+
+        return render_inertia_from_dto(
+            request,
+            "Compare",
+            props=dto,
+        )
+
+
+REACTION_LABELS = {
+    "🔥": "Огонь",
+    "❤️": "Сердце",
+    "👍": "Лайк",
+    "🤯": "Восторг",
+}
+
+
+class PostPageView(View):
+    """Страница разбора поста (Inertia: Post)."""
+
+    def get(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> HttpResponse:
+        post = (
+            Post.objects.select_related("post_analysis")
+            .prefetch_related("post_analysis__similar_posts", "reactions")
+            .filter(post_analysis__isnull=False)
+            .order_by("-published_at")
+            .first()
+        )
+        if post is None:
+            post = (
+                Post.objects.prefetch_related("reactions")
+                .order_by("-published_at")
+                .first()
+            )
+
+        props: dict[str, Any] = {"analysis": None, "reactions": []}
+        if post is None:
+            return inertia_render(request, "Post", props=props)
+
+        props["reactions"] = self._build_reactions(post)
+        props["analysis"] = self._build_analysis(post)
+        return inertia_render(request, "Post", props=props)
+
+    @staticmethod
+    def _build_reactions(post: Post) -> list[dict[str, Any]]:
+        total = post.total_reactions()
+        if total <= 0:
+            return []
+
+        return [
+            {
+                "emoji": reaction.emoji,
+                "label": REACTION_LABELS.get(reaction.emoji, reaction.emoji),
+                "count": reaction.count,
+                "percent": round(reaction.count / total * 100, 1),
+            }
+            for reaction in post.reactions.all()
+        ]
+
+    @staticmethod
+    def _build_analysis(post: Post) -> dict[str, Any] | None:
+        analysis = getattr(post, "post_analysis", None)
+        if analysis is None:
+            return None
+
+        return {
+            "status": "completed",
+            "why_worked": PostPageView._as_lines(analysis.why_worked),
+            "how_to_improve": PostPageView._as_lines(analysis.how_to_improve),
+            "similar_posts": [
+                {
+                    "id": item.pk,
+                    "telegram_message_id": item.telegram_message_id,
+                    "text": item.text,
+                    "published_at": item.published_at.isoformat(),
+                    "views": item.views,
+                    "forwards": item.forwards,
+                    "comments_count": item.comments_count,
+                    "permalink": item.permalink or "",
+                }
+                for item in analysis.similar_posts.all()
+            ],
+            "model_version": analysis.model_version,
+        }
+
+    @staticmethod
+    def _as_lines(value: str) -> list[str]:
+        lines = [line.strip() for line in value.splitlines() if line.strip()]
+        return lines or ([value] if value else [])

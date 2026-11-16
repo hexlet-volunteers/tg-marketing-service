@@ -1,10 +1,13 @@
 import logging
 from typing import Any
 
+from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
+from apps.parser.models import ChannelModerator
+from apps.users.constants import UserRole
 from apps.parser.models import TelegramChannel
 from apps.users.models import PartnerProfile, User
 from apps.users.roles import Role, UserRoleHistory
@@ -66,14 +69,16 @@ def assign_role_channel_moderator(
 
     try:
         if instance.status == "active":
-            if user.role != "partner":
+            if user.role not in {UserRole.ADMIN, UserRole.PARTNER}:
                 _set_user_role(
-                    user, "partner", "Партнёрский профиль активирован"
-                    )
-        elif user.role == "partner":
+                    user,
+                    UserRole.PARTNER,
+                    "Партнёрский профиль активирован",
+                )
+        elif user.role == UserRole.PARTNER:
             _set_user_role(
                 user,
-                "user",
+                UserRole.USER,
                 f"Партнёрский профиль: {instance.get_status_display()}",
             )
     except Role.DoesNotExist:

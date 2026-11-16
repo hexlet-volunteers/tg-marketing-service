@@ -1,0 +1,203 @@
+"""Мок-реестр данных публичных страниц parser-приложения.
+
+Используется как источник demo-данных для ``seed_demo`` и как fallback для
+полей, которых нет в моделях (например, ``type``/``imageUrl`` карточек).
+"""
+
+from typing import Any, Dict, List
+
+MOCK_CHANNELS: List[Dict[str, Any]] = [
+    {
+        "id": 1,
+        "name": "Tech News RU",
+        "username": "@technewsru",
+        "type": "channel",
+        "subscribers": 125000,
+        "category": "Технологии",
+        "verified": True,
+        "country": "Россия",
+        "imageUrl": "",
+        "er": 8.3,
+        "growth30d": 3.2,
+    },
+    {
+        "id": 2,
+        "name": "Crypto Talk",
+        "username": "@cryptotalk",
+        "type": "channel",
+        "subscribers": 89000,
+        "category": "Криптовалюты",
+        "verified": True,
+        "country": "Россия",
+        "imageUrl": "",
+        "er": 5.7,
+        "growth30d": -1.4,
+    },
+    {
+        "id": 3,
+        "name": "Marketing Hub",
+        "username": "@marketinghub",
+        "type": "group",
+        "subscribers": 45000,
+        "category": "Маркетинг",
+        "verified": False,
+        "country": "Украина",
+        "imageUrl": "",
+        "er": 12.1,
+        "growth30d": 6.8,
+    },
+    {
+        "id": 4,
+        "name": "Психология и жизнь",
+        "username": "@psychlife",
+        "type": "channel",
+        "subscribers": 210000,
+        "category": "Психология",
+        "verified": True,
+        "country": "Россия",
+        "imageUrl": "",
+        "er": 4.2,
+        "growth30d": 1.1,
+    },
+    {
+        "id": 5,
+        "name": "Startup Diary",
+        "username": "@startupdiary",
+        "type": "channel",
+        "subscribers": 32000,
+        "category": "Бизнес",
+        "verified": False,
+        "country": "Казахстан",
+        "imageUrl": "",
+        "er": 9.5,
+        "growth30d": 12.3,
+    },
+    {
+        "id": 6,
+        "name": "Dev Talks",
+        "username": "@devtalks",
+        "type": "group",
+        "subscribers": 78000,
+        "category": "Технологии",
+        "verified": True,
+        "country": "Россия",
+        "imageUrl": "",
+        "er": 15.4,
+        "growth30d": 4.7,
+    },
+    {
+        "id": 7,
+        "name": "Fitness Pro",
+        "username": "@fitnesspro",
+        "type": "channel",
+        "subscribers": 156000,
+        "category": "Спорт",
+        "verified": False,
+        "country": "Украина",
+        "imageUrl": "",
+        "er": 6.1,
+        "growth30d": -0.8,
+    },
+    {
+        "id": 8,
+        "name": "Книжный клуб",
+        "username": "@bookclub",
+        "type": "group",
+        "subscribers": 67000,
+        "category": "Книги",
+        "verified": True,
+        "country": "Россия",
+        "imageUrl": "",
+        "er": 11.3,
+        "growth30d": 2.5,
+    },
+    {
+        "id": 9,
+        "name": "AI & ML Daily",
+        "username": "@aiml_daily",
+        "type": "channel",
+        "subscribers": 94000,
+        "category": "Технологии",
+        "verified": True,
+        "country": "Россия",
+        "imageUrl": "",
+        "er": 7.8,
+        "growth30d": 8.9,
+    },
+    {
+        "id": 10,
+        "name": "Бизнес-идеи",
+        "username": "@bizideas",
+        "type": "group",
+        "subscribers": 112000,
+        "category": "Бизнес",
+        "verified": False,
+        "country": "Казахстан",
+        "imageUrl": "",
+        "er": 10.2,
+        "growth30d": 5.1,
+    },
+]
+
+MOCK_COMPARE_METRICS: List[Dict[str, str]] = [
+    {"key": "subscribers", "label": "Подписчики"},
+    {"key": "er", "label": "ER"},
+    {"key": "growth30d", "label": "Прирост 30д"},
+    {"key": "avgReach", "label": "Средний охват"},
+    {"key": "reachPerSub", "label": "Охват/подписчик"},
+]
+
+MOCK_POST_REACTIONS: List[Dict[str, Any]] = [
+    {"emoji": "🔥", "label": "Огонь", "percent": 42, "count": 374},
+    {"emoji": "❤️", "label": "Сердце", "percent": 28, "count": 250},
+    {"emoji": "👍", "label": "Лайк", "percent": 20, "count": 178},
+    {"emoji": "🤯", "label": "Восторг", "percent": 10, "count": 89},
+]
+
+MOCK_POST_ANALYSIS: Dict[str, Any] = {
+    "status": "processing",
+    "model_version": "GPT-4o",
+    "why_worked": [
+        "Конкретный список + эмоция в заголовке и понятная польза",
+        "Реакции на 34% выше среднего по каналу",
+    ],
+    "how_to_improve": [
+        "Добавить больше данных и графиков",
+        "Сократить воду в начале",
+        "Добавить CTA в конце",
+    ],
+    "similar_posts": [
+        {
+            "id": 1,
+            "text": "7 ошибок в продуктовой аналитике",
+            "permalink": "#",
+            "telegram_message_id": 101,
+            "published_at": "",
+            "views": 0,
+            "forwards": 0,
+            "comments_count": 0,
+        },
+        {
+            "id": 2,
+            "text": "Метрики активации по шагам воронки",
+            "permalink": "#",
+            "telegram_message_id": 102,
+            "published_at": "",
+            "views": 0,
+            "forwards": 0,
+            "comments_count": 0,
+        },
+    ],
+}
+
+
+def get_mock_channel(username: str | None) -> Dict[str, Any] | None:
+    """Возвращает мок-канал по username без учёта регистра и '@'."""
+    normalized = (username or "").lstrip("@").lower()
+    if not normalized:
+        return None
+    for channel in MOCK_CHANNELS:
+        mock_username = str(channel.get("username") or "").lstrip("@")
+        if mock_username.lower() == normalized:
+            return channel
+    return None

@@ -10,10 +10,6 @@ interface Idea extends IdeaData {
   icon: React.ElementType;
 }
 
-interface Ideas {
-  ideas: Idea[]
-}
-
 interface InsightData {
   type: 'recommendation' | 'trend' | 'warning' | 'positive';
   text: string;
@@ -32,10 +28,33 @@ interface Competitor {
 
 type HeatMapData = Record<string, Record<number, number>>
 
-interface AiCabinetPageProps extends Ideas {
-  insights: Insight[];
+interface AskAIAboutChannelProps {
+ quickQuestions: string[];
+}
+
+interface BestTimeToPostProps {
+ daysOfWeek: string[];
+ hours: number[];
+ heatMapData: HeatMapData;
+}
+
+interface CompetitorsProps {
+ competitors: Competitor[];
+}
+
+interface WeeklyInsightsProps {
+    insights: Insight[];
+}
+
+interface WhatToWriteAboutProps {
+ ideas: Idea[];
+}
+
+interface AiCabinetPageProps {
+  ideas: IdeaData[];
+  insights: InsightData[];
   competitors: Competitor[];
   heatMapData: HeatMapData;
 }
 
-export type { IdeaData, Idea, Competitor, InsightData, Insight, HeatMapData, AiCabinetPageProps }
+export type { IdeaData, Idea, Competitor, InsightData, Insight, HeatMapData, AskAIAboutChannelProps, BestTimeToPostProps, CompetitorsProps, WeeklyInsightsProps, WhatToWriteAboutProps, AiCabinetPageProps }

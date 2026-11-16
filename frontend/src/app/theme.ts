@@ -25,16 +25,16 @@ export const theme: MantineThemeOverride = {
       '#7048E8', '#5F35D6', '#4E28BF', '#3F1FA5', '#3B1F8E',
     ],
     tggreen: [
-      '#E6FCF5', '#C3F0D9', '#93E2B8', '#66D399', '#3FC47B',
+      '#E6FCF5', '#C3F0D9', '#93E2B8', '#12B886', '#0CA678',
       '#2F9E44', '#27923B', '#1F7E33', '#1A6D2B', '#1B5E20',
     ],
     tgred: [
-      '#FFF5F5', '#FFE3E3', '#FFC9C9', '#FFA8A8', '#FF8787',
+      '#FFF5F5', '#FFE3E3', '#FFC9C9', '#F783AC', '#E64980',
       '#E03131', '#C92A2A', '#B02525', '#982020', '#8B1A1A',
     ],
     tgorange: [
       '#FFF4E6', '#FFE8CC', '#FFD8A8', '#FFC078', '#FFA94D',
-      '#F08C00', '#E8590C', '#D9480F', '#C2410C', '#8B4000',
+      '#f76707', '#E8590C', '#D9480F', '#C2410C', '#8B4000',
     ],
   },
 

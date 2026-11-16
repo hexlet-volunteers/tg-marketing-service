@@ -1,8 +1,14 @@
+import hashlib
 import re
-from typing import List
+from typing import Dict, List
 
 from telethon import TelegramClient
-from telethon.tl.types import Channel, Message
+from telethon.tl.types import (
+    Channel,
+    Message,
+    ReactionCustomEmoji,
+    ReactionPaid,
+)
 
 from apps.parser.models import Post, PostReaction, TelegramChannel
 from apps.parser.types import ParsedPostsData
@@ -18,6 +24,7 @@ class PostsParser:
         self,
         channel_entity: "Channel",
         channel_model: TelegramChannel,
+        pinned_ids: set[int],
         limit: int = 10,
     ) -> ParsedPostsData:
         """Парсинг постов и реакций."""
@@ -33,6 +40,9 @@ class PostsParser:
             if message.service:
                 continue
 
+            media_type = "none"
+            is_pinned = message.id in pinned_ids
+
             # Обработка поста
             permalink = (
                 f"https://t.me/{channel_entity.username}/{message.id}"
@@ -43,6 +53,39 @@ class PostsParser:
             current_forwards = message.forwards or 0
             current_comments = message.replies.replies if message.replies else 0
             current_views = message.views or 0
+
+            if message.media:
+                # Проверка на Photo
+                if hasattr(message.media, "photo"):
+                    media_type = "photo"
+
+                # Проверка на Sticker
+                elif hasattr(message.media, "sticker"):
+                    media_type = "sticker"
+
+                # Проверка на Video
+                elif hasattr(message.media, "video") or (
+                    hasattr(message.media, "document")
+                    and getattr(
+                        message.media.document, "mime_type", ""
+                    ).startswith("video/")
+                ):
+                    media_type = "video"
+
+                # Проверка на Document (включая аудио и прочие файлы)
+                elif hasattr(message.media, "document"):
+                    mime = getattr(message.media.document, "mime_type", "")
+                    if mime.startswith("image/"):
+                        media_type = "photo"
+                    elif mime.startswith("video/"):
+                        media_type = "video"
+                    else:
+                        media_type = "document"
+
+                else:
+                    media_type = "document"
+            else:
+                media_type = "none"
 
             fwd_from = None
             if message.fwd_from:
@@ -56,7 +99,9 @@ class PostsParser:
             if message.text:
                 # Паттерны упоминаний каналов (поддержка точек и подчеркиваний)
                 found_mentions = re.findall(r"@([\w\.]+)", message.text)
-                mentions = list(set(found_mentions))
+                mentions = list(
+                    set(m.lstrip("@").casefold() for m in found_mentions)
+                )
 
             # 1. Создание или получение поста
             post, created = await Post.objects.aget_or_create(
@@ -71,12 +116,22 @@ class PostsParser:
                     "comments_count": current_comments,
                     "fwd_from": fwd_from,
                     "mentions": mentions,
+                    "is_pinned": is_pinned,
+                    "media_type": media_type,
                 },
             )
 
             # 2. Обновление полей для существующих постов
             if not created:
                 update_fields = []
+
+                if is_pinned != post.is_pinned:
+                    post.is_pinned = is_pinned
+                    update_fields.append("is_pinned")
+
+                if media_type != post.media_type:
+                    post.media_type = media_type
+                    update_fields.append("media_type")
 
                 if current_views > post.views:
                     post.views = current_views
@@ -105,21 +160,43 @@ class PostsParser:
             await PostReaction.objects.filter(post=post).adelete()
 
             if message.reactions:
-                for reaction in message.reactions.results:
-                    # Извлечение эмоджи из вложенного объекта
-                    inner_reaction = getattr(reaction, "reaction", None)
+                reactions_map: Dict[str, int] = {}
 
-                    if inner_reaction and hasattr(inner_reaction, "emoticon"):
+                for reaction_res in message.reactions.results:
+                    inner_reaction = getattr(reaction_res, "reaction", None)
+                    if not inner_reaction:
+                        continue
+
+                    if (
+                        hasattr(inner_reaction, "emoticon")
+                        and inner_reaction.emoticon
+                    ):
                         emoji = inner_reaction.emoticon
+                    elif isinstance(inner_reaction, ReactionCustomEmoji):
+                        # хеш от ID, чтобы ключ был уникальным и коротким
+                        doc_id_str = str(inner_reaction.document_id)
+                        hash_part = hashlib.sha256(
+                            doc_id_str.encode()
+                        ).hexdigest()[:8]
+                        emoji = f"c:{hash_part}"
+                    elif isinstance(inner_reaction, ReactionPaid):
+                        emoji = "paid"
                     else:
-                        emoji = (
-                            str(inner_reaction)[:10] if inner_reaction else "❓"
-                        )
+                        emoji = "❓"
 
+                    # На случай, если системный эмодзи длиннее 10
+                    if len(emoji) > 10:
+                        emoji = emoji[:10]
+
+                    reactions_map[emoji] = (
+                        reactions_map.get(emoji, 0) + reaction_res.count
+                    )
+
+                for emoji, count in reactions_map.items():
                     await PostReaction.objects.acreate(
                         post=post,
                         emoji=emoji,
-                        count=reaction.count,
+                        count=count,
                     )
 
             # Сбор статистики для возвращаемого агрегата

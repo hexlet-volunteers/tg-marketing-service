@@ -4,10 +4,18 @@ from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
 from django.contrib.messages import add_message
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
-from django.http import HttpRequest, HttpResponseBase, HttpResponseRedirect
-from django.shortcuts import redirect
+from django.http import (
+    HttpRequest,
+    HttpResponseBase,
+    HttpResponseForbidden,
+    HttpResponseRedirect,
+)
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from guardian.utils import get_anonymous_user
+
+from apps.group_channels.models import Group
+from apps.users.constants import UserRole
 
 
 class CheckingUserRolesMixin:
@@ -34,6 +42,33 @@ class CheckingUserRolesMixin:
             return True
         else:
             return False
+
+
+class GroupOwnerRequiredMixin:
+    """
+    Разрешает dispatch только владельцу группы из URL-параметра ``slug``.
+
+    ВАЖНО: должен идти в MRO ПОСЛЕ миксина, отсекающего анонимов
+    (``UserAuthenticationCheckMixin``), чтобы:
+      * аноним получал redirect на логин, а не 403;
+      * существование группы не проверялось для неаутентифицированных
+        (иначе ``get_object_or_404`` утечёт 404 vs 403).
+
+    После успешной проверки у вью доступен ``self.group``.
+    """
+
+    group: Group
+
+    def dispatch(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> HttpResponseBase:
+        self.group = get_object_or_404(Group, slug=kwargs["slug"])
+        if self.group.owner != request.user:
+            return HttpResponseForbidden("Недостаточно прав")
+        return cast(
+            HttpResponseBase,
+            super().dispatch(request, *args, **kwargs),  # type: ignore[misc]
+        )
 
 
 class UserAuthenticationCheckMixin(CheckingUserRolesMixin):
@@ -112,21 +147,26 @@ class RoleRequiredMixin(AccessMixin):
 class GuestRequiredMixin(RoleRequiredMixin):
     """Только для неавторизованных пользователей"""
 
-    allowed_roles = ["guest"]
+    allowed_roles = [UserRole.GUEST]
     permission_denied_message = "Эта страница доступна только гостям"
 
 
 class UserRequiredMixin(RoleRequiredMixin):
     """Для всех авторизованных пользователей"""
 
-    allowed_roles = ["user", "partner", "admin", "channel_moderator"]
+    allowed_roles = [
+        UserRole.USER,
+        UserRole.PARTNER,
+        UserRole.ADMIN,
+        UserRole.CHANNEL_MODERATOR,
+    ]
     permission_denied_message = "Требуется авторизация"
 
 
 class PartnerRequiredMixin(RoleRequiredMixin):
     """Только для активных партнеров"""
 
-    allowed_roles = ["partner"]
+    allowed_roles = [UserRole.PARTNER]
     permission_denied_message = "Доступ только для партнеров"
 
     def _test_role(self, request: HttpRequest) -> bool:
@@ -141,7 +181,7 @@ class PartnerRequiredMixin(RoleRequiredMixin):
 class ChannelModeratorRequiredMixin(RoleRequiredMixin):
     """Только для модераторов каналов"""
 
-    allowed_roles = ["channel_moderator"]
+    allowed_roles = [UserRole.CHANNEL_MODERATOR, UserRole.PARTNER]
     permission_denied_message = "Доступ только для модераторов каналов"
 
     def _test_role(self, request: HttpRequest) -> bool:
@@ -156,20 +196,12 @@ class ChannelModeratorRequiredMixin(RoleRequiredMixin):
 class StaffRequiredMixin(RoleRequiredMixin):
     """Пример добавления новой роли - персонал"""
 
-    allowed_roles = ["staff", "admin"]
+    allowed_roles = [UserRole.STAFF, UserRole.ADMIN]
     permission_denied_message = "Доступ только для сотрудников"
 
 
 class AdminRequiredMixin(RoleRequiredMixin):
     """Только для администраторов"""
 
-    allowed_roles = ["admin"]
+    allowed_roles = [UserRole.ADMIN]
     permission_denied_message = "Доступ только для администраторов"
-
-    def _test_role(self, request: HttpRequest) -> bool:
-        """Дополнительная проверка статуса администратора"""
-        return super()._test_role(request) and (
-            getattr(request, "role", None) == "admin"
-            or getattr(request.user, "is_staff", False)
-            or getattr(request.user, "is_superuser", False)
-        )

@@ -80,6 +80,39 @@ class Plan(models.Model):
             "aiRequestsLimit": self.ai_requests_limit,
         }
 
+    def to_tariff_payload(self) -> dict[str, object]:
+        """Представление тарифа для блока тарифов на главной странице."""
+        monthly_price = int(self.monthly_price)
+        price = (
+            "0 ₽"
+            if monthly_price == 0
+            else f"{monthly_price:,}".replace(",", " ") + " ₽"
+        )
+        button_label = (
+            "Начать бесплатно"
+            if self.code == self.Code.FREE
+            else f"Выбрать {self.name}"
+        )
+
+        payload: dict[str, object] = {
+            "id": self.pk,
+            "name": self.name,
+            "description": self.description,
+            "price": price,
+            "period": "навсегда" if monthly_price == 0 else "в месяц",
+            "monthlyPrice": monthly_price,
+            "features": self.get_data()["features"],
+            "button": {
+                "label": button_label,
+                "variant": "primary" if self.is_highlighted else "default",
+            },
+        }
+        if self.is_highlighted:
+            payload["label"] = "Популярный"
+            payload["isHighlighted"] = True
+            payload["isPopular"] = True
+        return payload
+
 
 class Subscription(models.Model):
     """Состояние подписки пользователя.

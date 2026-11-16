@@ -1,11 +1,11 @@
 from typing import Any
 
-from django.core.validators import URLValidator
 from django.db import models
 from django.utils.text import slugify
 from unidecode import unidecode
 
 from apps.users.models import User
+from apps.users.validators import MAX_IMAGE_URL_LENGTH, validate_http_url
 
 
 class Group(models.Model):
@@ -57,7 +57,8 @@ class Group(models.Model):
         related_name="groups",
     )
     image_url = models.TextField(
-        validators=[URLValidator()],
+        max_length=MAX_IMAGE_URL_LENGTH,
+        validators=[validate_http_url],
         blank=True,
         verbose_name="обложка группы",
     )
@@ -88,11 +89,18 @@ class Group(models.Model):
         super().save(*args, **kwargs)
 
     @property
+    def is_auto(self) -> bool:
+        """
+        Возвращает True, если у группы есть правило автоподборки.
+        """
+        return hasattr(self, "auto_rule")
+
+    @property
     def channel_count(self) -> int:
         if hasattr(self, "annotated_channel_count"):
             return self.annotated_channel_count
 
-        if hasattr(self, "auto_rule"):
+        if self.is_auto:
             return self.channels.model.objects.filter(
                 category=self.auto_rule.category
             ).count()
