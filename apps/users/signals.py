@@ -8,26 +8,10 @@ from django.utils import timezone
 
 from apps.parser.models import ChannelModerator
 from apps.users.constants import UserRole
-from apps.parser.models import TelegramChannel
 from apps.users.models import PartnerProfile, User
 from apps.users.roles import Role, UserRoleHistory
 
 log = logging.getLogger(__name__)
-
-
-def _set_user_role(user: User, new_code: str, reason: str) -> None:
-    # сначала достаём новую роль: если её нет, ничего не успеем изменить
-    new_role = Role._default_manager.get(code=new_code)
-
-    # закрываем текущую запись истории (не создаём ещё одну закрытую)
-    UserRoleHistory.objects.filter(user=user, end_date__isnull=True).update(
-        end_date=timezone.now()
-    )
-
-    user.role = new_code
-    user.save(update_fields=["role"])
-
-    UserRoleHistory.objects.create(user=user, role=new_role, reason=reason)
 
 
 """Отлавливаем событие регистрации пользователя"""
@@ -41,18 +25,44 @@ def assign_role_partner(
     created: bool,
     **kwargs: Any,
 ) -> None:
-    try:
-        if created:
-            user = instance
-            if user.role != "user":
-                user.role = "user"
-                user.save(update_fields=["role"])
+    """Назначает роль обычного пользователя при регистрации."""
+    if created and not instance.role:
+        instance.role = UserRole.USER
+        instance.save(update_fields=["role"])
 
-    except Role.DoesNotExist:
-        log.error("Роль 'moderated_channels' не найдена в базе")
+
+def _switch_role(
+    user: User,
+    role_code: str,
+    role_name: str,
+    reason: str,
+) -> None:
+    """Закрывает активные записи истории и назначает новую роль."""
+    with transaction.atomic():
+        # Получаем роль или создаём её, если она ещё не зарегистрирована.
+        new_role, _ = Role.objects.get_or_create(
+            code=role_code,
+            defaults={"name": role_name},
+        )
+
+        # Закрываем текущую запись истории, не создавая закрытых копий.
+        UserRoleHistory.objects.filter(
+            user=user,
+            end_date__isnull=True,
+        ).update(end_date=timezone.now())
+
+        user.role = new_role.code
+        user.save(update_fields=["role"])
+
+        UserRoleHistory.objects.create(
+            user=user,
+            role=new_role,
+            reason=reason,
+        )
 
 
 """Синхронизируем роль пользователя со статусом партнёрского профиля"""
+"""active -> Partner, любой другой статус -> возвращаем роль User"""
 
 
 @receiver(post_save, sender=PartnerProfile)
@@ -67,70 +77,71 @@ def assign_role_channel_moderator(
 
     user = instance.user
 
-    try:
-        if instance.status == "active":
-            if user.role not in {UserRole.ADMIN, UserRole.PARTNER}:
-                _set_user_role(
-                    user,
-                    UserRole.PARTNER,
-                    "Партнёрский профиль активирован",
-                )
-        elif user.role == UserRole.PARTNER:
-            _set_user_role(
+    if instance.status == "active":
+        # Админ и так партнёром не становится, роль не затираем
+        if user.role not in {UserRole.ADMIN, UserRole.PARTNER}:
+            _switch_role(
                 user,
-                UserRole.USER,
-                f"Партнёрский профиль: {instance.get_status_display()}",
+                UserRole.PARTNER,
+                "Партнёр",
+                "Партнёрский профиль активирован",
             )
-    except Role.DoesNotExist:
-        log.error("Роль для партнёрского перехода не найдена в базе")
+    elif user.role == UserRole.PARTNER:
+        # Откатываем только ту роль, которую сами выдали
+        _switch_role(
+            user,
+            UserRole.USER,
+            "Пользователь",
+            f"Партнёрский профиль: {instance.get_status_display()}",
+        )
 
 
 """Отлавливаем событие регистрации канала"""
 """присваеиваем роль - Moderator_channels"""
 
 
-@receiver(post_save, sender=TelegramChannel)
+@receiver(post_save, sender=ChannelModerator)
 def assign_role_moderator_channel(
-    sender: type[TelegramChannel],
-    instance: TelegramChannel,
+    sender: type[ChannelModerator],
+    instance: ChannelModerator,
     created: bool,
     **kwargs: Any,
 ) -> None:
-    if not created:
-        return  # только для нового канала
+    """Назначает владельцу канала роль модератора."""
+    if not instance.is_owner:
+        return
 
-    try:
-        owner_relation = instance.moderators.filter(is_owner=True).first()
-        if not owner_relation:
-            return  # владелец не найден
+    user = instance.user
 
-        user = owner_relation.user
-        moderator_role = Role._default_manager.get(code="moderated_channels")
+    # Партнёр, модератор и админ сохраняют свою роль
+    if user.role in (
+        UserRole.CHANNEL_MODERATOR,
+        UserRole.PARTNER,
+        UserRole.ADMIN,
+    ):
+        return
 
-        # Проверяем текущую роль пользователя
-        if user.role in ["moderated_channels", "partner"]:
-            return  # уже модератор или партнер
+    with transaction.atomic():
+        # Получаем роль или создаём её, если она ещё не зарегистрирована.
+        moderator_role, _ = Role.objects.get_or_create(
+            code=UserRole.CHANNEL_MODERATOR,
+            defaults={"name": "Модератор канала"},
+        )
 
-        # Закрываем старую роль в истории
-        old_role_obj = Role._default_manager.filter(code=user.role).first()
-        if old_role_obj:
-            UserRoleHistory.objects.create(
-                user=user,
-                role=old_role_obj,
-                end_date=timezone.now(),
-                reason="Назначена роль модератора канала",
-            )
+        # Закрываем все активные записи истории прежних ролей.
+        UserRoleHistory.objects.filter(
+            user=user,
+            end_date__isnull=True,
+        ).update(
+            end_date=timezone.now(),
+            reason="Назначена роль модератора канала",
+        )
 
-        # Назначаем новую роль
         user.role = moderator_role.code
         user.save(update_fields=["role"])
 
-        # Создаем запись в истории
         UserRoleHistory.objects.create(
             user=user,
             role=moderator_role,
             reason="Назначена роль модератора канала",
         )
-
-    except Role.DoesNotExist:
-        log.error("Роль 'moderated_channels' не найдена в базе")

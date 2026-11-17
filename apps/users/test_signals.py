@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 from unittest.mock import patch
 
 from django.http import JsonResponse
@@ -7,6 +7,7 @@ from django.urls import reverse
 
 from apps.parser.models import ChannelModerator, TelegramChannel
 from apps.users.constants import UserRole
+from apps.users.middleware import RoleRequest
 from apps.users.models import PartnerProfile, User
 from apps.users.roles import Role, UserRoleHistory
 
@@ -75,10 +76,9 @@ class PartnerRoleSyncTest(TestCase):
             user=self.user, end_date__isnull=True
         )
         self.assertEqual(current.role.code, UserRole.USER)
-        self.assertIn("Приостановлен", current.reason)
+        self.assertIn("Приостановлен", current.reason or "")
         self.assertEqual(
-            UserRoleHistory.objects.current_role(self.user).code,
-            UserRole.USER,
+            UserRoleHistory.objects.current_role(self.user), current.role
         )
 
     def test_other_roles_are_not_overwritten(self) -> None:
@@ -104,11 +104,13 @@ class PartnerRoleSyncTest(TestCase):
 
         self.set_status("active")
         response = self.client.get(url)
-        self.assertEqual(response.wsgi_request.role, UserRole.PARTNER)
+        request = cast(RoleRequest, response.wsgi_request)
+        self.assertEqual(request.role, UserRole.PARTNER)
 
         self.set_status("suspended")
         response = self.client.get(url)
-        self.assertEqual(response.wsgi_request.role, UserRole.USER)
+        request = cast(RoleRequest, response.wsgi_request)
+        self.assertEqual(request.role, UserRole.USER)
 
 
 class AssignRoleModeratorChannelTest(TestCase):
