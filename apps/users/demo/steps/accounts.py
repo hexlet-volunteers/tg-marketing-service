@@ -26,7 +26,8 @@ class UsersStep(BaseSeedStep):
     def seed(self, ctx: DemoSeedContext) -> None:
         users: dict[str, User] = {}
         role_codes = {
-            "demo_admin": "user",
+            "demo_admin": "admin",
+            "demo_user": "user",
             "demo_partner": "partner",
             "demo_moderator": "channel_moderator",
         }
@@ -40,9 +41,10 @@ class UsersStep(BaseSeedStep):
         notification_settings: list[NotificationSettings] = []
 
         for username in users_mocks.DEMO_USERNAMES:
+            role_code = role_codes.get(username, "user")
             defaults = {
                 "email": f"{username}@demo.test",
-                "role": "user",
+                "role": role_code,
                 "is_active": True,
                 "first_name": username.replace("demo_", "").capitalize(),
                 "last_name": "Demo",
@@ -56,7 +58,7 @@ class UsersStep(BaseSeedStep):
             user.save()
             users[username] = user
 
-            role = roles.get(role_codes.get(username, "user"))
+            role = roles.get(role_code)
             if role is not None:
                 role_histories.append(
                     UserRoleHistory(
@@ -76,9 +78,10 @@ class UsersStep(BaseSeedStep):
                     },
                 )
 
-        UserRoleHistory.objects.bulk_create(
-            role_histories, ignore_conflicts=True
-        )
+        UserRoleHistory.objects.filter(
+            user__username__in=users_mocks.DEMO_USERNAMES
+        ).delete()
+        UserRoleHistory.objects.bulk_create(role_histories)
         NotificationSettings.objects.bulk_create(
             notification_settings, ignore_conflicts=True
         )
