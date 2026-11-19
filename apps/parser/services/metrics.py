@@ -1,8 +1,10 @@
 import math
 from typing import Dict, Optional, Tuple
+from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.db.models import Avg, Count, F, Sum
-from django.db.models.functions import ExtractHour, ExtractWeekDay
+from django.db.models.functions import ExtractHour, ExtractIsoWeekDay
 
 from apps.parser.models import Post, PostReaction, TelegramChannel
 
@@ -209,18 +211,18 @@ def posting_heatmap(channel: TelegramChannel) -> list[dict]:
         - post_count: количество постов в данной ячейке
     """
 
+    project_tz = ZoneInfo(settings.TIME_ZONE)
+
     stats = (
         channel.posts.annotate(
-            weekday=ExtractWeekDay("published_at"),
-            hour=ExtractHour("published_at"),
+            weekday=ExtractIsoWeekDay("published_at", tzinfo=project_tz),
+            hour=ExtractHour("published_at", tzinfo=project_tz),
         )
         .filter(hour__gte=9, hour__lte=20)
         .values("weekday", "hour")
         .annotate(avg_reach=Avg("views"), post_count=Count("id"))
         .order_by("weekday", "hour")
     )
-
-    print(f"\nDEBUG: DB Stats: {list(stats)}")
 
     stats_map = {}
     for s in stats:

@@ -178,97 +178,65 @@ class PostingHeatmapTest(TestCase):
         )
 
     def test_heatmap_correct_calculations(self):
-        import datetime
+        """
+        Проверка корректности расчетов
+        """
 
-        from django.utils import timezone
-
-        # посты с фиксированным временем в UTC
-        p1_date = timezone.make_aware(
+        monday_date = timezone.make_aware(
             datetime.datetime(2024, 1, 1, 12, 0), datetime.timezone.utc
         )
-        post1 = Post.objects.create(
+        Post.objects.create(
             channel=self.channel,
             views=100,
-            published_at=p1_date,
+            published_at=monday_date,
             telegram_message_id=101,
         )
-        post2 = Post.objects.create(
+        Post.objects.create(
             channel=self.channel,
             views=200,
-            published_at=p1_date,
+            published_at=monday_date,
             telegram_message_id=102,
         )
 
-        p2_date = timezone.make_aware(
-            datetime.datetime(2024, 1, 3, 12, 0), datetime.timezone.utc
+        wednesday_date = timezone.make_aware(
+            datetime.datetime(2024, 1, 3, 15, 0), datetime.timezone.utc
         )
-        post3 = Post.objects.create(
+        Post.objects.create(
             channel=self.channel,
             views=500,
-            published_at=p2_date,
+            published_at=wednesday_date,
             telegram_message_id=103,
-        )
-
-        post1.refresh_from_db()
-        post2.refresh_from_db()
-        post3.refresh_from_db()
-
-        from django.db.models.functions import ExtractHour, ExtractWeekDay
-
-        p1_data = (
-            Post.objects.filter(id=post1.id)
-            .annotate(
-                wd=ExtractWeekDay("published_at"),
-                hr=ExtractHour("published_at"),
-            )
-            .values("wd", "hr")
-            .first()
-        )
-
-        p2_data = (
-            Post.objects.filter(id=post3.id)
-            .annotate(
-                wd=ExtractWeekDay("published_at"),
-                hr=ExtractHour("published_at"),
-            )
-            .values("wd", "hr")
-            .first()
         )
 
         result = posting_heatmap(self.channel)
 
-        p1_cell = next(
+        # Проверяем Понедельник (weekday 1)
+        monday_cell = next(
             (
                 item
                 for item in result
-                if item["weekday"] == p1_data["wd"]
-                and item["hour"] == p1_data["hr"]
+                if item["weekday"] == 1 and item["hour"] == 12
             ),
             None,
         )
-        p2_cell = next(
+        self.assertIsNotNone(
+            monday_cell, "Ячейка для Понедельника (1) не найдена"
+        )
+        self.assertEqual(monday_cell["avg_reach"], 150.0)
+        self.assertEqual(monday_cell["post_count"], 2)
+
+        # Проверяем Среду (weekday 3)
+        wednesday_cell = next(
             (
                 item
                 for item in result
-                if item["weekday"] == p2_data["wd"]
-                and item["hour"] == p2_data["hr"]
+                if item["weekday"] == 3 and item["hour"] == 15
             ),
             None,
         )
-
-        self.assertIsNotNone(
-            p1_cell,
-            f"Cell for weekday {p1_data['wd']} hour {p1_data['hr']} not found",
-        )
-        self.assertEqual(p1_cell["avg_reach"], 150.0)
-        self.assertEqual(p1_cell["post_count"], 2)
-
-        self.assertIsNotNone(
-            p2_cell,
-            f"Cell for weekday {p2_data['wd']} hour {p2_data['hr']} not found",
-        )
-        self.assertEqual(p2_cell["avg_reach"], 500.0)
-        self.assertEqual(p2_cell["post_count"], 1)
+        self.assertIsNotNone(wednesday_cell, "Ячейка для Среды (3) не найдена")
+        self.assertEqual(wednesday_cell["avg_reach"], 500.0)
+        self.assertEqual(wednesday_cell["post_count"], 1)
 
     def test_heatmap_excludes_out_of_range_hours(self):
         utc = datetime.timezone.utc
