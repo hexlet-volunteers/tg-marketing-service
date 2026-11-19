@@ -39,6 +39,9 @@ DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = "test_*.py"
 asyncio_mode = "auto"
 
+[tool.uv]
+constraint-dependencies = ["tornado>=6.6.1"]
+
 [dependency-groups]
 dev = [
     "celery-stubs>=0.1.3",
