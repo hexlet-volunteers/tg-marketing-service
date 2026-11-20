@@ -9,6 +9,7 @@ def build_channel_card(channel: TelegramChannel) -> ChannelCardDTO:
 
     return ChannelCardDTO(
         id=channel.channel_id,
+        pk=channel.pk,
         name=channel.title,
         username=f"@{channel.username}" if channel.username else None,
         type=mock_channel.get("type") or "channel",

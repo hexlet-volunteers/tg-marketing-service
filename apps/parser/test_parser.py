@@ -370,7 +370,8 @@ def test_parser_view_does_not_parse_invalid_channel() -> None:
     )
 
     view = ParserView()
-    request = RequestFactory().post("/parser/")
+    # Inertia-ответ не требует собранного Vite-манифеста.
+    request = RequestFactory().post("/parser/", HTTP_X_INERTIA="true")
     request.user = user
     request.session = SessionStore()
     setattr(request, "_messages", FallbackStorage(request))
@@ -545,7 +546,8 @@ def test_parser_view_rejects_submission_when_pending_limit_reached() -> None:
         )
 
     view = ParserView()
-    request = RequestFactory().post("/parser/")
+    # Inertia-ответ не требует собранного Vite-манифеста.
+    request = RequestFactory().post("/parser/", HTTP_X_INERTIA="true")
     request.user = user
     request.session = SessionStore()
     setattr(request, "_messages", FallbackStorage(request))
