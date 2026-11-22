@@ -11,6 +11,7 @@ import {
 import { IconCheck } from "@tabler/icons-react";
 import { InsightCard } from "@/components/ui/InsightCard";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { useWeeklyInsights } from "../model/useWeeklyInsights";
 import { InsightsEmptyState } from "./InsightsEmptyState";
 import type { WeeklyInsightsProps } from "@/types/aiCabinet";
 
@@ -29,31 +30,15 @@ const WeeklyInsights: React.FC<WeeklyInsightsProps> = ({
  /** Исходный список инсайтов недели, поступающий через пропсы */
  insights: initialInsights = [],
 }) => {
- const [list, setList] = useState(initialInsights);
-
- const [deletingIds, setDeletingIds] = useState<Set<string | number>>(
-  new Set(),
- );
-
- const handleDismiss = (itemId: string | number) => {
-  setDeletingIds((prev) => new Set(prev).add(itemId));
-
-  setTimeout(() => {
-   setList((prev) => prev.filter((_, index) => index !== itemId));
-   setDeletingIds((prev) => {
-    const next = new Set(prev);
-    next.delete(itemId);
-    return next;
-   });
-  }, 250);
- };
+ const { list, deletingIds, handleDismiss, isEmpty, emptyStateVariant } =
+  useWeeklyInsights(initialInsights);
 
  return (
   <SectionCard title="Инсайты недели">
-   {list.length === 0 ? (
+   {isEmpty ? (
     /* Компонент с пустыми состояниями */
      <InsightsEmptyState
-      variant={initialInsights.length > 0 ? "all-read" : "no-insights"}
+      variant={emptyStateVariant}
     />
     ) : (
     /* Список инсайтов с анимацией */
