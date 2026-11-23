@@ -1,25 +1,45 @@
-import React from 'react';
-import { Text, TextInput, PasswordInput, Checkbox, Stack, Divider, Group, Title, Button, Box, Flex, Anchor } from '@mantine/core';
+import type { AuthPageProps } from '@/types/auth';
+import { router } from '@inertiajs/react';
+import { Anchor, Box, Button, Checkbox, Divider, Flex, Group, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { useEffect, useState, type FC } from 'react';
 import { SocialIcon } from 'react-social-icons';
+import { mapServerErrors } from '@/utils/mapServerErrors';
 import PasswordRecovery from '../modals/PasswordRecovery';
 
-const FormRegistration: React.FC = () => {
+const FormRegistration: FC<Partial<AuthPageProps>> = ({ form: authForm, next }) => {
   const form = useForm({
-    initialValues: { email: '', password: '', remember: false },
+    initialValues: { email: authForm?.data?.email ?? '', password: '', remember: false },
     validate: {
       email: (val) => (!val || !/^\S+@\S+\.\S+$/.test(val) ? 'Некорректный email' : null),
       password: (val) => (!val || val.length < 6 ? 'Минимум 6 символов' : null),
     },
+    validateInputOnBlur: true,
   });
 
-  const [showModal, setShowModal] = React.useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const { setErrors } = form;
+  const serverErrors = authForm?.errors;
+
+  useEffect(() => {
+    setErrors(mapServerErrors(serverErrors));
+  }, [serverErrors, setErrors]);
 
   const openModal = () => setShowModal(true);
   const closeModal = () => setShowModal(false);
 
   const onSubmit = (values: { email: string; password: string; remember: boolean }) => {
-    console.log('Login:', values.email);
+    router.post(
+      '/auth/login/',
+      { email: values.email, password: values.password, next: next ?? '' },
+      {
+        forceFormData: true,
+        preserveScroll: true,
+        onStart: () => setProcessing(true),
+        onFinish: () => setProcessing(false),
+      },
+    );
   };
 
   return (
@@ -62,7 +82,13 @@ const FormRegistration: React.FC = () => {
           />
 
           <Stack gap="sm" align="center">
-            <Button type="submit" fullWidth color="tgblue">
+            <Button
+              type="submit"
+              fullWidth
+              color="tgblue"
+              loading={processing}
+              disabled={processing}
+            >
               Войти
             </Button>
             <Anchor component="button" size="sm" onClick={openModal}>

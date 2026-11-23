@@ -87,7 +87,7 @@ const Profile = ({ user, notifications }: UserProfilePageProps ) => {
               size="sm"
               color="tgred"
               leftSection={<IconLogout size={14} />}
-              onClick={() => router.visit('/auth/logout/')}
+              onClick={() => router.post('/auth/logout/')}
             >
               Выйти
             </Button>

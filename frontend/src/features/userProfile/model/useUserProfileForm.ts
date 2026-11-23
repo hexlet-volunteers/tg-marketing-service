@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useForm, usePage } from '@inertiajs/react';
-import { mapServerErrors } from '../libr/mapServerErrors';
+import { mapServerErrors } from '@/utils/mapServerErrors';
 import { validateProfile } from './validateProfile';
 import type { User, UserProfileProps } from './types';
 import { userProfileApi } from '../api';
