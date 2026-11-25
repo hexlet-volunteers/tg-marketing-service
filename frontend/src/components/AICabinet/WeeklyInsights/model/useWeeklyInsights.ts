@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { Insight, EmptyStateVariant  } from "@/types/aiCabinet";
 
 /**
@@ -20,33 +20,51 @@ import type { Insight, EmptyStateVariant  } from "@/types/aiCabinet";
 
 
 export const useWeeklyInsights = (initialInsights: Insight[] = []) => {
-    const [list, setList] = useState(initialInsights);
-    const [deletingIds, setDeletingIds] = useState<Set<string | number>>(
-        new Set(),
-    );
+  const [list, setList] = useState(initialInsights);
+  const [deletingIds, setDeletingIds] = useState<Set<string | number>>(new Set());
 
-    const handleDismiss = (itemId: string | number) => {
-        setDeletingIds((prev) => new Set(prev).add(itemId));
+  const timeoutsRef = useRef<Map<string | number, number>>(new Map());
 
-        setTimeout(() => {
-            setList((prev) => prev.filter((_, index) => index !== itemId));
-            setDeletingIds((prev) => {
-                const next = new Set(prev);
-                next.delete(itemId);
-                return next;
-            });
-        }, 250);
-    };
+  const handleDismiss = (itemId: string | number) => {
+    setDeletingIds((prev) => new Set(prev).add(itemId));
 
-    const isEmpty = list.length === 0;
-    const emptyStateVariant: EmptyStateVariant =
-        initialInsights.length > 0 ? "all-read" : "no-insights";
+    if (timeoutsRef.current.has(itemId)) {
+      clearTimeout(timeoutsRef.current.get(itemId));
+    }
 
-    return {
-        list,
-        deletingIds,
-        handleDismiss,
-        isEmpty,
-        emptyStateVariant,
-    };
+    const timerId = setTimeout(() => {
+      setList((prev) => prev.filter((_, index) => index !== itemId));
+      
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(itemId);
+        return next;
+      });
+
+      timeoutsRef.current.delete(itemId);
+    }, 250);
+
+    timeoutsRef.current.set(itemId, timerId);
+  };
+
+ useEffect(() => {
+  const timeouts = timeoutsRef.current; 
+
+  return () => {
+    timeouts.forEach((timerId) => clearTimeout(timerId));
+    timeouts.clear();
+  };
+}, []);
+
+  const isEmpty = list.length === 0;
+  const emptyStateVariant: EmptyStateVariant =
+    initialInsights.length > 0 ? "all-read" : "no-insights";
+
+  return {
+    list,
+    deletingIds,
+    handleDismiss,
+    isEmpty,
+    emptyStateVariant,
+  };
 };
