@@ -1,7 +1,9 @@
 import { Avatar, Box, Burger, Button, Flex, Text, Title } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import { router, usePage } from "@inertiajs/react";
 import { IconLogout } from "@tabler/icons-react";
 import { SearchBar } from "../ui/SearchBar";
+import AuthModal from "../modals/AuthModal";
 import { initials } from "@/utils/initials";
 import type { SharedPageProps } from "@/types/auth";
 
@@ -12,7 +14,11 @@ interface HeaderProps {
 }
 
 const Header = ({ opened, onToggle, showSearchBar = true }: HeaderProps) => {
- const { auth } = usePage<SharedPageProps>().props;
+ const page = usePage<SharedPageProps>();
+ const { auth } = page.props;
+ const { url } = page;
+ const [authOpened, { open: openAuth, close: closeAuth }] = useDisclosure(false);
+ const next = url.startsWith("/auth/") ? undefined : url;
 
  return (
   <Flex px="md" py="sm" gap="sm" justify="space-between">
@@ -52,12 +58,13 @@ const Header = ({ opened, onToggle, showSearchBar = true }: HeaderProps) => {
        </Button>
       </>
      ) : (
-      <Button variant="subtle" onClick={() => router.visit("/auth/login/")}>
+      <Button variant="subtle" onClick={openAuth}>
        Войти
       </Button>
      )}
     </Flex>
    </Flex>
+   {!auth && <AuthModal opened={authOpened} onClose={closeAuth} next={next} />}
   </Flex>
  );
 };
