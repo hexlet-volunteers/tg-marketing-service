@@ -76,7 +76,6 @@ class DashboardService:
             .values("total")
         )
 
-        # подзапрос среднего взаимодействия по всем постам конкретного канала
         avg_interactions_subquery = (
             Post.objects.filter(channel=OuterRef("pk"))
             .annotate(
