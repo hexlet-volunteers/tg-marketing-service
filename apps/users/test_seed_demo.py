@@ -15,6 +15,7 @@ from apps.users.management.commands.seed_demo import (
     DEMO_CHANNEL_ID_MIN,
 )
 from apps.users.models import User
+from apps.users.roles import UserRoleHistory
 from mocks.parser import MOCK_CHANNELS
 
 pytestmark = pytest.mark.django_db
@@ -120,6 +121,45 @@ def test_seed_demo_refuses_in_prod(monkeypatch):
     assert not TelegramChannel.objects.filter(
         channel_id__gte=DEMO_CHANNEL_ID_MIN
     ).exists()
+
+
+def test_seed_demo_assigns_expected_roles():
+    call_command("seed_demo")
+
+    expected_roles = {
+        "demo_admin": "admin",
+        "demo_user": "user",
+        "demo_partner": "partner",
+        "demo_moderator": "channel_moderator",
+    }
+
+    actual_roles = dict(
+        User.objects.filter(username__in=expected_roles).values_list(
+            "username", "role"
+        )
+    )
+    assert actual_roles == expected_roles
+
+    for username, role_code in expected_roles.items():
+        user = User.objects.get(username=username)
+        current_role = UserRoleHistory.objects.current_role(user)
+        assert current_role is not None
+        assert current_role.code == role_code
+
+
+def test_seed_demo_admin_can_access_moderation(client):
+    call_command("seed_demo")
+
+    admin = User.objects.get(username="demo_admin")
+    client.force_login(admin)
+
+    response = client.get(
+        reverse("admin_moderation:list"),
+        HTTP_ACCEPT="application/json",
+        HTTP_X_INERTIA="true",
+    )
+
+    assert response.status_code == 200
 
 
 def test_seed_demo_fills_dashboard_for_demo_user(client):
