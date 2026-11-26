@@ -1,9 +1,12 @@
 import math
 from typing import Dict, Optional, Tuple
+from zoneinfo import ZoneInfo
 
-from django.db.models import Count, F
+from django.conf import settings
+from django.db.models import Avg, Count, F, Sum
+from django.db.models.functions import ExtractHour, ExtractIsoWeekDay
 
-from apps.parser.models import Post, TelegramChannel
+from apps.parser.models import Post, PostReaction, TelegramChannel
 
 
 def engagement_rate(interactions: int, views: int) -> float:
@@ -157,3 +160,97 @@ def update_channels_citation_indices() -> None:
         m_count = mention_map.get(channel.channel_id, 0)
 
         _calculate_and_save_index(channel, r_count, m_count)
+
+
+def reactions_breakdown(channel: TelegramChannel, top_n: int = 6) -> dict:
+    reactions_qs = (
+        PostReaction.objects.filter(post__channel=channel)
+        .values("emoji")
+        .annotate(total_count=Sum("count"))
+        .order_by("-total_count")
+    )
+
+    if not reactions_qs:
+        return {"details": [], "others_percent": 0.0}
+
+    grand_total = sum(item["total_count"] for item in reactions_qs)
+    if grand_total == 0:
+        return {"details": [], "others_percent": 0.0}
+
+    details = []
+    sum_top_percent = 0.0
+
+    for i, item in enumerate(reactions_qs):
+        if i >= top_n:
+            break
+
+        count = item["total_count"]
+        percent = round((count / grand_total * 100), 2)
+        details.append(
+            {"emoji": item["emoji"], "count": count, "percent": percent}
+        )
+        sum_top_percent += percent
+
+    others_percent = round(max(0, 100.0 - sum_top_percent), 2)
+
+    return {"details": details, "others_percent": others_percent}
+
+
+def posting_heatmap(channel: TelegramChannel) -> list[dict]:
+    """
+    Рассчитывает распределение постов по дням недели и часам (с 09:00 до 20:00).
+
+    Расчет использует настройки часового пояса базы данных (settings.TIME_ZONE)
+    для извлечения дня недели и часа из поля published_at.
+
+    Возвращает:
+        Список из 84 словарей, содержащих:
+        - weekday: день недели (1-7)
+        - hour: час (9-20)
+        - avg_reach: среднее количество просмотров
+        - post_count: количество постов в данной ячейке
+    """
+
+    project_tz = ZoneInfo(settings.TIME_ZONE)
+
+    stats = (
+        channel.posts.annotate(
+            weekday=ExtractIsoWeekDay("published_at", tzinfo=project_tz),
+            hour=ExtractHour("published_at", tzinfo=project_tz),
+        )
+        .filter(hour__gte=9, hour__lte=20)
+        .values("weekday", "hour")
+        .annotate(avg_reach=Avg("views"), post_count=Count("id"))
+        .order_by("weekday", "hour")
+    )
+
+    stats_map = {}
+    for s in stats:
+        stats_map[(s["weekday"], s["hour"])] = {
+            "avg_reach": round(float(s["avg_reach"]), 2),
+            "post_count": s["post_count"],
+        }
+
+    heatmap = []
+    for wd in range(1, 8):
+        for hr in range(9, 21):
+            cell = stats_map.get((wd, hr))
+            if cell:
+                heatmap.append(
+                    {
+                        "weekday": wd,
+                        "hour": hr,
+                        "avg_reach": cell["avg_reach"],
+                        "post_count": cell["post_count"],
+                    }
+                )
+            else:
+                heatmap.append(
+                    {
+                        "weekday": wd,
+                        "hour": hr,
+                        "avg_reach": 0.0,
+                        "post_count": 0,
+                    }
+                )
+    return heatmap

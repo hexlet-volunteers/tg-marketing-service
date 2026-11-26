@@ -437,12 +437,13 @@ class DashboardPagePropsTest(TestCase):
         self.assertEqual(channel["subscribers"], 1000)
         self.assertEqual(channel["type"], "channel")
         self.assertEqual(channel["imageUrl"], "")
-        self.assertEqual(channel["growth30d"], 0.0)
+        self.assertEqual(channel["growth_30d"], {"abs": 0, "percent": 0.0})
 
         kpis = {kpi["label"]: kpi for kpi in props["kpis"]}
         self.assertEqual(kpis["Подписчики"]["value"], 1000)
         self.assertEqual(kpis["Подписчики"]["delta"], 0)
-        self.assertEqual(kpis["Ср. охват"]["value"], 200)
+        # Исправлено: если постов нет, охват равен 0
+        self.assertEqual(kpis["Ср. охват"]["value"], 0)
         self.assertEqual(
             kpis["Ср. охват"]["percentDelta"],
             MOCK_KPIS[1]["percentDelta"],
@@ -484,7 +485,7 @@ class DashboardPagePropsTest(TestCase):
         kpis = {kpi["label"]: kpi for kpi in props["kpis"]}
         self.assertEqual(kpis["Подписчики"]["value"], 1000)
         self.assertEqual(kpis["Подписчики"]["delta"], 200)
-        self.assertEqual(kpis["Ср. охват"]["value"], 200)
+        self.assertEqual(kpis["Ср. охват"]["value"], 1000)
         self.assertEqual(kpis["ER"]["value"], 1.8)
         self.assertEqual(props["growthData"][-1]["подписчики"], 1000)
         self.assertEqual(props["posts"][0]["views"], 1000)
