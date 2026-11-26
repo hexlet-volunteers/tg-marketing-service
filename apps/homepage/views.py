@@ -36,7 +36,14 @@ class DashboardView(View):
                     "posts": 24,
                     "views": 156000,
                     "engagement": 78.5,
-                    "growth": 12.3
+                    "growth": 12.3,
+                    "er_percent": 78.5,
+                    "average_reach": 6500.0,
+                    "citation_index": 4.5,
+                    "growth_30d": {
+                        "abs": 1200,
+                        "percent": 2.5
+                    }
                 },
                 {
                     "name": "AI Weekly",
@@ -44,7 +51,14 @@ class DashboardView(View):
                     "posts": 18,
                     "views": 89200,
                     "engagement": 74.2,
-                    "growth": 8.7
+                    "growth": 8.7,
+                    "er_percent": 74.2,
+                    "average_reach": 4000.0,
+                    "citation_index": 1.2,
+                    "growth_30d": {
+                        "abs": 500,
+                        "percent": 1.5
+                    }
                 }
             ],
             "ai_insights": [
@@ -93,7 +107,7 @@ class DashboardView(View):
                 "country": "Россия",
                 "imageUrl": "",
                 "er": 8.3,
-                "growth30d": 3.2
+                "growth_30d": 3.2
             },
             "kpis": [
                 {
@@ -101,6 +115,27 @@ class DashboardView(View):
                     "value": 142340,
                     "delta": 2480,
                     "percentDelta": 1.8,
+                    "positive": true
+                },
+                {
+                    "label": "Ср. охват",
+                    "value": 5400,
+                    "positive": true
+                },
+                {
+                    "label": "ER",
+                    "value": 12.5,
+                    "positive": true
+                },
+                {
+                    "label": "Индекс цитирования",
+                    "value": 5,
+                    "positive": true
+                },
+                {
+                    "label": "Прирост (30д)",
+                    "value": 1200,
+                    "percentDelta": 2.5,
                     "positive": true
                 }
             ],
@@ -123,11 +158,12 @@ class DashboardView(View):
     Примечания:
     - channels ограничены первыми 5 каналами для производительности
     - ai_insights: до 5 непрочитанных из БД или сгенерированных fallback
-    - engagement: процент (views / subscribers * 100)
+    - engagement: процент взаимодействия (interactions / views * 100)
     - growth: процентный рост подписчиков за последний период
     - days_left: дней до конца текущего периода подписки (Subscription)
-    - is_auto: признак автоматической/ручной коллекции
+    - is_auto: признак ручной или автоматической коллекции
     - channel/kpis/growthData/posts: данные БД + моки для отсутствующих полей
+    - KPI: включает 4 основные метрики + прирост
     """
 
     def get(

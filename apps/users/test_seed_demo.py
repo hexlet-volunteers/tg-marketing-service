@@ -138,6 +138,6 @@ def test_seed_demo_fills_dashboard_for_demo_user(client):
     props = response.json()["props"]
 
     assert props["channel"]["name"]
-    assert len(props["kpis"]) == 4
+    assert len(props["kpis"]) == 5
     assert len(props["growthData"]) == DEFAULT_STATS_DAYS
     assert len(props["posts"]) == DEFAULT_POSTS_PER_CHANNEL
