@@ -71,7 +71,7 @@ make clear-demo  # uv run python manage.py clear_demo
 
 | Данные | Состав |
 |--------|--------|
-| Роли | `user`, `guest`, `channel_moderator`, `partner` из `ROLE_LABELS` |
+| Роли | `user`, `guest`, `channel_moderator`, `partner` из `ROLE_LABELS`; `admin` — из миграции |
 | Пользователи | 4 аккаунта: `demo_admin`, `demo_user`, `demo_partner`, `demo_moderator`; пароль `demo123` |
 | Партнёр | профиль `demo_partner` со статусом `active` и балансом `12500.00` |
 | Подписки | `demo_user` — Free, `demo_partner` — Pro (год), `demo_moderator` — Pro (месяц), `demo_admin` — Agency (год) |
@@ -92,7 +92,7 @@ make clear-demo  # uv run python manage.py clear_demo
 
 | Логин | Пароль | Почта | Роль |
 |-------|--------|-------|------|
-| `demo_admin` | `demo123` | `demo_admin@demo.test` | `user` + staff/superuser |
+| `demo_admin` | `demo123` | `demo_admin@demo.test` | `admin` + staff/superuser |
 | `demo_user` | `demo123` | `demo_user@demo.test` | `user` |
 | `demo_partner` | `demo123` | `demo_partner@demo.test` | `partner` |
 | `demo_moderator` | `demo123` | `demo_moderator@demo.test` | `channel_moderator` |
@@ -107,8 +107,8 @@ make clear-demo  # uv run python manage.py clear_demo
   пределами ожидаемого диапазона удаляются;
 - реакции пересоздаются для демо-постов;
 - статистика демо-каналов удаляется и создаётся заново;
-- роли, истории ролей и настройки уведомлений вставляются с
-  `ignore_conflicts=True`;
+- истории ролей демо-пользователей пересоздаются, настройки уведомлений
+  вставляются с `ignore_conflicts=True`;
 - у демо-подборок удаляются прежние `AutoGroupRule` (новые не создаются).
 
 ### Пример вывода
