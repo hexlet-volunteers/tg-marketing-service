@@ -31,8 +31,38 @@ def assign_role_partner(
         instance.save(update_fields=["role"])
 
 
-"""Отлавливаем событие при изменении статуса партнера на Активный"""
-"""присваеиваем роль - Partner"""
+def _switch_role(
+    user: User,
+    role_code: str,
+    role_name: str,
+    reason: str,
+) -> None:
+    """Закрывает активные записи истории и назначает новую роль."""
+    with transaction.atomic():
+        # Получаем роль или создаём её, если она ещё не зарегистрирована.
+        new_role, _ = Role.objects.get_or_create(
+            code=role_code,
+            defaults={"name": role_name},
+        )
+
+        # Закрываем текущую запись истории, не создавая закрытых копий.
+        UserRoleHistory.objects.filter(
+            user=user,
+            end_date__isnull=True,
+        ).update(end_date=timezone.now())
+
+        user.role = new_role.code
+        user.save(update_fields=["role"])
+
+        UserRoleHistory.objects.create(
+            user=user,
+            role=new_role,
+            reason=reason,
+        )
+
+
+"""Синхронизируем роль пользователя со статусом партнёрского профиля"""
+"""active -> Partner, любой другой статус -> возвращаем роль User"""
 
 
 @receiver(post_save, sender=PartnerProfile)
@@ -45,12 +75,25 @@ def assign_role_channel_moderator(
     if created:
         return
 
-    if instance.status == PartnerProfile.STATUS_CHOICES[0][0]:
-        user = instance.user
+    user = instance.user
 
+    if instance.status == "active":
+        # Админ и так партнёром не становится, роль не затираем
         if user.role not in {UserRole.ADMIN, UserRole.PARTNER}:
-            user.role = UserRole.PARTNER
-            user.save(update_fields=["role"])
+            _switch_role(
+                user,
+                UserRole.PARTNER,
+                "Партнёр",
+                "Партнёрский профиль активирован",
+            )
+    elif user.role == UserRole.PARTNER:
+        # Откатываем только ту роль, которую сами выдали
+        _switch_role(
+            user,
+            UserRole.USER,
+            "Пользователь",
+            f"Партнёрский профиль: {instance.get_status_display()}",
+        )
 
 
 """Отлавливаем событие регистрации канала"""
