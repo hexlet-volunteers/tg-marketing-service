@@ -12,7 +12,7 @@ import { IconSparkles } from "@tabler/icons-react";
 import WhatToWriteAboutThisWeek from "@/components/AICabinet/WhatToWriteAboutThisWeek";
 import Competitors from "@/components/AICabinet/Competitors";
 import BestTimeToPost from "@/components/AICabinet/BestTimeToPost";
-import WeeklyInsights from "@/components/AICabinet/WeeklyInsights";
+import WeeklyInsights from "@/components/AICabinet/WeeklyInsights/ui/WeeklyInsights";
 import AskAIAboutChannel from "@/components/AICabinet/AskAIAboutChannel";
 
 import type { AiCabinetPageProps } from "@/types/aiCabinet";

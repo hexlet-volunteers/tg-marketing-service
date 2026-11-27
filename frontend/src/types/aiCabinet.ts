@@ -46,6 +46,12 @@ interface WeeklyInsightsProps {
     insights: Insight[];
 }
 
+interface InsightsEmptyStateProps {
+  variant: "all-read" | "no-insights";
+}
+
+type EmptyStateVariant = "all-read" | "no-insights";
+
 interface WhatToWriteAboutProps {
  ideas: Idea[];
 }
@@ -57,4 +63,4 @@ interface AiCabinetPageProps {
   heatMapData: HeatMapData;
 }
 
-export type { IdeaData, Idea, Competitor, InsightData, Insight, HeatMapData, AskAIAboutChannelProps, BestTimeToPostProps, CompetitorsProps, WeeklyInsightsProps, WhatToWriteAboutProps, AiCabinetPageProps }
+export type { IdeaData, Idea, Competitor, InsightData, Insight, HeatMapData, AskAIAboutChannelProps, BestTimeToPostProps, CompetitorsProps, WeeklyInsightsProps, InsightsEmptyStateProps, EmptyStateVariant,  WhatToWriteAboutProps, AiCabinetPageProps }
