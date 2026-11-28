@@ -143,7 +143,7 @@ FE, `✅ БД + mock` — данные из БД, а поля, которых н
 | Blog | `Blog` | `/blog/` | `BlogListView` | ✅ `Blog.tsx` | ✅ |
 | BlogPost | `BlogPost` | `/blog/<slug>/` | `BlogArticleDetailView` | ✅ `BlogPost.tsx` | ✅ |
 | Legal | `Legal` | `/legal/` | `LegalView` | ✅ `Legal.tsx` | ✅ |
-| NotFound | `NotFound` | `/<path>/` | `NotFoundView` | ✅ `NotFound.tsx` | 🔸 |
+| NotFound | `NotFound` | `/<path>/` | `NotFoundView`, `handler404` | ✅ `NotFound.tsx` | 🔸 |
 | Admin | `Admin` | `/admin/moderation/` | `ModerationRequestListView` | ✅ `Admin.tsx` | ⚠️ BE≠FE |
 
 Вспомогательные страницы, не входящие в 14 экранов, но используемые модалками
@@ -877,9 +877,20 @@ Props описаны DTO `apps/group_channels/dto/collections_dto.py`
 Вкладка «Соглашение» использует ключ `agreement` (ранее мок использовал
 `terms`).
 
-## NotFound — `/<path>/`
+## NotFound — `/<path>/` и `handler404`
 
-Catch-all для несопоставленных URL. Ответ всегда имеет статус 404.
+Страница 404 отдаётся двумя путями:
+
+- catch-all `<path:missing>/` (`NotFoundView`) — для URL, не совпавших
+  ни с одним маршрутом;
+- кастомный `handler404` (`config.views.handler404`) — для `Http404`,
+  поднятых внутри view при `DEBUG=False` (например, для отсутствующей
+  статьи блога).
+
+Оба пути возвращают один и тот же Inertia-компонент `NotFound` со
+статусом HTTP 404. Общие props (`auth`, `role`, `is_admin`, `csrfToken`,
+`flash`) добавляет `SharedInertiaPropsMiddleware`, поэтому страница
+одинаково работает для анонимных и авторизованных пользователей.
 
 ```json
 {
@@ -892,6 +903,12 @@ Catch-all для несопоставленных URL. Ответ всегда �
 ```python
 response = inertia_render(request, "NotFound")
 response.status_code = 404
+```
+
+В `config/urls.py` обработчик подключается строкой:
+
+```python
+handler404 = "config.views.handler404"
 ```
 
 Catch-all регистрируется только для URL с завершающим слэшем
