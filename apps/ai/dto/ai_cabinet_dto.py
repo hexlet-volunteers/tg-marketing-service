@@ -27,6 +27,13 @@ class CompetitorDTO(BaseModel):
     delta: float
 
 
+class ChannelContextDTO(BaseModel):
+    """Выбранный канал в кабинете автора."""
+
+    id: int
+    title: str
+
+
 class AICabinetDTO(BaseModel):
     """Props страницы 'AICabinet' (/ai-cabinet/).
 
@@ -34,6 +41,7 @@ class AICabinetDTO(BaseModel):
     mocks/ai.py, пока нет соответствующих данных в БД.
     """
 
+    channel: ChannelContextDTO
     ideas: List[IdeaDTO] = Field(default_factory=list)
     insights: List[InsightDTO] = Field(default_factory=list)
     competitors: List[CompetitorDTO] = Field(default_factory=list)

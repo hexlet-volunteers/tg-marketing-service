@@ -1,90 +1,218 @@
 import pytest
-from django.core.management import call_command
+from django.urls import reverse
 
-from apps.parser.models import AIInsight
+from apps.parser.models import (
+    AIInsight,
+    ChannelModerator,
+    TelegramChannel,
+)
 from apps.users.models import User
-from mocks import ai as ai_mocks
-from mocks.users import DEMO_USERNAMES
 
 pytestmark = pytest.mark.django_db
 
-DEMO_USERNAME = DEMO_USERNAMES[1]
+
+@pytest.fixture
+def owner() -> User:
+    return User.objects.create_user(
+        username="owner",
+        email="owner@example.com",
+        password="secret123",
+    )
 
 
-def _props(client) -> dict:
-    response = client.get("/ai-cabinet/", HTTP_X_INERTIA="true")
+@pytest.fixture
+def moderator() -> User:
+    return User.objects.create_user(
+        username="moderator",
+        email="moderator@example.com",
+        password="secret123",
+    )
+
+
+@pytest.fixture
+def outsider() -> User:
+    return User.objects.create_user(
+        username="outsider",
+        email="outsider@example.com",
+        password="secret123",
+    )
+
+
+@pytest.fixture
+def channel() -> TelegramChannel:
+    return TelegramChannel.objects.create(
+        channel_id=1000001,
+        title="Канал автора",
+        username="author_channel",
+    )
+
+
+@pytest.fixture
+def foreign_channel() -> TelegramChannel:
+    return TelegramChannel.objects.create(
+        channel_id=1000002,
+        title="Чужой канал",
+        username="foreign_channel",
+    )
+
+
+@pytest.fixture
+def owner_assignment(
+    owner: User,
+    channel: TelegramChannel,
+) -> ChannelModerator:
+    return ChannelModerator.objects.create(
+        user=owner,
+        channel=channel,
+        is_owner=True,
+        can_edit=True,
+        can_delete=True,
+        can_manage_moderators=True,
+    )
+
+
+@pytest.fixture
+def moderator_assignment(
+    moderator: User,
+    channel: TelegramChannel,
+) -> ChannelModerator:
+    return ChannelModerator.objects.create(
+        user=moderator,
+        channel=channel,
+        is_owner=False,
+        can_edit=True,
+    )
+
+
+@pytest.fixture
+def channel_insight(owner_assignment: ChannelModerator) -> AIInsight:
+    return AIInsight.objects.create(
+        user=owner_assignment.user,
+        channel=owner_assignment.channel,
+        insight_type="recommendation",
+        insight_text="Инсайт канала автора",
+    )
+
+
+def test_anonymous_user_is_redirected_to_login(client) -> None:
+    response = client.get(
+        reverse("ai:ai_cabinet"),
+        HTTP_X_INERTIA="true",
+    )
+
+    assert response.status_code == 302
+    assert response.url == reverse("users:login")
+
+
+def test_outsider_cannot_open_cabinet(client, outsider: User) -> None:
+    client.force_login(outsider)
+
+    response = client.get(
+        reverse("ai:ai_cabinet"),
+        HTTP_X_INERTIA="true",
+    )
+
+    assert response.status_code == 403
+
+
+def test_owner_can_open_cabinet(
+    client,
+    owner: User,
+    owner_assignment: ChannelModerator,
+) -> None:
+    client.force_login(owner)
+
+    response = client.get(
+        reverse("ai:ai_cabinet"),
+        HTTP_X_INERTIA="true",
+    )
 
     assert response.status_code == 200
-    payload = response.json()
-    assert payload["component"] == "AICabinet"
-    return payload["props"]
+    assert response.headers["X-Inertia"] == "true"
+
+    page = response.json()
+    assert page["component"] == "AICabinet"
+    assert page["url"] == reverse("ai:ai_cabinet")
+    assert set(page["props"]) >= {
+        "channel",
+        "ideas",
+        "insights",
+        "competitors",
+        "heatMapData",
+        "csrfToken",
+    }
 
 
-def _create_demo_insight() -> None:
-    user = User.objects.create_user(
-        username=DEMO_USERNAME,
-        email="demo_user@example.com",
-        password="secret123",
-        role="user",
+def test_moderator_can_open_cabinet(
+    client,
+    moderator: User,
+    moderator_assignment: ChannelModerator,
+) -> None:
+    client.force_login(moderator)
+
+    response = client.get(
+        reverse("ai:ai_cabinet"),
+        HTTP_X_INERTIA="true",
     )
-    AIInsight.objects.create(
-        user=user,
-        insight_type="recommendation",
-        insight_text="Демо-инсайт",
+
+    assert response.status_code == 200
+
+
+def test_owner_receives_empty_state(
+    client,
+    owner: User,
+    owner_assignment: ChannelModerator,
+) -> None:
+    client.force_login(owner)
+
+    response = client.get(
+        reverse("ai:ai_cabinet"),
+        HTTP_X_INERTIA="true",
     )
 
-
-def test_ai_cabinet_view_empty(client):
-    props = _props(client)
-
+    assert response.status_code == 200
+    props = response.json()["props"]
     assert props["ideas"] == []
     assert props["insights"] == []
     assert props["competitors"] == []
     assert props["heatMapData"] == {}
 
 
-def test_ai_cabinet_view_uses_db_insights_and_mock_fallback(client):
-    _create_demo_insight()
+def test_owner_receives_selected_channel_insights(
+    client,
+    owner: User,
+    owner_assignment: ChannelModerator,
+    channel_insight: AIInsight,
+) -> None:
+    client.force_login(owner)
 
-    props = _props(client)
+    response = client.get(
+        reverse("ai:ai_cabinet"),
+        {"channel_id": owner_assignment.channel_id},
+        HTTP_X_INERTIA="true",
+    )
 
-    assert props["ideas"] == ai_mocks.MOCK_IDEAS
-    assert props["competitors"] == ai_mocks.MOCK_COMPETITORS
-    assert props["heatMapData"] == ai_mocks.MOCK_HEAT_MAP
-    assert props["insights"] == [
-        {"type": "recommendation", "text": "Демо-инсайт"}
+    assert response.status_code == 200
+    assert response.json()["props"]["insights"] == [
+        {
+            "type": "recommendation",
+            "text": "Инсайт канала автора",
+        }
     ]
 
 
-def test_ai_cabinet_view_hides_non_demo_insights_from_guests(client):
-    _create_demo_insight()
-    other_user = User.objects.create_user(
-        username="author",
-        email="author@example.com",
-        password="secret123",
-        role="user",
+def test_user_cannot_select_foreign_channel(
+    client,
+    owner: User,
+    owner_assignment: ChannelModerator,
+    foreign_channel: TelegramChannel,
+) -> None:
+    client.force_login(owner)
+
+    response = client.get(
+        reverse("ai:ai_cabinet"),
+        {"channel_id": foreign_channel.pk},
+        HTTP_X_INERTIA="true",
     )
-    AIInsight.objects.create(
-        user=other_user,
-        insight_type="warning",
-        insight_text="Чужой инсайт",
-    )
 
-    props = _props(client)
-
-    assert props["insights"] == [
-        {"type": "recommendation", "text": "Демо-инсайт"}
-    ]
-
-
-def test_clear_demo_empties_ai_cabinet(client):
-    _create_demo_insight()
-    assert _props(client)["ideas"]
-
-    call_command("clear_demo", force=True)
-
-    props = _props(client)
-    assert props["ideas"] == []
-    assert props["insights"] == []
-    assert props["competitors"] == []
-    assert props["heatMapData"] == {}
+    assert response.status_code == 404
