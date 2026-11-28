@@ -82,3 +82,7 @@ urlpatterns = [
         name="not_found",
     ),
 ]
+
+# Кастомный обработчик 404 для Http404, поднятых внутри view (DEBUG=False).
+# Отдаёт ту же Inertia-страницу NotFound, что и catch-all выше.
+handler404 = "config.views.handler404"

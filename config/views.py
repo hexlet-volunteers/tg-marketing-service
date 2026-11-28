@@ -84,17 +84,53 @@ class IndexView(View):
         return inertia_render(request, "Landing", props=page_props)
 
 
-class NotFoundView(View):
-    """Страница 404 (Inertia: NotFound).
+def render_not_found(request: HttpRequest) -> HttpResponse:
+    """Рендерит Inertia-страницу 404 со статусом HTTP 404.
 
-    Ловит все несопоставленные URL: напрямую в браузере страница
-    рендерится со статусом 404; клиентский router.visit на неизвестный
-    адрес покажет стандартную Inertia-ошибку.
+    Документация компонента для InertiaJS:
+    {
+        "component": "NotFound",
+        "props": {},
+        "url": "<request.path>"
+    }
+
+    Используется и catch-all-маршрутом ``NotFoundView``, и кастомным
+    ``handler404`` для ``Http404``, поднятых внутри view.
+    """
+    response = inertia_render(request, "NotFound")
+    response.status_code = 404
+    return response
+
+
+def handler404(
+    request: HttpRequest, exception: Exception | None = None
+) -> HttpResponse:
+    """Кастомный Django handler404 (Inertia: NotFound).
+
+    Вызывается Django при ``DEBUG=False``, когда view поднимает
+    ``Http404``. Возвращает тот же ответ, что и catch-all:
+
+    {
+        "component": "NotFound",
+        "props": {},
+        "url": "<request.path>"
+    }
+
+    Статус ответа — HTTP 404; общие props (``auth``, ``role`` и т. д.)
+    добавляет ``SharedInertiaPropsMiddleware``.
+    """
+    return render_not_found(request)
+
+
+class NotFoundView(View):
+    """Catch-all для несопоставленных URL (Inertia: NotFound).
+
+    Перехватывает URL, не совпавшие ни с одним маршрутом. Для ``Http404``,
+    поднятых внутри view, используется ``handler404``; оба пути отдают
+    одинаковую React-страницу со статусом 404.
     """
 
     def get(
         self, request: HttpRequest, *args: Any, **kwargs: Any
     ) -> HttpResponse:
-        response = inertia_render(request, "NotFound")
-        response.status_code = 404
-        return response
+        return render_not_found(request)

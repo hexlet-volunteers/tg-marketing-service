@@ -355,7 +355,11 @@ class BlogArticleDetailViewTest(TestCase):
     def test_views_count_not_incremented_on_404(self) -> None:
         before = self.unpublished.views_count
 
-        self.client.get(self._detail_url(self.unpublished.slug))
+        # Inertia-ответ не требует собранного Vite-манифеста.
+        self.client.get(
+            self._detail_url(self.unpublished.slug),
+            HTTP_X_INERTIA="true",
+        )
 
         self.unpublished.refresh_from_db()
         self.assertEqual(self.unpublished.views_count, before)
