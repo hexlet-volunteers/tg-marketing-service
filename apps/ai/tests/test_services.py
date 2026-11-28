@@ -2,7 +2,7 @@ import pytest
 
 from apps.ai.dto.ai_cabinet_dto import AICabinetDTO
 from apps.ai.services.ai_cabinet_service import AICabinetService
-from apps.parser.models import AIInsight
+from apps.parser.models import AIInsight, TelegramChannel
 from apps.users.models import User
 from mocks import ai as ai_mocks
 from mocks.users import DEMO_USERNAMES
@@ -17,151 +17,95 @@ def _create_user(username: str, email: str) -> User:
         username=username,
         email=email,
         password="secret123",
-        role="user",
     )
 
 
-def test_build_empty_database_returns_empty_dto():
-    dto = AICabinetService().build()
+def _create_channel(
+    channel_id: int,
+    title: str,
+) -> TelegramChannel:
+    return TelegramChannel.objects.create(
+        channel_id=channel_id,
+        title=title,
+    )
+
+
+def test_build_returns_selected_channel_and_empty_sections() -> None:
+    user = _create_user("author", "author@example.com")
+    channel = _create_channel(100001, "Канал автора")
+
+    dto = AICabinetService(
+        user=user,
+        channel=channel,
+    ).build()
 
     assert isinstance(dto, AICabinetDTO)
+    assert dto.channel.id == channel.pk
+    assert dto.channel.title == "Канал автора"
     assert dto.ideas == []
     assert dto.insights == []
     assert dto.competitors == []
     assert dto.heatMapData == {}
 
 
-def test_guest_without_demo_data_gets_empty_insights():
+def test_build_returns_only_selected_channel_insights() -> None:
     user = _create_user("author", "author@example.com")
+    other_user = _create_user("other", "other@example.com")
+
+    selected_channel = _create_channel(100001, "Выбранный канал")
+    other_channel = _create_channel(100002, "Другой канал")
+
     AIInsight.objects.create(
         user=user,
+        channel=selected_channel,
+        insight_type="recommendation",
+        insight_text="Нужный инсайт",
+    )
+    AIInsight.objects.create(
+        user=user,
+        channel=other_channel,
         insight_type="trend",
-        insight_text="Реальный инсайт",
+        insight_text="Инсайт другого канала",
+    )
+    AIInsight.objects.create(
+        user=other_user,
+        channel=selected_channel,
+        insight_type="warning",
+        insight_text="Инсайт другого пользователя",
     )
 
-    dto = AICabinetService().build()
+    dto = AICabinetService(
+        user=user,
+        channel=selected_channel,
+    ).build()
 
+    assert [(item.type, item.text) for item in dto.insights] == [
+        ("recommendation", "Нужный инсайт")
+    ]
+
+
+def test_demo_data_enables_mock_sections() -> None:
+    demo_user = _create_user(DEMO_USERNAME, "demo@example.com")
+    demo_channel = _create_channel(100001, "Демо-канал")
+
+    AIInsight.objects.create(
+        user=demo_user,
+        channel=demo_channel,
+        insight_type="recommendation",
+        insight_text="Демо-инсайт",
+    )
+
+    author = _create_user("author", "author@example.com")
+    author_channel = _create_channel(100002, "Канал автора")
+
+    dto = AICabinetService(
+        user=author,
+        channel=author_channel,
+    ).build()
+
+    assert [item.model_dump() for item in dto.ideas] == ai_mocks.MOCK_IDEAS
+    assert [
+        item.model_dump() for item in dto.competitors
+    ] == ai_mocks.MOCK_COMPETITORS
+    assert dto.heatMapData == ai_mocks.MOCK_HEAT_MAP
     assert dto.insights == []
-    assert dto.ideas == []
-    assert dto.competitors == []
-    assert dto.heatMapData == {}
-
-
-def test_authenticated_non_demo_user_sees_own_insight():
-    user = _create_user("author", "author@example.com")
-    AIInsight.objects.create(
-        user=user,
-        insight_type="trend",
-        insight_text="Реальный инсайт",
-    )
-
-    dto = AICabinetService(user).build()
-
-    assert [(item.type, item.text) for item in dto.insights] == [
-        ("trend", "Реальный инсайт")
-    ]
-
-
-def test_guest_sees_only_demo_insights():
-    demo_user = _create_user(DEMO_USERNAME, "demo_user@example.com")
-    other_user = _create_user("other", "other@example.com")
-    AIInsight.objects.create(
-        user=demo_user,
-        insight_type="recommendation",
-        insight_text="Демо-инсайт",
-    )
-    AIInsight.objects.create(
-        user=other_user,
-        insight_type="warning",
-        insight_text="Чужой инсайт",
-    )
-
-    dto = AICabinetService().build()
-
-    assert [(item.type, item.text) for item in dto.insights] == [
-        ("recommendation", "Демо-инсайт")
-    ]
-
-
-def test_demo_insight_enables_mock_data():
-    user = _create_user(DEMO_USERNAME, "demo_user@example.com")
-    AIInsight.objects.create(
-        user=user,
-        insight_type="recommendation",
-        insight_text="Демо-инсайт",
-    )
-
-    dto = AICabinetService().build()
-
-    assert [item.model_dump() for item in dto.ideas] == ai_mocks.MOCK_IDEAS
-    assert [
-        item.model_dump() for item in dto.competitors
-    ] == ai_mocks.MOCK_COMPETITORS
-    assert dto.heatMapData == ai_mocks.MOCK_HEAT_MAP
-    assert [(item.type, item.text) for item in dto.insights] == [
-        ("recommendation", "Демо-инсайт")
-    ]
-
-
-def test_authenticated_non_demo_user_sees_demo_mocks():
-    demo_user = _create_user(DEMO_USERNAME, "demo_user@example.com")
-    other_user = _create_user("author", "author@example.com")
-    AIInsight.objects.create(
-        user=demo_user,
-        insight_type="recommendation",
-        insight_text="Демо-инсайт",
-    )
-    AIInsight.objects.create(
-        user=other_user,
-        insight_type="trend",
-        insight_text="Свой инсайт",
-    )
-
-    dto = AICabinetService(other_user).build()
-
-    assert [(item.type, item.text) for item in dto.insights] == [
-        ("trend", "Свой инсайт")
-    ]
-    assert [item.model_dump() for item in dto.ideas] == ai_mocks.MOCK_IDEAS
-    assert [
-        item.model_dump() for item in dto.competitors
-    ] == ai_mocks.MOCK_COMPETITORS
-    assert dto.heatMapData == ai_mocks.MOCK_HEAT_MAP
-
-
-def test_authenticated_demo_user_sees_demo_mocks():
-    demo_user = _create_user(DEMO_USERNAME, "demo_user@example.com")
-    AIInsight.objects.create(
-        user=demo_user,
-        insight_type="recommendation",
-        insight_text="Демо-инсайт",
-    )
-
-    dto = AICabinetService(demo_user).build()
-
-    assert [item.model_dump() for item in dto.ideas] == ai_mocks.MOCK_IDEAS
-    assert [
-        item.model_dump() for item in dto.competitors
-    ] == ai_mocks.MOCK_COMPETITORS
-    assert dto.heatMapData == ai_mocks.MOCK_HEAT_MAP
-
-
-def test_authenticated_user_sees_only_own_insights():
-    demo_user = _create_user(DEMO_USERNAME, "demo_user@example.com")
-    other_user = _create_user("other", "other@example.com")
-    AIInsight.objects.create(
-        user=demo_user,
-        insight_type="trend",
-        insight_text="Свой инсайт",
-    )
-    AIInsight.objects.create(
-        user=other_user,
-        insight_type="warning",
-        insight_text="Чужой инсайт",
-    )
-
-    dto = AICabinetService(demo_user).build()
-
-    assert [(item.type, item.text) for item in dto.insights] == [
-        ("trend", "Свой инсайт")
-    ]

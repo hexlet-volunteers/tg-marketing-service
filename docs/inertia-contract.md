@@ -562,21 +562,60 @@ Props — DTO `apps/parser/dto/post_analysis_dto.py` (`PostPagePropsDTO`).
 
 ## AICabinet — `/ai-cabinet/`
 
-AI-кабинет автора. Props собирает `AICabinetService`
-(`apps/ai/services/ai_cabinet_service.py`). `insights` читаются из БД
-(`AIInsight`; для авторизованного пользователя — только его, для гостя —
-только инсайты демо-пользователей из `DEMO_USERNAMES`; если демо-данных
-нет — пустой список). Остальные
-поля пока берутся из мок-реестра `mocks/ai.py`: `ideas`, `competitors`,
-`heatMapData`. Моки активны, пока в БД есть демо-инсайты; `clear_demo`
-удаляет инсайты, после чего страница отдаёт пустые списки и карту. Иконки/цвета
-инсайтов FE выводит по полю `type`
-(`frontend/src/utils/makeIdeasAndInsights.ts`).
+Закрытый AI-кабинет владельца или назначенного модератора канала.
+Props собирает `AICabinetService`
+(`apps/ai/services/ai_cabinet_service.py`) для выбранного канала.
+
+Доступ:
+
+- анонимный пользователь получает redirect на `/auth/login/`;
+- авторизованный пользователь без назначенных каналов получает HTTP 403;
+- владелец (`ChannelModerator.is_owner=true`) получает доступ;
+- назначенный модератор (`ChannelModerator.is_owner=false`) получает доступ.
+
+Выбранный канал передаётся через query-параметр `channel_id`:
+
+```text
+/ai-cabinet/?channel_id=1
+```
+
+`channel_id` содержит внутренний primary key `TelegramChannel`. Канал
+ищется только среди назначений текущего пользователя. Запрос чужого,
+несуществующего или некорректного `channel_id` возвращает HTTP 404.
+
+Если `channel_id` не указан, выбирается первый доступный пользователю канал
+в порядке внутреннего идентификатора.
+
+`channel` содержит минимальный контекст выбранного канала:
+
+- `id` — внутренний primary key `TelegramChannel`;
+- `title` — название канала.
+
+`insights` читаются из `AIInsight` и одновременно фильтруются по текущему
+пользователю и выбранному каналу. Инсайты другого пользователя или другого
+канала в ответ не попадают.
+
+Остальные секции пока используют существующий мок-реестр `mocks/ai.py`:
+
+- `ideas` — идеи публикаций;
+- `heatMapData` — данные секции лучшего времени публикации (`best_time`);
+- `competitors` — данные конкурентов;
+- `insights` — данные секции еженедельных инсайтов (`weekly_insights`).
+
+Быстрые вопросы секции Ask AI пока находятся в статических данных
+frontend и отдельным prop не передаются.
+
+Общие Inertia props (`auth`, `role`, `csrfToken`, `flash`) добавляются
+централизованно middleware.
 
 ```json
 {
   "component": "AICabinet",
   "props": {
+    "channel": {
+      "id": 1,
+      "title": "Канал автора"
+    },
     "ideas": [
       {
         "title": "Обзор новых функций Telegram",
@@ -586,12 +625,42 @@ AI-кабинет автора. Props собирает `AICabinetService`
       }
     ],
     "insights": [
-      { "type": "recommendation", "text": "Публикуйте посты в среду в 19:00 — пик активности" }
+      {
+        "type": "recommendation",
+        "text": "Публикуйте посты в среду в 19:00 — пик активности"
+      }
     ],
-    "competitors": [{ "name": "@techreview", "er": 9.2, "delta": 1.1 }],
-    "heatMapData": { "Ср": { "19": 10 } }
+    "competitors": [
+      {
+        "name": "@techreview",
+        "er": 9.2,
+        "delta": 1.1
+      }
+    ],
+    "heatMapData": {
+      "Ср": {
+        "19": 10
+      }
+    },
+    "csrfToken": "<token>"
   },
   "url": "/ai-cabinet/"
+}
+```
+
+Если для выбранного канала ещё нет данных и демоданные не загружены,
+возвращается empty state:
+
+```json
+{
+  "channel": {
+    "id": 1,
+    "title": "Канал автора"
+  },
+  "ideas": [],
+  "insights": [],
+  "competitors": [],
+  "heatMapData": {}
 }
 ```
 
